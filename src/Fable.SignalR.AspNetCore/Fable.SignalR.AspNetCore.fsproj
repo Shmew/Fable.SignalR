@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="AspNetCore.fs" />
+    <None Include="paket.references" />
+    <None Include="paket.template" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fable.SignalR.Server\Fable.SignalR.Server.fsproj" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>

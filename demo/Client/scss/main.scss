@@ -1,0 +1,31 @@
+html {
+    height: 100%;
+}
+
+body {
+    height: inherit;
+    padding: 0 !important;
+}
+
+#app {
+    height: inherit;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    display: none;
+}
+
+*::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background: #00000000;
+    transition: background 3s;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+    background: rgba(3, 218, 198, 0.54);
+}
+

@@ -1,0 +1,15 @@
+group Client
+	Fable.Browser.Dom
+    Fable.Browser.Url
+    Fable.Browser.WebSocket
+    Fable.Core
+    Fable.Elmish
+	Fable.Elmish.React
+	Fable.Elmish.Debugger
+	Fable.Elmish.HMR
+    Fable.React
+    Fable.SimpleJson
+    Fable.Promise
+    Feliz
+    Feliz.UseElmish
+    FSharp.Core

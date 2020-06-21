@@ -1,0 +1,136 @@
+version 5.241.2
+
+framework: auto-detect
+
+group Fable.SignalR
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Core ~> 3
+    nuget Fable.Promise ~> 2
+    nuget Fable.SimpleJson ~> 3
+    nuget FSharp.Core ~> 4.7
+
+group Fable.SignalR.AspNetCore
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Remoting.Json ~> 2
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+
+group Fable.SignalR.Elmish
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Core ~> 3
+    nuget Fable.Elmish ~> 3
+    nuget Fable.Promise ~> 2
+    nuget FSharp.Core ~> 4.7
+
+group Fable.SignalR.Feliz
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Core ~> 3
+    nuget Fable.Promise ~> 2
+    nuget Feliz ~> 1
+    nuget FSharp.Core ~> 4.7
+    
+group Fable.SignalR.Saturn
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Remoting.Json ~> 2
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+    nuget Saturn ~> 0
+
+group Fable.SignalR.Server
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Remoting.Json ~> 2
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+    
+group Fable.SignalR.Tests
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Browser.Dom ~> 1
+    nuget Fable.Browser.Url ~> 1
+    nuget Fable.Browser.WebSocket ~> 1
+    nuget Fable.Core ~> 3
+    nuget Fable.FastCheck ~> 0
+    nuget Fable.FastCheck.Jest ~> 0
+    nuget Fable.Jester ~> 0
+    nuget Fable.ReactTestingLibrary ~> 0
+    nuget Fable.Promise ~> 2
+    nuget Feliz ~> 0
+    nuget FSharp.Core ~> 4.7
+
+group Client
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Browser.Dom ~> 1
+    nuget Fable.Browser.Url ~> 1
+    nuget Fable.Browser.WebSocket ~> 1
+    nuget Elmish.Bridge.Client ~> 3
+	nuget Fable.Core ~> 3
+	nuget Fable.Elmish ~> 3
+	nuget Fable.Elmish.Debugger ~> 3
+	nuget Fable.Elmish.HMR ~> 4
+	nuget Fable.Elmish.React ~> 3
+    nuget Fable.Promise ~> 2
+    nuget Fable.React ~> 6
+    nuget Fable.SimpleJson ~> 3
+    nuget Feliz ~> 1
+    nuget Feliz.Recoil ~> 0
+    nuget Feliz.UseElmish ~> 1
+    nuget FSharp.Core ~> 4.7
+
+group Server
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget FSharp.Control.AsyncSeq ~> 2
+	nuget FSharp.Core ~> 4.7
+    nuget Saturn ~> 0
+    nuget TaskBuilder.fs 2.2.0-alpha
+
+group Shared
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget FSharp.Core ~> 4.7.1
+
+group Tooling
+	source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+	nuget Fake.IO.FileSystem ~> 5
+	nuget FSharp.Core ~> 4.7
+    nuget FSharp.Json ~> 0
+	nuget FSharpLint.Core ~> 0
+    nuget Yarnpkg.Yarn ~> 1
+
+	clitool dotnet-fable ~> 2
+	clitool dotnet-fake ~> 5
+
+group FakeBuild
+	source https://api.nuget.org/v3/index.json
+
+	nuget Fake.Core.Target ~> 5
+	nuget Fake.Core.ReleaseNotes ~> 5
+	nuget Fake.DotNet.AssemblyInfoFile ~> 5
+	nuget Fake.DotNet.Cli ~> 5
+	nuget Fake.DotNet.MSBuild ~> 5
+	nuget Fake.DotNet.Paket ~> 5
+	nuget Fake.IO.FileSystem ~> 5
+    nuget Fake.JavaScript.Yarn ~> 5
+	nuget Fake.JavaScript.Npm ~> 5
+	nuget Fake.Tools.Git ~> 5
+    nuget FSharp.Json ~> 0
+	nuget FSharpLint.Core ~> 0

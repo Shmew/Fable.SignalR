@@ -1,0 +1,5 @@
+﻿group Fable.SignalR.Feliz
+    Fable.Core
+    Fable.Promise
+    Feliz
+    FSharp.Core

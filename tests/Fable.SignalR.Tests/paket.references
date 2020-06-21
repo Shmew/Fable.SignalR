@@ -1,0 +1,12 @@
+﻿group Fable.SignalR.Tests
+    Fable.Browser.Dom
+    Fable.Browser.Url
+    Fable.Browser.WebSocket
+    Fable.Core
+    Fable.FastCheck
+    Fable.FastCheck.Jest
+    Fable.Jester
+    Fable.ReactTestingLibrary
+    Fable.Promise
+    Feliz
+    FSharp.Core

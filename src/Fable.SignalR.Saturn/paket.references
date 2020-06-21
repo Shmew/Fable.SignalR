@@ -1,0 +1,5 @@
+﻿group Fable.SignalR.Saturn
+    Fable.Remoting.Json
+    FSharp.Core
+    Saturn
+    Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson

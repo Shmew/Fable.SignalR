@@ -1,0 +1,5 @@
+﻿group Fable.SignalR.Elmish
+    Fable.Core
+    Fable.Elmish
+    Fable.Promise
+    FSharp.Core

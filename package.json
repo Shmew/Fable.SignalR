@@ -1,0 +1,70 @@
+{
+  "name": "fable.-signal-r",
+  "version": "0.0.1",
+  "description": "Fable and server bindings for SignalR.",
+  "homepage": "https://github.com/Shmew/Fable.SignalR",
+  "bugs": {
+    "url": "https://github.com/Shmew/Feliz.UseBridge/issues/new/choose"
+  },
+  "license": "MIT",
+  "author": "Cody Johnson",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Shmew/Fable.SignalR"
+  },
+  "scripts": {
+    "build": "webpack -p",
+    "dev": "webpack-dev-server",
+    "pretest": "fable-splitter -c tests/Fable.SignalR.Tests/splitter.config.js",
+    "publish-docs": "node publish.js",
+    "start": "live-server --port=8080 docs/",
+    "test": "yarn pretest && yarn jest"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^3.1.4",
+    "react": "^16",
+    "react-dom": "^16"
+  },
+  "devDependencies": {
+    "@babel/core": "^7",
+    "@babel/plugin-transform-modules-commonjs": "^7",
+    "@babel/plugin-transform-regenerator": "^7",
+    "@babel/preset-env": "^7",
+    "@sinonjs/fake-timers": "^6",
+    "@testing-library/jest-dom": "^5",
+    "@testing-library/react": "^10",
+    "@testing-library/user-event": "^10",
+    "babel-loader": "^8",
+    "clean-webpack-plugin": "^3",
+    "copy-webpack-plugin": "^5",
+    "core-js": "^3",
+    "css-loader": "^3",
+    "fable-compiler": "^2",
+    "fable-loader": "^2",
+    "fable-splitter": "^2",
+    "fast-check": "^1",
+    "file-loader": "^4",
+    "gh-pages": "^2",
+    "html-webpack-plugin": "^3",
+    "jest": "^26",
+    "live-server": "^1",
+    "mini-css-extract-plugin": "^0.9.0",
+    "node-sass": "^4",
+    "prettier": "^2",
+    "remotedev": "^0.2.9",
+    "resolve-url-loader": "^3",
+    "sass": "^1",
+    "sass-loader": "^7",
+    "save": "^2",
+    "style-loader": "^1",
+    "webpack": "^4",
+    "webpack-cli": "^3",
+    "webpack-dev-server": "^3"
+  },
+  "private": true,
+  "jest": {
+    "roots": [
+      "./dist/tests"
+    ]
+  }
+}

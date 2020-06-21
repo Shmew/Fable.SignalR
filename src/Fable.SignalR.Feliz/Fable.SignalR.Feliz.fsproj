@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Feliz.fs" />
+    <None Include="paket.references" />
+    <None Include="paket.template" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fable.SignalR\Fable.SignalR.fsproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <NpmDependencies>
+      <NpmPackage Name="jest" Version="gte 26 lt 27" ResolutionStrategy="max" DevDependency="true" />
+      <NpmPackage Name="@testing-library/jest-dom" Version="gte 5.7 lt 6" ResolutionStrategy="max" DevDependency="true" />
+    </NpmDependencies>
+  </PropertyGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
