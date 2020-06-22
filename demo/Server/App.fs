@@ -12,8 +12,8 @@ module App =
         try
             let app =
                 application {
-                    use_streaming_signalr (
-                        configure_streaming_signalr {
+                    use_signalr (
+                        configure_signalr {
                             endpoint Endpoints.Root
                             update SignalRHub.update
                             stream SignalRHub.Stream.update

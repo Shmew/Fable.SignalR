@@ -115,8 +115,8 @@ module Parser =
         member inline _.processMsg<'ClientApi,'ServerApi> (parsedRaw: Json, msgType: MessageType) =
             match msgType with
             | MessageType.Invocation ->
-                Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<'ClientApi>> parsedRaw
-                |> Result.map (HubRecords.InvocationMessage.Validate >> unbox<InvocationMessage<'ClientApi>> >> U7.Case1)
+                Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<'ServerApi>> parsedRaw
+                |> Result.map (HubRecords.InvocationMessage.Validate >> unbox<InvocationMessage<'ServerApi>> >> U7.Case1)
             | MessageType.StreamItem -> 
                 Json.tryConvertFromJsonAs<HubRecords.StreamItemMessage<'ServerApi>> parsedRaw
                 |> Result.map (HubRecords.StreamItemMessage.Validate >> unbox<StreamItemMessage<'ServerApi>> >> U7.Case2)

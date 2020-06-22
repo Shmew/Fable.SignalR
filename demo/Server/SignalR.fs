@@ -5,7 +5,7 @@ module SignalRHub =
     open FSharp.Control
     open SignalRHub
 
-    let update (msg: Action) (hubContext: StreamingFableHub<Action,Action,Response,Response>) =
+    let update (msg: Action) (hubContext: FableHub<Action,Response>) =
         printfn "New Msg: %A" msg
 
         match msg with
@@ -32,11 +32,14 @@ module SignalRHub =
     module Stream =
         open FSharp.Control
 
-        let update (msg: Action) (hubContext: StreamingFableHub<Action,Action,Response,Response>) =
+        let update (msg: Action) (hubContext: FableHub<Action,Response>) =
             printfn "New stream msg: %A" msg
 
             match msg with
             | Action.GetInts ->
+                Response.Howdy
+                |> hubContext.Clients.Caller.Send
+                |> Async.AwaitTask |> Async.Start
                 asyncSeq {
                     for i in [ 1 .. 100 ] do
                         do! Async.Sleep 100

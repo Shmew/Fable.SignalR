@@ -195,6 +195,7 @@ module App =
     let render = React.functionComponent(fun () ->
         Html.div [
             Elmish.render()
+            Hook.render()
             StreamingHook.render()
         ])
 
