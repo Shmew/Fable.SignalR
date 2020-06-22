@@ -13,7 +13,7 @@ module App =
         type Model =
             { Count: int
               Text: string
-              Hub: ElmishHub<Action,Response> option }
+              Hub: Elmish.Hub<Action,Response> option }
 
             interface System.IDisposable with
                 member this.Dispose () =
@@ -25,7 +25,7 @@ module App =
             | DecrementCount
             | RandomCharacter
             | SayHello
-            | RegisterHub of ElmishHub<Action,Response>
+            | RegisterHub of Elmish.Hub<Action,Response>
 
         let init =
             { Count = 0
@@ -131,13 +131,13 @@ module App =
                 Html.div input.text
             ])
 
-        let buttons = React.functionComponent(fun (input: {| count: int; hub: StreamHubRef<Action,Stream.Action,Response,Stream.Response> |}) ->
+        let buttons = React.functionComponent(fun (input: {| count: int; hub: Stream.From.HubRef<Action,Stream.Action,Response,Stream.Response> |}) ->
             React.fragment [
                 Html.button [
                     prop.text "Stream"
                     prop.onClick <| fun _ -> 
                         promise {
-                            let stream = input.hub.current.stream Stream.Action.GenInts
+                            let stream = input.hub.current.streamFrom Stream.Action.GenInts
                             stream.subscribe (
                                 {| closed = false
                                    next = fun (msg: Stream.Response) -> 

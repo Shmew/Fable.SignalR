@@ -16,7 +16,7 @@ module App =
                         configure_signalr {
                             endpoint Endpoints.Root
                             update SignalRHub.update
-                            stream SignalRHub.Stream.update
+                            stream_from SignalRHub.Stream.update
                         }
                     )
                     error_handler (fun e log -> text e.Message)

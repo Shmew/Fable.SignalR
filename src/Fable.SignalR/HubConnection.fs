@@ -166,9 +166,21 @@ module HubInterfaces =
         /// If IHubProtocol.transferFormat is 'Text', the result of this method will be a string, otherwise it will be an ArrayBuffer.
         abstract writeMessage: message: HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> U2<string, JS.ArrayBuffer>
 
+    /// Stream implementation to stream items to the server.
+    type Subject<'T> =
+        inherit IStreamResult<'T>
+    
+        abstract next: item: 'T -> unit
+    
+        abstract error: err: exn option -> unit
+    
+        abstract complete: unit -> unit
+    
+        abstract subscribe: observer: IStreamSubscriber<'T> -> ISubscription<'T>
+
     /// Represents a connection to a SignalR Hub.
     [<EditorBrowsable(EditorBrowsableState.Never)>]
-    type IHubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> =
+    type IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
         /// The server timeout in milliseconds.
         /// 
         /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
@@ -188,13 +200,18 @@ module HubInterfaces =
         abstract stop: unit -> JS.Promise<unit>
 
         /// Invokes a streaming hub method on the server using the specified name and arguments.
-        abstract stream: methodName: string * [<ParamArray>] args: ResizeArray<'ClientStreamApi> -> IStreamResult<'ServerStreamApi>
+        abstract stream: methodName: string * [<ParamArray>] args: ResizeArray<'ClientStreamFromApi> -> IStreamResult<'ServerStreamApi>
 
         /// Invokes a hub method on the server using the specified name and arguments. Does not wait for a response from the receiver.
         /// 
         /// The Promise returned by this method resolves when the client has sent the invocation to the server. The server may still
         /// be processing the invocation.
         abstract send: methodName: string * [<ParamArray>] args: ResizeArray<'ClientApi> -> JS.Promise<unit>
+        /// Invokes a hub method on the server using the specified name and arguments. Does not wait for a response from the receiver.
+        /// 
+        /// The Promise returned by this method resolves when the client has sent the invocation to the server. The server may still
+        /// be processing the invocation.
+        abstract send: methodName: string * [<ParamArray>] args: ResizeArray<Subject<'ClientStreamToApi>> -> JS.Promise<unit>
 
         /// Invokes a hub method on the server using the specified name and arguments.
         /// 
@@ -224,25 +241,26 @@ module HubInterfaces =
         abstract onreconnected: callback: (string option -> unit) -> unit
 
     [<EditorBrowsable(EditorBrowsableState.Never)>]
-    type IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> =
-        abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
-        abstract configureLogging: logger: ILogger -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
-        abstract configureLogging: logLevel: string -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
+    type IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
+        abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+        abstract configureLogging: logger: ILogger -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+        abstract configureLogging: logLevel: string -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
-        abstract withUrl: url: string -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
-        abstract withUrl: url: string * transportType: TransportType -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
-        abstract withUrl: url: string * options: Http.IConnectionOptions -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
+        abstract withUrl: url: string -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+        abstract withUrl: url: string * transportType: TransportType -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+        abstract withUrl: url: string * options: Http.IConnectionOptions -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
-        abstract withHubProtocol : protocol: IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
+        abstract withHubProtocol : protocol: IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
-        abstract withAutomaticReconnect: unit -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
-        abstract withAutomaticReconnect: retryDelays: seq<int> -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
-        abstract withAutomaticReconnect: reconnectPolicy: IRetryPolicy -> IHubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
+        abstract withAutomaticReconnect: unit -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+        abstract withAutomaticReconnect: retryDelays: seq<int> -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+        abstract withAutomaticReconnect: reconnectPolicy: IRetryPolicy -> IHubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
-        abstract build: unit -> IHubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
+        abstract build: unit -> IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
 open HubInterfaces
 
+[<EditorBrowsable(EditorBrowsableState.Never)>] 
 type HubRegistration =
     /// Registers a handler that will be invoked when the connection is closed.
     abstract onClose: (exn option -> unit) -> unit
@@ -253,8 +271,8 @@ type HubRegistration =
     /// Registers a handler that will be invoked when the connection starts reconnecting.
     abstract onReconnecting: (exn option -> unit) -> unit
 
-type HubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> [<EditorBrowsable(EditorBrowsableState.Never)>] 
-    (hub: IHubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
+type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> [<EditorBrowsable(EditorBrowsableState.Never)>] 
+    (hub: IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
 
     interface HubRegistration with
         member this.onClose handler = this.onclose handler
@@ -285,20 +303,27 @@ type HubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> [<Ed
     /// Stops the connection immediately.
     member _.stopNow () = hub.stop() |> Promise.start
 
-    /// Invokes a streaming hub method on the server using the specified name and arguments.
-    member _.stream (msg: 'ClientStreamApi) = hub.stream("Stream", ResizeArray [| msg |])
+    /// Streams from the hub.
+    member _.streamFrom (msg: 'ClientStreamFromApi) = hub.stream("StreamFrom", ResizeArray [| msg |])
     
+    /// Streams to the hub.
+    member _.streamTo (subject: Subject<'ClientStreamToApi>) = hub.send("StreamTo", ResizeArray [| subject |]) |> Async.AwaitPromise
+
+    /// Streams to the hub and starts the computation.
+    member inline this.streamToNow (subject: Subject<'ClientStreamToApi>) = this.streamTo(subject) |> Async.StartImmediate
+
     /// Invokes a hub method on the server using the specified name and arguments. Does not wait for a response from the receiver.
     /// 
     /// The Promise returned by this method resolves when the client has sent the invocation to the server. The server may still
     /// be processing the invocation.
     member _.send (msg: 'ClientApi) = hub.send("Send", ResizeArray [| msg |]) |> Async.AwaitPromise
+
     /// Invokes a hub method on the server using the specified name and arguments. Does not wait for a response from the receiver.
     /// 
     /// The Promise returned by this method resolves when the client has sent the invocation to the server. The server may still
     /// be processing the invocation.
     member inline this.sendNow (msg: 'ClientApi) = this.send(msg) |> Async.StartImmediate
-    
+
     /// Invokes a hub method on the server using the specified name and arguments.
     /// 
     /// The Promise returned by this method resolves when the server indicates it has finished invoking the method. When the promise
@@ -321,18 +346,3 @@ type HubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> [<Ed
     /// Registers a handler that will be invoked when the connection successfully reconnects.
     member _.onreconnected (callback: (string option -> unit)) = hub.onreconnected(callback)
 
-/// Stream implementation to stream items to the server.
-type Subject<'T,'Error> =
-    inherit IStreamResult<'T>
-
-    abstract observers: ResizeArray<IStreamSubscriber<'T,'Error>> with get, set
-
-    abstract cancelCallback: (unit -> JS.Promise<unit>) option with get, set
-
-    abstract next: item: 'T -> unit
-
-    abstract error: err: 'Error option -> unit
-
-    abstract complete: unit -> unit
-
-    abstract subscribe: observer: IStreamSubscriber<'T,'Error> -> ISubscription<'T>

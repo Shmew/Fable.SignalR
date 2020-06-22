@@ -62,7 +62,7 @@ type IRetryPolicy =
     abstract nextRetryDelayInMilliseconds: retryContext: RetryContext -> int option
 
 /// Defines the expected type for a receiver of results streamed by the server.
-type IStreamSubscriber<'T,'Error> =
+type IStreamSubscriber<'T> =
     /// A boolean that will be set by the {@link @microsoft/signalr.IStreamResult} when the stream is closed.
     abstract closed: bool option with get, set
 
@@ -72,7 +72,7 @@ type IStreamSubscriber<'T,'Error> =
     /// Called by the framework when an error has occurred.
     /// 
     /// After this method is called, no additional methods on the IStreamSubscriber will be called.
-    abstract error: err: 'Error option -> unit
+    abstract error: err: exn option -> unit
 
     /// Called by the framework when the end of the stream is reached.
     /// 
@@ -87,4 +87,4 @@ type ISubscription<'T> =
 /// Defines the result of a streaming hub method.
 type IStreamResult<'T> =
     /// Attaches a IStreamSubscriber, which will be invoked when new items are available from the stream.
-    abstract subscribe: subscriber: IStreamSubscriber<'T,'Error> -> ISubscription<'T>
+    abstract subscribe: subscriber: IStreamSubscriber<'T> -> ISubscription<'T>

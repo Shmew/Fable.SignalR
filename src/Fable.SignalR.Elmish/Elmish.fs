@@ -5,49 +5,95 @@ open Fable.Core
 open System.ComponentModel
 
 module Elmish =
-    type ElmishHub<'ClientApi,'ServerApi> [<EditorBrowsable(EditorBrowsableState.Never)>] (hub: HubConnection<'ClientApi,unit,'ServerApi,unit>) =
-        [<EditorBrowsable(EditorBrowsableState.Never)>]
-        member _.hub = hub
+    [<RequireQualifiedAccess>]
+    module Elmish =
+        type Hub<'ClientApi,'ServerApi> [<EditorBrowsable(EditorBrowsableState.Never)>] (hub: HubConnection<'ClientApi,unit,unit,'ServerApi,unit>) =
+            [<EditorBrowsable(EditorBrowsableState.Never)>]
+            member _.hub = hub
         
-        [<EditorBrowsable(EditorBrowsableState.Never)>]
-        member _.CancellationToken = new System.Threading.CancellationTokenSource()
+            [<EditorBrowsable(EditorBrowsableState.Never)>]
+            member _.CancellationToken = new System.Threading.CancellationTokenSource()
 
-        member this.Dispose () =
-            this.hub.stopNow()
-            this.CancellationToken.Cancel()
-            this.CancellationToken.Dispose()
+            member this.Dispose () =
+                this.hub.stopNow()
+                this.CancellationToken.Cancel()
+                this.CancellationToken.Dispose()
 
-        interface System.IDisposable with
-            member this.Dispose () = this.Dispose()
-
-    type ElmishStreamHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> 
-        [<EditorBrowsable(EditorBrowsableState.Never)>] 
-        (hub: HubConnection<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
-
-        inherit ElmishHub<'ClientApi,'ServerApi>(unbox hub)
+            interface System.IDisposable with
+                member this.Dispose () = this.Dispose()
         
-        [<EditorBrowsable(EditorBrowsableState.Never)>]
-        member _.hub = hub
+        module Stream =
+            module Both =
+                type Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
+                    [<EditorBrowsable(EditorBrowsableState.Never)>] 
+                    (hub: HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
+
+                    inherit Hub<'ClientApi,'ServerApi>(unbox hub)
         
-        [<EditorBrowsable(EditorBrowsableState.Never)>]
-        member _.CancellationToken = new System.Threading.CancellationTokenSource()
+                    [<EditorBrowsable(EditorBrowsableState.Never)>]
+                    member _.hub = hub
+        
+                    [<EditorBrowsable(EditorBrowsableState.Never)>]
+                    member _.CancellationToken = new System.Threading.CancellationTokenSource()
 
-        member this.Dispose () =
-            this.hub.stopNow()
-            this.CancellationToken.Cancel()
-            this.CancellationToken.Dispose()
+                    member this.Dispose () =
+                        this.hub.stopNow()
+                        this.CancellationToken.Cancel()
+                        this.CancellationToken.Dispose()
 
-        interface System.IDisposable with
-            member this.Dispose () = this.Dispose()
+                    interface System.IDisposable with
+                        member this.Dispose () = this.Dispose()
+
+            module From =
+                type Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> 
+                    [<EditorBrowsable(EditorBrowsableState.Never)>] 
+                    (hub: HubConnection<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi>) =
+
+                    inherit Hub<'ClientApi,'ServerApi>(unbox hub)
+        
+                    [<EditorBrowsable(EditorBrowsableState.Never)>]
+                    member _.hub = hub
+        
+                    [<EditorBrowsable(EditorBrowsableState.Never)>]
+                    member _.CancellationToken = new System.Threading.CancellationTokenSource()
+
+                    member this.Dispose () =
+                        this.hub.stopNow()
+                        this.CancellationToken.Cancel()
+                        this.CancellationToken.Dispose()
+
+                    interface System.IDisposable with
+                        member this.Dispose () = this.Dispose()
+
+            module To =
+                type Hub<'ClientApi,'ClientStreamApi,'ServerApi> 
+                    [<EditorBrowsable(EditorBrowsableState.Never)>] 
+                    (hub: HubConnection<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit>) =
+
+                    inherit Hub<'ClientApi,'ServerApi>(unbox hub)
+        
+                    [<EditorBrowsable(EditorBrowsableState.Never)>]
+                    member _.hub = hub
+        
+                    [<EditorBrowsable(EditorBrowsableState.Never)>]
+                    member _.CancellationToken = new System.Threading.CancellationTokenSource()
+
+                    member this.Dispose () =
+                        this.hub.stopNow()
+                        this.CancellationToken.Cancel()
+                        this.CancellationToken.Dispose()
+
+                    interface System.IDisposable with
+                        member this.Dispose () = this.Dispose()
 
     [<RequireQualifiedAccess>]
     module Cmd =
         [<RequireQualifiedAccess>]
         module SignalR =
             let inline connect 
-                (registerHub: ElmishHub<'ClientApi,'ServerApi> -> 'Msg) 
+                (registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg) 
                 (registerMsgs: 'ServerApi -> 'Msg)
-                (config: HubConnectionBuilder<'ClientApi,unit,'ServerApi,unit> -> HubConnectionBuilder<'ClientApi,unit,'ServerApi,unit>) : Cmd<'Msg> =
+                (config: HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit> -> HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit>) : Cmd<'Msg> =
             
                 [ fun dispatch -> 
                     let connection = SignalR.connect(config)
@@ -56,29 +102,125 @@ module Elmish =
 
                     connection.startNow()
 
-                    registerHub (new ElmishHub<'ClientApi,'ServerApi>(connection))
+                    registerHub (new Elmish.Hub<'ClientApi,'ServerApi>(connection))
                     |> dispatch ]
 
-            let inline connectStreaming 
-                (registerHub: ElmishStreamHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
-                (registerMsgs: 'ServerApi -> 'Msg)
-                (config: HubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> 
-                    -> HubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) : Cmd<'Msg> =
+            module Stream =
+                module Both =
+                    let inline connect
+                        (registerHub: Elmish.Stream.Both.Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
+                        (registerMsgs: 'ServerApi -> 'Msg)
+                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
+                            -> HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) : Cmd<'Msg> =
             
-                [ fun dispatch -> 
-                    let connection = SignalR.connect(config)
+                        [ fun dispatch -> 
+                            let connection = SignalR.connect(config)
 
-                    connection.onMsg(registerMsgs >> dispatch) 
+                            connection.onMsg(registerMsgs >> dispatch) 
 
-                    connection.startNow()
+                            connection.startNow()
 
-                    registerHub (new ElmishStreamHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>(connection))
-                    |> dispatch ]
+                            registerHub (new Elmish.Stream.Both.Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(connection))
+                            |> dispatch ]
+
+                    let inline connectWith
+                        (registerHub: Elmish.Stream.Both.Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
+                        (registerMsgs: 'ServerApi -> 'Msg)
+                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
+                            -> HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) 
+                        (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
+            
+                        [ fun dispatch -> 
+                            let connection =
+                                SignalR.connect(config)
+
+                            registerHandlers (connection :> HubRegistration) dispatch
+
+                            connection.onMsg(registerMsgs >> dispatch)
+
+                            connection.startNow()
+
+                            registerHub (new Elmish.Stream.Both.Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(connection))
+                            |> dispatch ]
+
+                module From =
+                    let inline connect
+                        (registerHub: Elmish.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
+                        (registerMsgs: 'ServerApi -> 'Msg)
+                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi> 
+                            -> HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi>) : Cmd<'Msg> =
+            
+                        [ fun dispatch -> 
+                            let connection = SignalR.connect(config)
+
+                            connection.onMsg(registerMsgs >> dispatch) 
+
+                            connection.startNow()
+
+                            registerHub (new Elmish.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>(connection))
+                            |> dispatch ]
+
+                    let inline connectWith
+                        (registerHub: Elmish.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
+                        (registerMsgs: 'ServerApi -> 'Msg)
+                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi> 
+                            -> HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi>) 
+                        (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
+            
+                        [ fun dispatch -> 
+                            let connection =
+                                SignalR.connect(config)
+
+                            registerHandlers (connection :> HubRegistration) dispatch
+
+                            connection.onMsg(registerMsgs >> dispatch)
+
+                            connection.startNow()
+
+                            registerHub (new Elmish.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>(connection))
+                            |> dispatch ]
+
+                module To =
+                    let inline connect
+                        (registerHub: Elmish.Stream.To.Hub<'ClientApi,'ClientStreamApi,'ServerApi> -> 'Msg) 
+                        (registerMsgs: 'ServerApi -> 'Msg)
+                        (config: HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit> 
+                            -> HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit>) : Cmd<'Msg> =
+            
+                        [ fun dispatch -> 
+                            let connection = SignalR.connect(config)
+
+                            connection.onMsg(registerMsgs >> dispatch) 
+
+                            connection.startNow()
+
+                            registerHub (new Elmish.Stream.To.Hub<'ClientApi,'ClientStreamApi,'ServerApi>(connection))
+                            |> dispatch ]
+
+                    let inline connectWith
+                        (registerHub: Elmish.Stream.To.Hub<'ClientApi,'ClientStreamApi,'ServerApi> -> 'Msg) 
+                        (registerMsgs: 'ServerApi -> 'Msg)
+                        (config: HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit> 
+                            -> HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit>) 
+                        (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
+            
+                        [ fun dispatch -> 
+                            let connection =
+                                SignalR.connect(config)
+
+                            registerHandlers (connection :> HubRegistration) dispatch
+
+                            connection.onMsg(registerMsgs >> dispatch)
+
+                            connection.startNow()
+
+                            registerHub (new Elmish.Stream.To.Hub<'ClientApi,'ClientStreamApi,'ServerApi>(connection))
+                            |> dispatch ]
 
             let inline connectWith
-                (registerHub: ElmishHub<'ClientApi,'ServerApi> -> 'Msg) 
+                (registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg) 
                 (registerMsgs: 'ServerApi -> 'Msg)
-                (config: HubConnectionBuilder<'ClientApi,unit,'ServerApi,unit> -> HubConnectionBuilder<'ClientApi,unit,'ServerApi,unit>) 
+                (config: HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit> -> HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit>) 
                 (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
             
                 [ fun dispatch -> 
@@ -91,30 +233,10 @@ module Elmish =
 
                     connection.startNow()
 
-                    registerHub (new ElmishHub<'ClientApi,'ServerApi>(connection))
+                    registerHub (new Elmish.Hub<'ClientApi,'ServerApi>(connection))
                     |> dispatch ]
 
-            let inline connectStreamingWith
-                (registerHub: ElmishStreamHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
-                (registerMsgs: 'ServerApi -> 'Msg)
-                (config: HubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> 
-                    -> HubConnectionBuilder<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) 
-                (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
-            
-                [ fun dispatch -> 
-                    let connection =
-                        SignalR.connect(config)
-
-                    registerHandlers (connection :> HubRegistration) dispatch
-
-                    connection.onMsg(registerMsgs >> dispatch)
-
-                    connection.startNow()
-
-                    registerHub (new ElmishStreamHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>(connection))
-                    |> dispatch ]
-
-            let invoke (hub: ElmishHub<'ClientApi,'Msg> option) (msg: 'ClientApi) (onError: exn -> 'Msg) =
+            let invoke (hub: Elmish.Hub<'ClientApi,'Msg> option) (msg: 'ClientApi) (onError: exn -> 'Msg) =
                 match hub with
                 | Some hub -> 
                     Cmd.OfAsyncWith.either 
@@ -129,10 +251,13 @@ module Elmish =
                     #endif
                     [ fun _ -> () ]
             
-            let send (hub: ElmishHub<'ClientApi,'ServerApi> option) (msg: 'ClientApi) : Cmd<_> =
+            let send (hub: Elmish.Hub<'ClientApi,'ServerApi> option) (msg: 'ClientApi) : Cmd<_> =
                 [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.sendNow msg) ]
 
-            let stream (hub: ElmishStreamHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> option) 
+            let streamFrom (hub: Elmish.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> option) 
                 (msg: 'ClientStreamApi) (sub: IStreamResult<'ServerStreamApi> -> ('Msg -> unit) -> unit) : Cmd<_> =
                 
-                [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.stream msg |> fun rsp -> sub rsp dispatch) ]
+                [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.streamFrom msg |> fun rsp -> sub rsp dispatch) ]
+
+            /// Finish streaming and do srtp for allowing other types to work with these commands
+

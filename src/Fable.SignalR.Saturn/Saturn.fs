@@ -16,14 +16,20 @@ module SignalRExtension =
     
             type Endpoint = | Value of string
 
-            type Settings<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+            type Settings<'ClientApi,'ClientStreamToApi,'ClientStreamFromApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> =
-                | HasStream of SignalR.Settings<'ClientApi,'ServerApi> * ('ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>)
+                | HasStreamBoth of SignalR.Settings<'ClientApi,'ServerApi> * 
+                                    ('ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) * 
+                                    (IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task)
+                | HasStreamFrom of SignalR.Settings<'ClientApi,'ServerApi> * ('ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>)
+                | HasStreamTo of SignalR.Settings<'ClientApi,'ServerApi> * (IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task)
                 | NoStream of SignalR.Settings<'ClientApi,'ServerApi>
 
                 member this.mapSettings (mapper: SignalR.Settings<'ClientApi,'ServerApi> -> SignalR.Settings<'ClientApi,'ServerApi>) =
                     match this with
-                    | HasStream(settings,stream) -> mapper settings |> fun res -> Settings.HasStream(res, stream)
+                    | HasStreamBoth(settings,streamFrom,streamTo) -> mapper settings |> fun res -> Settings.HasStreamBoth(res, streamFrom, streamTo)
+                    | HasStreamFrom(settings,stream) -> mapper settings |> fun res -> Settings.HasStreamFrom(res, stream)
+                    | HasStreamTo(settings,stream) -> mapper settings |> fun res -> Settings.HasStreamTo(res, stream)
                     | NoStream settings -> mapper settings |> Settings.NoStream
 
         type SettingsBuilder () =
@@ -43,15 +49,24 @@ module SignalRExtension =
 
                 State.Settings.NoStream settings
 
-            [<CustomOperation("stream")>]
-            member _.Stream (state: State.Settings<_,_,_,_>, f) = 
+            [<CustomOperation("stream_from")>]
+            member _.StreamFrom (state: State.Settings<_,_,_,_,_>, f) = 
                 match state with
-                | State.HasStream(settings,_) -> settings
-                | State.NoStream(settings) -> settings
-                |> fun settings -> State.Settings.HasStream(settings, f)
+                | State.HasStreamBoth(settings,_,streamTo) -> State.Settings.HasStreamBoth(settings, f, streamTo)
+                | State.HasStreamFrom(settings,_) -> State.Settings.HasStreamFrom(settings, f)
+                | State.HasStreamTo(settings,streamTo) -> State.Settings.HasStreamBoth(settings, f, streamTo)
+                | State.NoStream(settings) -> State.Settings.HasStreamFrom(settings, f)
+
+            [<CustomOperation("stream_to")>]
+            member _.StreamTo (state: State.Settings<_,_,_,_,_>, f) = 
+                match state with
+                | State.HasStreamBoth(settings,streamFrom,streamTo) -> State.Settings.HasStreamBoth(settings, streamFrom, f)
+                | State.HasStreamFrom(settings,streamFrom) -> State.Settings.HasStreamBoth(settings, streamFrom, f)
+                | State.HasStreamTo(settings,_) -> State.Settings.HasStreamTo(settings, f)
+                | State.NoStream(settings) -> State.Settings.HasStreamTo(settings, f)
 
             [<CustomOperation("with_endpoint_config")>]
-            member _.EndpointConfig (state: State.Settings<_,_,_,_>, f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =
+            member _.EndpointConfig (state: State.Settings<_,_,_,_,_>, f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =
                 state.mapSettings <| fun state ->
                     { state with
                         Config =
@@ -60,7 +75,7 @@ module SignalRExtension =
                             |> Some }
     
             [<CustomOperation("with_hub_options")>]
-            member _.HubOptions (state: State.Settings<_,_,_,_>, f: HubOptions -> unit) =
+            member _.HubOptions (state: State.Settings<_,_,_,_,_>, f: HubOptions -> unit) =
                 state.mapSettings <| fun state ->
                     { state with
                         Config =
@@ -69,7 +84,7 @@ module SignalRExtension =
                             |> Some }
     
             [<CustomOperation("with_on_connected")>]
-            member _.OnConnected (state: State.Settings<_,_,_,_>, f: FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
+            member _.OnConnected (state: State.Settings<_,_,_,_,_>, f: FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
                 state.mapSettings <| fun state -> 
                     { state with
                         Config =
@@ -78,7 +93,7 @@ module SignalRExtension =
                             |> Some }
     
             [<CustomOperation("with_on_disconnected")>]
-            member _.OnDisconnected (state: State.Settings<_,_,_,_>, f: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
+            member _.OnDisconnected (state: State.Settings<_,_,_,_,_>, f: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
                 state.mapSettings <| fun state ->  
                     { state with
                         Config =
@@ -86,10 +101,12 @@ module SignalRExtension =
                                 OnDisconnected = Some f }
                             |> Some }
                 
-            member _.Run (state: State.Settings<_,_,_,_>) = 
+            member _.Run (state: State.Settings<_,_,_,_,_>) = 
                 match state with
-                | State.HasStream(settings,stream) -> settings, Some stream
-                | State.NoStream settings -> settings, None
+                | State.HasStreamBoth(settings,streamFrom,streamTo) -> settings, Some streamFrom, Some streamTo
+                | State.HasStreamFrom(settings,stream) -> settings, Some stream, None
+                | State.HasStreamTo(settings,stream) -> settings, None, Some stream
+                | State.NoStream settings -> settings, None, None
     
     [<AutoOpen>]
     module Builder =
@@ -100,15 +117,21 @@ module SignalRExtension =
         [<CustomOperation("use_signalr")>]
         member this.UseSignalR
             (state, settings: SignalR.Settings<'ClientApi,'ServerApi> * 
-                ('ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) option) =
+                ('ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) option *
+                (IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task) option) =
             
-            let settings,stream = settings
+            let settings,streamFrom,streamTo = settings
 
-            match stream with
-            | Some stream ->
-                this.ServiceConfig(state, fun services -> services.AddSignalR(settings, stream))
-                |> fun state -> this.AppConfig(state, fun app -> app.UseSignalR(settings, stream))
-            | None ->
+            match streamFrom,streamTo with
+            | Some streamFrom, Some streamTo ->
+                this.ServiceConfig(state, fun services -> services.AddSignalR(settings, streamFrom, streamTo))
+                |> fun state -> this.AppConfig(state, fun app -> app.UseSignalR(settings, streamFrom, streamTo))
+            | Some streamFrom, None ->
+                this.ServiceConfig(state, fun services -> services.AddSignalR(settings, streamFrom))
+                |> fun state -> this.AppConfig(state, fun app -> app.UseSignalR(settings, streamFrom))
+            | None, Some streamTo ->
+                this.ServiceConfig(state, fun services -> services.AddSignalR(settings, streamTo))
+                |> fun state -> this.AppConfig(state, fun app -> app.UseSignalR(settings, streamTo))
+            | _ ->
                 this.ServiceConfig(state, fun services -> services.AddSignalR(settings))
                 |> fun state -> this.AppConfig(state, fun app -> app.UseSignalR(settings))
-
