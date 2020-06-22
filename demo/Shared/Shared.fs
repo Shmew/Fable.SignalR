@@ -7,14 +7,12 @@ module SignalRHub =
         | DecrementCount of int
         | RandomCharacter
         | SayHello
-        | GetInts
 
     [<RequireQualifiedAccess>]
     type Response =
         | Howdy
         | NewCount of int
         | RandomCharacter of string
-        | GetInts of int
 
     module Stream =
         [<RequireQualifiedAccess>]

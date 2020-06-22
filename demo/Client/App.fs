@@ -46,7 +46,6 @@ module App =
                     { model with Text = str }, Cmd.none
                 | Response.NewCount i ->
                     { model with Count = i }, Cmd.none
-                | _ -> model, Cmd.none
             | IncrementCount ->
                 model, Cmd.SignalR.send model.Hub (Action.IncrementCount model.Count)
             | DecrementCount ->
@@ -103,20 +102,16 @@ module App =
             let testing,setTesting = React.useState false
 
             let hub =
-                React.useSignalR<Action,Response>({
-                    config = 
-                        fun hub -> 
-                            hub.withUrl(Endpoints.Root)
-                                .withAutomaticReconnect()
-                                .configureLogging(LogLevel.Debug)
-
-                    onMsg =
-                        function
-                        | Response.Howdy -> JS.console.log("Howdy!")
-                        | Response.NewCount i -> setCount i
-                        | Response.RandomCharacter str -> setText str
-                        | _ -> ()
-                }, [| testing :> obj |])
+                React.useSignalR<Action,Response>((fun hub -> 
+                    hub.withUrl(Endpoints.Root)
+                        .withAutomaticReconnect()
+                        .configureLogging(LogLevel.Debug)
+                        .onMessage <|
+                            function
+                            | Response.Howdy -> JS.console.log("Howdy!")
+                            | Response.NewCount i -> setCount i
+                            | Response.RandomCharacter str -> setText str
+                ), [| testing :> obj |])
             
             React.useEffect(fun () ->
                 if count > 5 then setTesting true
@@ -136,20 +131,19 @@ module App =
                 Html.div input.text
             ])
 
-        let buttons = React.functionComponent(fun (input: {| count: int; hub: HubRef<Action,Response> |}) ->
+        let buttons = React.functionComponent(fun (input: {| count: int; hub: StreamHubRef<Action,Stream.Action,Response,Stream.Response> |}) ->
             React.fragment [
                 Html.button [
                     prop.text "Stream"
                     prop.onClick <| fun _ -> 
                         promise {
-                            let stream = input.hub.current.stream Action.GetInts
+                            let stream = input.hub.current.stream Stream.Action.GenInts
                             stream.subscribe (
                                 {| closed = false
-                                   next = fun (msg: Response) -> 
+                                   next = fun (msg: Stream.Response) -> 
                                     match msg with
-                                    | Response.GetInts i ->
+                                    | Stream.Response.GetInts i ->
                                         JS.console.log(i)
-                                    | _ -> ()
                                    complete = fun () -> JS.console.log("Complete!")
                                    error = fun err -> JS.console.log(err) |}
                                 |> unbox
@@ -166,20 +160,16 @@ module App =
             let testing,setTesting = React.useState false
 
             let hub =
-                React.useSignalR<Action,Response>({
-                    config = 
-                        fun hub -> 
-                            hub.withUrl(Endpoints.Root)
-                                .withAutomaticReconnect()
-                                .configureLogging(LogLevel.Debug)
-
-                    onMsg =
-                        function
-                        | Response.Howdy -> JS.console.log("Howdy!")
-                        | Response.NewCount i -> setCount i
-                        | Response.RandomCharacter str -> setText str
-                        | _ -> ()
-                }, [| testing :> obj |])
+                React.useSignalR<Action,Stream.Action,Response,Stream.Response>((fun hub -> 
+                    hub.withUrl(Endpoints.Root)
+                        .withAutomaticReconnect()
+                        .configureLogging(LogLevel.Debug)
+                        .onMessage <|
+                            function
+                            | Response.Howdy -> JS.console.log("Howdy!")
+                            | Response.NewCount i -> setCount i
+                            | Response.RandomCharacter str -> setText str
+                ), [| testing :> obj |])
             
             React.useEffect(fun () ->
                 if count > 5 then setTesting true

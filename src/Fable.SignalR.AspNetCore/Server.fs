@@ -214,16 +214,6 @@ module FableHub =
             System.Func<System.IServiceProvider,StreamingFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>
                 (fun _ -> settings)
 
-    //let addUpdateWithStreamTransient update (s: IServiceCollection) =
-    //    s.AddTransient<'ClientApi -> StreamingFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> Task> <|
-    //        System.Func<System.IServiceProvider,'ClientApi -> StreamingFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> Task>
-    //            (fun _ -> update)
-
-    //let addStreamTransient stream (s: IServiceCollection) =
-    //    s.AddTransient<'ClientStreamApi -> StreamingFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IAsyncEnumerable<'ServerStreamApi>> <|
-    //        System.Func<System.IServiceProvider,'ClientStreamApi -> StreamingFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IAsyncEnumerable<'ServerStreamApi>>
-    //            (fun _ -> stream)
-
 [<RequireQualifiedAccess>]
 module SignalR =
     [<RequireQualifiedAccess>]

@@ -1,4 +1,0 @@
-﻿group Fable.SignalR.Server
-    Fable.Remoting.Json
-    FSharp.Core
-    Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson

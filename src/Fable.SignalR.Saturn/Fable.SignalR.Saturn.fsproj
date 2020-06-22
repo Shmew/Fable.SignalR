@@ -14,7 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fable.SignalR.AspNetCore\Fable.SignalR.AspNetCore.fsproj" />
-    <ProjectReference Include="..\Fable.SignalR.Server\Fable.SignalR.Server.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

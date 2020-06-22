@@ -26,17 +26,16 @@ module SignalRHub =
             |> string
             |> Response.RandomCharacter
             |> hubContext.Clients.Caller.Send
-        | _ -> failwith "bad"
 
     [<RequireQualifiedAccess>]
     module Stream =
         open FSharp.Control
 
-        let update (msg: Action) (hubContext: FableHub<Action,Response>) =
+        let update (msg: Stream.Action) (hubContext: FableHub<Action,Response>) =
             printfn "New stream msg: %A" msg
 
             match msg with
-            | Action.GetInts ->
+            | Stream.Action.GenInts ->
                 Response.Howdy
                 |> hubContext.Clients.Caller.Send
                 |> Async.AwaitTask |> Async.Start
@@ -44,7 +43,6 @@ module SignalRHub =
                     for i in [ 1 .. 100 ] do
                         do! Async.Sleep 100
                         printfn "%i" i
-                        yield Response.GetInts i
+                        yield Stream.Response.GetInts i
                 }
                 |> AsyncSeq.toAsyncEnum
-            | _ -> failwith "Invalid"

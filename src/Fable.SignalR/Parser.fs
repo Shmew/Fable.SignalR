@@ -73,15 +73,6 @@ module Parser =
             { ``type``: MessageType
               invocationId: string }
 
-        type HubMessage<'ClientApi,'ServerApi> =
-            U7<InvocationMessage<'ServerApi>, 
-               StreamItemMessage<'ClientApi>, 
-               CompletionMessage<'ClientApi>, 
-               StreamInvocationMessage<'ServerApi>, 
-               CancelInvocationMessage, 
-               PingMessage, 
-               CloseMessage>
-
     [<RequireQualifiedAccess>]
     module TextMessageFormat =
         let recordSeparatorChar = char 0x1e
@@ -101,31 +92,31 @@ module Parser =
         member _.version = 1.0
         member _.transferFormat = TransferFormat.Text
 
-        member _.writeMessage (message: HubMessage<'ClientApi,'ServerApi>) =
+        member _.writeMessage (message: HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
             TextMessageFormat.write(Json.stringify message)
             |> U2.Case1
 
         #if FABLE_COMPILER
-        member inline this.parseMessages<'ClientApi,'ServerApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
+        member inline this.parseMessages<'ClientStreamApi,'ServerApi,'ServerStreamApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
         #else
-        member this.parseMessages<'ClientApi,'ServerApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
+        member this.parseMessages<'ClientStreamApi,'ServerApi,'ServerStreamApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
         #endif
-            this.parseMsgs<'ClientApi,'ServerApi>(input, ?logger = logger)
+            this.parseMsgs<'ClientStreamApi,'ServerApi,'ServerStreamApi>(input, ?logger = logger)
 
-        member inline _.processMsg<'ClientApi,'ServerApi> (parsedRaw: Json, msgType: MessageType) =
+        member inline _.processMsg<'ClientStreamApi,'ServerApi,'ServerStreamApi> (parsedRaw: Json, msgType: MessageType) =
             match msgType with
             | MessageType.Invocation ->
                 Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<'ServerApi>> parsedRaw
                 |> Result.map (HubRecords.InvocationMessage.Validate >> unbox<InvocationMessage<'ServerApi>> >> U7.Case1)
             | MessageType.StreamItem -> 
-                Json.tryConvertFromJsonAs<HubRecords.StreamItemMessage<'ServerApi>> parsedRaw
-                |> Result.map (HubRecords.StreamItemMessage.Validate >> unbox<StreamItemMessage<'ServerApi>> >> U7.Case2)
+                Json.tryConvertFromJsonAs<HubRecords.StreamItemMessage<'ServerStreamApi>> parsedRaw
+                |> Result.map (HubRecords.StreamItemMessage.Validate >> unbox<StreamItemMessage<'ServerStreamApi>> >> U7.Case2)
             | MessageType.Completion -> 
                 Json.tryConvertFromJsonAs<HubRecords.CompletionMessage<'ServerApi>> parsedRaw
                 |> Result.map (HubRecords.CompletionMessage.Validate >> unbox<CompletionMessage<'ServerApi>> >> U7.Case3)
             | MessageType.StreamInvocation -> 
-                Json.tryConvertFromJsonAs<HubRecords.StreamInvocationMessage<'ClientApi>> parsedRaw
-                |> Result.map (unbox<StreamInvocationMessage<'ClientApi>> >> U7.Case4)
+                Json.tryConvertFromJsonAs<HubRecords.StreamInvocationMessage<'ClientStreamApi>> parsedRaw
+                |> Result.map (unbox<StreamInvocationMessage<'ClientStreamApi>> >> U7.Case4)
             | MessageType.CancelInvocation -> 
                 Json.tryConvertFromJsonAs<HubRecords.CancelInvocationMessage> parsedRaw
                 |> Result.map (unbox<CancelInvocationMessage> >> U7.Case5)
@@ -137,9 +128,9 @@ module Parser =
                 |> Result.map (unbox<CloseMessage> >> U7.Case7)
 
         #if FABLE_COMPILER
-        member inline this.parseMsgs<'ClientApi,'ServerApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
+        member inline this.parseMsgs<'ClientStreamApi,'ServerApi,'ServerStreamApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
         #else
-        member this.parseMsgs<'ClientApi,'ServerApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
+        member this.parseMsgs<'ClientStreamApi,'ServerApi,'ServerStreamApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
         #endif
             let logger =
                 match logger with
@@ -156,7 +147,7 @@ module Parser =
                     SimpleJson.readPath ["type"] parsedRaw
                     |> Option.map Json.convertFromJsonAs<MessageType>
                     |> Option.get
-                    |> fun msgType -> this.processMsg<'ClientApi,'ServerApi>(parsedRaw, msgType)
+                    |> fun msgType -> this.processMsg<'ClientStreamApi,'ServerApi,'ServerStreamApi>(parsedRaw, msgType)
                     |> function
                     | Ok msg -> Some msg
                     | Error e -> 
