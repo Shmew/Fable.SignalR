@@ -1,5 +1,8 @@
 ﻿namespace Fable.SignalR
 
+open Fable.Core
+open System.ComponentModel
+
 /// Represents a signal that can be monitored to 
 /// determine if a request has been aborted.
 type AbortSignal =
@@ -8,7 +11,7 @@ type AbortSignal =
 
     /// Set this to a handler that will be invoked 
     /// when the request is aborted.
-    abstract onabort: unit -> unit
+    abstract onAbort: (unit -> unit)
 
 [<RequireQualifiedAccess>]
 type LogLevel =
@@ -25,13 +28,16 @@ type ILogger =
     /// <summary>Called by the framework to emit a diagnostic message.</summary>
     /// <param name="logLevel">The severity level of the message.</param>
     /// <param name="message">The message.</param>
-    abstract log: logLevel: LogLevel * message: string -> unit
+    [<Emit("$0.log($1, $2)")>]
+    abstract log: logLevel: LogLevel -> message: string -> unit
 
 /// A logger that does nothing when log messages are sent to it.
 type NullLogger =
-    inherit ILogger
+    interface ILogger with
+        member this.log logLevel message = this.log logLevel message
 
-    abstract log: logLevel: LogLevel * message: string -> unit
+    [<Emit("$0.log($1, $2)")>]
+    member _.log (logLevel: LogLevel) (message: string) : unit = jsNative
 
 [<RequireQualifiedAccess>] 
 type TransportType =
@@ -46,45 +52,32 @@ type TransferFormat =
     | Binary = 2
 
 type RetryContext =
-    /// The number of consecutive failed tries so far.
-    abstract previousRetryCount: int
+    { /// The number of consecutive failed tries so far.
+      previousRetryCount: int
+      /// The amount of time in milliseconds spent retrying so far.
+      elapsedMilliseconds: int
+      /// The error that forced the upcoming retry.
+      retryReason: exn }
 
-    /// The amount of time in milliseconds spent retrying so far.
-    abstract elapsedMilliseconds: int
-
-    /// The error that forced the upcoming retry.
-    abstract retryReason: exn
-
-/// An abstraction that controls when the client attempts to reconnect and how many times it does so.
-type IRetryPolicy =
-    /// <summary>Called after the transport loses the connection.</summary>
-    /// <param name="retryContext">Details related to the retry event to help determine how long to wait for the next retry.</param>
-    abstract nextRetryDelayInMilliseconds: retryContext: RetryContext -> int option
-
-/// Defines the expected type for a receiver of results streamed by the server.
-type IStreamSubscriber<'T> =
-    /// A boolean that will be set by the {@link @microsoft/signalr.IStreamResult} when the stream is closed.
-    abstract closed: bool option with get, set
-
-    /// Called by the framework when a new item is available.
-    abstract next: value: 'T -> unit
-
-    /// Called by the framework when an error has occurred.
-    /// 
-    /// After this method is called, no additional methods on the IStreamSubscriber will be called.
-    abstract error: err: exn option -> unit
-
-    /// Called by the framework when the end of the stream is reached.
-    /// 
-    /// After this method is called, no additional methods on the IStreamSubscriber will be called.
-    abstract complete: unit -> unit
+/// Controls when the client attempts to reconnect and how many times it does so.
+type RetryPolicy =
+    { /// Called after the transport loses the connection.
+      ///
+      /// retryContext - Details related to the retry event to help determine how long to wait for the next retry.
+      nextRetryDelayInMilliseconds: RetryContext -> int option }
 
 /// An interface that allows an IStreamSubscriber to be disconnected from a stream.
-type ISubscription<'T> =
-    /// Disconnects the IStreamSubscriber associated with this subscription from the stream.
-    abstract dispose: unit -> unit
+type Subscription<'T> =
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
+    [<Emit("$0.dispose()")>]
+    member _.dispose' () : unit = jsNative
 
-/// Defines the result of a streaming hub method.
-type IStreamResult<'T> =
-    /// Attaches a IStreamSubscriber, which will be invoked when new items are available from the stream.
-    abstract subscribe: subscriber: IStreamSubscriber<'T> -> ISubscription<'T>
+type StreamSubscriber<'T> =
+    { next: 'T -> unit
+      error: exn option -> unit
+      complete: unit -> unit }
+
+type StreamResult<'T> =
+    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    [<Emit("$0.subscribe($1)")>]
+    member _.subscribe (subscriber: StreamSubscriber<'T>) : Subscription<'T> = jsNative

@@ -20,8 +20,8 @@ module Feliz =
                     { cancellationToken: Fable.React.IRefValue<System.Threading.CancellationToken>
                       invoke: 'ClientApi -> Async<'ServerApi> 
                       send: 'ClientApi -> unit
-                      streamFrom: 'ClientStreamFromApi -> IStreamResult<'ServerStreamApi>
-                      streamTo: HubInterfaces.Subject<'ClientStreamToApi> -> unit }
+                      streamFrom: 'ClientStreamFromApi -> StreamResult<'ServerStreamApi>
+                      streamTo: Subject<'ClientStreamToApi> -> unit }
 
                 type Config<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
                     HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
@@ -33,7 +33,7 @@ module Feliz =
                     { cancellationToken: Fable.React.IRefValue<System.Threading.CancellationToken>
                       invoke: 'ClientApi -> Async<'ServerApi> 
                       send: 'ClientApi -> unit
-                      streamFrom: 'ClientStreamApi -> IStreamResult<'ServerStreamApi> }
+                      streamFrom: 'ClientStreamApi -> StreamResult<'ServerStreamApi> }
 
                 type Config<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
                     HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi> 
@@ -45,27 +45,24 @@ module Feliz =
                     { cancellationToken: Fable.React.IRefValue<System.Threading.CancellationToken>
                       invoke: 'ClientApi -> Async<'ServerApi> 
                       send: 'ClientApi -> unit
-                      streamTo: HubInterfaces.Subject<'ClientStreamApi> -> unit }
+                      streamTo: Subject<'ClientStreamApi> -> unit }
 
                 type Config<'ClientApi,'ClientStreamApi,'ServerApi> = 
                     HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit> 
                         -> HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit>
 
-    type HubRef<'ClientApi,'ServerApi> = Fable.React.IRefValue<SignalR.Hub<'ClientApi,'ServerApi>>
+    type Hub<'ClientApi,'ServerApi> = Fable.React.IRefValue<SignalR.Hub<'ClientApi,'ServerApi>>
 
     [<RequireQualifiedAccess>]
-    module Stream =
-        module Both =
-            type HubRef<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
-                Fable.React.IRefValue<SignalR.Stream.Both.Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>
+    module StreamHub =
+        type Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
+            Fable.React.IRefValue<SignalR.Stream.Both.Hub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>
 
-        module From =
-            type HubRef<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
-                Fable.React.IRefValue<SignalR.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>
+        type ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
+            Fable.React.IRefValue<SignalR.Stream.From.Hub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>
 
-        module To =
-            type HubRef<'ClientApi,'ClientStreamApi,'ServerApi> = 
-                Fable.React.IRefValue<SignalR.Stream.To.Hub<'ClientApi,'ClientStreamApi,'ServerApi>>
+        type ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> = 
+            Fable.React.IRefValue<SignalR.Stream.To.Hub<'ClientApi,'ClientStreamApi,'ServerApi>>
 
     type React with
         static member inline useSignalR<'ClientApi,'ServerApi> (config: SignalR.Config<'ClientApi,'ServerApi>, ?dependencies: obj []) =
@@ -90,7 +87,7 @@ module Feliz =
             let invoke = React.useCallbackRef <| fun msg ->
                 connection.current.invoke msg
 
-            let hub : HubRef<'ClientApi,'ServerApi> = 
+            let hub : Hub<'ClientApi,'ServerApi> = 
                 React.useRef <|
                     { cancellationToken = token
                       invoke = invoke
@@ -126,7 +123,7 @@ module Feliz =
             let stream = React.useCallbackRef <| fun msg ->
                 connection.current.streamFrom msg
 
-            let hub : Stream.From.HubRef<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
+            let hub : StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
                 React.useRef <|
                     { cancellationToken = token
                       invoke = invoke
@@ -163,7 +160,7 @@ module Feliz =
             let stream = React.useCallbackRef <| fun msg ->
                 connection.current.streamToNow msg
 
-            let hub : Stream.To.HubRef<'ClientApi,'ClientStreamApi,'ServerApi> = 
+            let hub : StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> = 
                 React.useRef <|
                     { cancellationToken = token
                       invoke = invoke
@@ -204,7 +201,7 @@ module Feliz =
             let streamTo = React.useCallbackRef <| fun msg ->
                 connection.current.streamToNow msg
 
-            let hub : Stream.Both.HubRef<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
+            let hub : StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
                 React.useRef <|
                     { cancellationToken = token
                       invoke = invoke

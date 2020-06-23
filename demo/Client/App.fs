@@ -87,7 +87,7 @@ module App =
                 Html.div input.text
             ])
 
-        let buttons = React.functionComponent(fun (input: {| count: int; hub: HubRef<Action,Response> |}) ->
+        let buttons = React.functionComponent(fun (input: {| count: int; hub: Hub<Action,Response> |}) ->
             React.fragment [
                 Html.button [
                     prop.text "Testing"
@@ -131,23 +131,23 @@ module App =
                 Html.div input.text
             ])
 
-        let buttons = React.functionComponent(fun (input: {| count: int; hub: Stream.From.HubRef<Action,Stream.Action,Response,Stream.Response> |}) ->
+        let buttons = React.functionComponent(fun (input: {| count: int; hub: StreamHub.ServerToClient<Action,Stream.Action,Response,Stream.Response> |}) ->
+            let subscriber = 
+                { next = fun (msg: Stream.Response) -> 
+                    match msg with
+                    | Stream.Response.GetInts i ->
+                        JS.console.log(i)
+                  complete = fun () -> JS.console.log("Complete!")
+                  error = fun err -> JS.console.log(err) }
+
             React.fragment [
                 Html.button [
                     prop.text "Stream"
                     prop.onClick <| fun _ -> 
                         promise {
                             let stream = input.hub.current.streamFrom Stream.Action.GenInts
-                            stream.subscribe (
-                                {| closed = false
-                                   next = fun (msg: Stream.Response) -> 
-                                    match msg with
-                                    | Stream.Response.GetInts i ->
-                                        JS.console.log(i)
-                                   complete = fun () -> JS.console.log("Complete!")
-                                   error = fun err -> JS.console.log(err) |}
-                                |> unbox
-                            ) |> unbox
+                            stream.subscribe(subscriber)
+                            |> ignore
                         }
                         |> Promise.start
                 ]
@@ -188,7 +188,5 @@ module App =
             Hook.render()
             StreamingHook.render()
         ])
-
-
 
     ReactDOM.render(render, Browser.Dom.document.getElementById "app")

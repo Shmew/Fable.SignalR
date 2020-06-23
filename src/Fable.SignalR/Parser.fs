@@ -87,7 +87,7 @@ module Parser =
                 arr.[0..(arr.Length-2)]
             else failwith "Message is incomplete."
 
-    type SimpleJsonProtocol () =
+    type JsonProtocol () =
         member _.name = "json"
         member _.version = 1.0
         member _.transferFormat = TransferFormat.Text
@@ -151,7 +151,8 @@ module Parser =
                     |> function
                     | Ok msg -> Some msg
                     | Error e -> 
-                        logger.log(LogLevel.Information, sprintf "Unknown message type: %s" e)
+                        sprintf "Unknown message type: %s" e
+                        |> logger.log LogLevel.Information
                         None)
             | _ -> failwith "Invalid input for JSON hub protocol. Expected a string."
             |> RArray
