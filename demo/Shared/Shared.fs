@@ -14,7 +14,7 @@ module SignalRHub =
         | NewCount of int
         | RandomCharacter of string
 
-    module Stream =
+    module StreamFrom =
         [<RequireQualifiedAccess>]
         type Action =
             | GenInts
@@ -22,6 +22,11 @@ module SignalRHub =
         [<RequireQualifiedAccess>]
         type Response =
             | GetInts of int
+
+    module StreamTo =
+        [<RequireQualifiedAccess>]
+        type Action =
+            | GiveInt of int
 
 module Endpoints =
     let port = 8080us

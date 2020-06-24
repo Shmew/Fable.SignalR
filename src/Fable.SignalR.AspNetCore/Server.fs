@@ -102,6 +102,11 @@ and StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Serve
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
+[<RequireQualifiedAccess>]
+module internal Task =
+    let toGen (f: 'a -> 'b -> #Task) =
+        fun a b -> f a b :> Task
+
 [<EditorBrowsable(EditorBrowsableState.Never);RequireQualifiedAccess>]
 module FableHub =
     [<RequireQualifiedAccess>]
@@ -521,3 +526,6 @@ module SignalR =
             this
 
         member _.Build () = state
+
+[<assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Fable.SignalR.Saturn")>]
+do ()

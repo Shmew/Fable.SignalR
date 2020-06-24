@@ -86,13 +86,11 @@ type StreamSubscriber<'T> =
       /// Completes the stream.
       complete: unit -> unit }
 
-    interface IStreamSubscriber<'T> with
-        member this.next (value: 'T) = this.next(value)
-        member this.error (error: exn option) = this.error(error)
-        member this.complete () = this.complete()
-
 [<Erase>]
 type StreamResult<'T> =
-    /// Attaches aa IStreamSubscriber, which will be invoked when new items are available from the stream.
+    /// Attaches an IStreamSubscriber, which will be invoked when new items are available from the stream.
     [<Emit("$0.subscribe($1)")>]
     member _.subscribe (subscriber: IStreamSubscriber<'T>) : ISubscription = jsNative
+    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    [<Emit("$0.subscribe($1)")>]
+    member _.subscribe (subscriber: StreamSubscriber<'T>) : ISubscription = jsNative

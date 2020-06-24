@@ -12,7 +12,7 @@ module internal Bindings =
         [<Emit("$0.NullLogger.instance")>]
         member _.NullLogger () : NullLogger = jsNative
 
-        [<Emit("$0.Subject()")>]
+        [<Emit("new $0.Subject()")>]
         member _.Subject<'T> () : Subject<'T> = jsNative
 
     let signalR : SignalR = importAll "@microsoft/signalr"

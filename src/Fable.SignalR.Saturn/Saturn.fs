@@ -41,8 +41,11 @@ module SignalRExtension =
                 State.Endpoint.Value value
     
             [<CustomOperation("update")>]
-            member _.Update (State.Endpoint.Value state, f) = 
-                let settings : SignalR.Settings<_,_> =
+            member _.Update (State.Endpoint.Value state, f: 'a -> FableHub<'a,'d> -> #Task) = 
+
+                let f = (fun msg hub -> (f msg hub) :> Task)
+
+                let settings : SignalR.Settings< ^a, ^d> =
                     { EndpointPattern = state
                       Update = f
                       Config = None }
@@ -50,7 +53,8 @@ module SignalRExtension =
                 State.Settings.NoStream settings
 
             [<CustomOperation("stream_from")>]
-            member _.StreamFrom (state: State.Settings<_,_,_,_,_>, f) = 
+            member _.StreamFrom (state: State.Settings<_,_,_,_,_>, f) =
+
                 match state with
                 | State.HasStreamBoth(settings,_,streamTo) -> State.Settings.HasStreamBoth(settings, f, streamTo)
                 | State.HasStreamFrom(settings,_) -> State.Settings.HasStreamFrom(settings, f)
@@ -58,9 +62,12 @@ module SignalRExtension =
                 | State.NoStream(settings) -> State.Settings.HasStreamFrom(settings, f)
 
             [<CustomOperation("stream_to")>]
-            member _.StreamTo (state: State.Settings<_,_,_,_,_>, f) = 
+            member _.StreamTo(state: State.Settings<_,_,_,_,_>, f: IAsyncEnumerable<_> -> FableHub<_,_> -> #Task) =
+
+                let f = (fun ae hub -> (f ae hub) :> Task)
+
                 match state with
-                | State.HasStreamBoth(settings,streamFrom,streamTo) -> State.Settings.HasStreamBoth(settings, streamFrom, f)
+                | State.HasStreamBoth(settings,streamFrom,_) -> State.Settings.HasStreamBoth(settings, streamFrom, f)
                 | State.HasStreamFrom(settings,streamFrom) -> State.Settings.HasStreamBoth(settings, streamFrom, f)
                 | State.HasStreamTo(settings,_) -> State.Settings.HasStreamTo(settings, f)
                 | State.NoStream(settings) -> State.Settings.HasStreamTo(settings, f)

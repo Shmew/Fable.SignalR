@@ -170,6 +170,7 @@ type ISubject<'T> =
     abstract complete: unit -> unit
 
     abstract subscribe: observer: IStreamSubscriber<'T> -> ISubscription
+    abstract subscribe: observer: StreamSubscriber<'T> -> ISubscription
 
 /// Stream implementation to stream items to the server.
 type Subject<'T> =
@@ -178,6 +179,7 @@ type Subject<'T> =
         member this.error (err: exn) = this.error(err)
         member this.complete () = this.complete()
         member this.subscribe (observer: IStreamSubscriber<'T>) = this.subscribe(observer)
+        member this.subscribe (observer: StreamSubscriber<'T>) = this.subscribe(observer)
 
     [<Emit("$0.next($1)")>]
     member _.next (item: 'T) : unit = jsNative
@@ -187,6 +189,8 @@ type Subject<'T> =
     member _.complete () : unit = jsNative
     [<Emit("$0.subscribe($1)")>]
     member _.subscribe (observer: IStreamSubscriber<'T>) : ISubscription = jsNative
+    [<Emit("$0.subscribe($1)")>]
+    member _.subscribe (observer: StreamSubscriber<'T>) : ISubscription = jsNative
 
 [<EditorBrowsable(EditorBrowsableState.Never)>] 
 type HubRegistration =
@@ -207,12 +211,290 @@ type ConnectionState =
     | Disconnecting
     | Reconnecting
 
+type Hub<'ClientApi,'ServerApi> =
+    [<Emit("$0.baseUrl()")>]
+    member _.baseUrl () : string = jsNative
+
+    [<Emit("$0.connectionId()")>]
+    member _.connectionId () : string option = jsNative
+    
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
+    [<Emit("$0.invoke($1...)")>]
+    member _.invoke' (methodName: string, [<ParamArray>] args: obj) : JS.Promise<'ServerApi> = jsNative
+    
+    /// Invokes a hub method on the server.
+    /// 
+    /// The async returned by this method resolves when the server indicates it has finished invoking the method. When it finishes, 
+    /// the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+    /// resolving the async call.
+    member inline this.invoke (msg: 'ClientApi) : Async<'ServerApi> = 
+        this.invoke'("Send", msg) |> Async.AwaitPromise
+
+    /// Default interval at which to ping the server.
+    /// 
+    /// The default value is 15,000 milliseconds (15 seconds).
+    /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
+    [<Emit("$0.keepAliveIntervalInMilliseconds")>]
+    member _.keepAliveIntervalInMilliseconds : int = jsNative
+
+    [<Emit("$0.send($1...)")>]
+    member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
+
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    /// 
+    /// The async returned by this method resolves when the client has sent the invocation to the server. The server may still
+    /// be processing the invocation.
+    member inline this.send (msg: 'ClientApi) = 
+        this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
+
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    member inline this.sendNow (msg: 'ClientApi) = 
+        this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
+        this.send'("Send", ResizeArray [| msg :> obj |]) 
+        |> Async.AwaitPromise 
+        |> fun p -> Async.StartImmediate(p, cancellationToken)
+    
+    /// The server timeout in milliseconds.
+    /// 
+    /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
+    /// The default timeout value is 30,000 milliseconds (30 seconds).
+    [<Emit("$0.serverTimeoutInMilliseconds")>]
+    member _.serverTimeoutInMilliseconds : int = jsNative
+
+    /// Indicates the state of the HubConnection to the server.
+    [<Emit("$0.state()")>]
+    member _.state () : ConnectionState = jsNative
+    
+[<RequireQualifiedAccess>]
+module StreamHub =
+    type ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> = 
+        [<Emit("$0.baseUrl()")>]
+        member _.baseUrl () : string = jsNative
+
+        [<Emit("$0.connectionId()")>]
+        member _.connectionId () : string option = jsNative
+        
+        [<EditorBrowsable(EditorBrowsableState.Never)>]
+        [<Emit("$0.invoke($1...)")>]
+        member _.invoke' (methodName: string, [<ParamArray>] args: obj) : JS.Promise<'ServerApi> = jsNative
+        
+        /// Invokes a hub method on the server.
+        /// 
+        /// The async returned by this method resolves when the server indicates it has finished invoking the method. When it finishes, 
+        /// the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+        /// resolving the async call.
+        member inline this.invoke (msg: 'ClientApi) : Async<'ServerApi> = 
+            this.invoke'("Send", msg) |> Async.AwaitPromise
+
+        /// Default interval at which to ping the server.
+        /// 
+        /// The default value is 15,000 milliseconds (15 seconds).
+        /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
+        [<Emit("$0.keepAliveIntervalInMilliseconds")>]
+        member _.keepAliveIntervalInMilliseconds : int = jsNative
+
+        [<Emit("$0.send($1...)")>]
+        member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
+
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// 
+        /// The async returned by this method resolves when the client has sent the invocation to the server. The server may still
+        /// be processing the invocation.
+        member inline this.send (msg: 'ClientApi) = 
+            this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
+
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        member inline this.sendNow (msg: 'ClientApi) = 
+            this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
+            this.send'("Send", ResizeArray [| msg :> obj |]) 
+            |> Async.AwaitPromise 
+            |> fun p -> Async.StartImmediate(p, cancellationToken)
+        
+        /// The server timeout in milliseconds.
+        /// 
+        /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
+        /// The default timeout value is 30,000 milliseconds (30 seconds).
+        [<Emit("$0.serverTimeoutInMilliseconds")>]
+        member _.serverTimeoutInMilliseconds : int = jsNative
+
+        /// Indicates the state of the HubConnection to the server.
+        [<Emit("$0.state()")>]
+        member _.state () : ConnectionState = jsNative
+
+        [<EditorBrowsable(EditorBrowsableState.Never)>]
+        [<Emit("$0.stream($1...)")>]
+        member _.stream (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : StreamResult<'ServerStreamApi> = jsNative
+
+        [<Emit("$0.send($1, $2)")>]
+        member _.streamTo' (methodName: string, subscriber: ISubject<'ClientStreamToApi>) : JS.Promise<unit> = jsNative
+
+        /// Returns an async that when invoked, starts streaming to the hub.
+        member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = 
+            this.streamTo'("StreamTo", subject) |> Async.AwaitPromise
+
+        /// Streams to the hub immediately.
+        member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
+            this.streamTo'("StreamTo", subject)  |> Promise.start
+        /// Streams to the hub immediately.
+        member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>, cancellationToken: System.Threading.CancellationToken) =
+            this.streamTo'("StreamTo", subject)
+            |> Async.AwaitPromise 
+            |> fun p -> Async.StartImmediate(p, cancellationToken)
+         
+    type ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
+        [<Emit("$0.baseUrl()")>]
+        member _.baseUrl () : string = jsNative
+
+        [<Emit("$0.connectionId()")>]
+        member _.connectionId () : string option = jsNative
+        
+        [<EditorBrowsable(EditorBrowsableState.Never)>]
+        [<Emit("$0.invoke($1...)")>]
+        member _.invoke' (methodName: string, [<ParamArray>] args: obj) : JS.Promise<'ServerApi> = jsNative
+        
+        /// Invokes a hub method on the server.
+        /// 
+        /// The async returned by this method resolves when the server indicates it has finished invoking the method. When it finishes, 
+        /// the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+        /// resolving the async call.
+        member inline this.invoke (msg: 'ClientApi) : Async<'ServerApi> = 
+            this.invoke'("Send", msg) |> Async.AwaitPromise
+
+        /// Default interval at which to ping the server.
+        /// 
+        /// The default value is 15,000 milliseconds (15 seconds).
+        /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
+        [<Emit("$0.keepAliveIntervalInMilliseconds")>]
+        member _.keepAliveIntervalInMilliseconds : int = jsNative
+
+        [<Emit("$0.send($1...)")>]
+        member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
+
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// 
+        /// The async returned by this method resolves when the client has sent the invocation to the server. The server may still
+        /// be processing the invocation.
+        member inline this.send (msg: 'ClientApi) = 
+            this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
+
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        member inline this.sendNow (msg: 'ClientApi) = 
+            this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
+            this.send'("Send", ResizeArray [| msg :> obj |]) 
+            |> Async.AwaitPromise 
+            |> fun p -> Async.StartImmediate(p, cancellationToken)
+        
+        /// The server timeout in milliseconds.
+        /// 
+        /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
+        /// The default timeout value is 30,000 milliseconds (30 seconds).
+        [<Emit("$0.serverTimeoutInMilliseconds")>]
+        member _.serverTimeoutInMilliseconds : int = jsNative
+
+        /// Indicates the state of the HubConnection to the server.
+        [<Emit("$0.state()")>]
+        member _.state () : ConnectionState = jsNative
+
+        [<EditorBrowsable(EditorBrowsableState.Never)>]
+        [<Emit("$0.stream($1...)")>]
+        member _.stream (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : StreamResult<'ServerStreamApi> = jsNative
+
+        /// Streams from the hub.
+        member inline this.streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi> = 
+            this.stream("StreamFrom", ResizeArray [| msg :> obj |])
+
+    type Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
+        [<Emit("$0.baseUrl()")>]
+        member _.baseUrl () : string = jsNative
+
+        [<Emit("$0.connectionId()")>]
+        member _.connectionId () : string option = jsNative
+        
+        [<EditorBrowsable(EditorBrowsableState.Never)>]
+        [<Emit("$0.invoke($1...)")>]
+        member _.invoke' (methodName: string, [<ParamArray>] args: obj) : JS.Promise<'ServerApi> = jsNative
+        
+        /// Invokes a hub method on the server.
+        /// 
+        /// The async returned by this method resolves when the server indicates it has finished invoking the method. When it finishes, 
+        /// the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+        /// resolving the async call.
+        member inline this.invoke (msg: 'ClientApi) : Async<'ServerApi> = 
+            this.invoke'("Send", msg) |> Async.AwaitPromise
+
+        /// Default interval at which to ping the server.
+        /// 
+        /// The default value is 15,000 milliseconds (15 seconds).
+        /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
+        [<Emit("$0.keepAliveIntervalInMilliseconds")>]
+        member _.keepAliveIntervalInMilliseconds : int = jsNative
+
+        [<Emit("$0.send($1...)")>]
+        member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
+
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// 
+        /// The async returned by this method resolves when the client has sent the invocation to the server. The server may still
+        /// be processing the invocation.
+        member inline this.send (msg: 'ClientApi) = 
+            this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
+
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        member inline this.sendNow (msg: 'ClientApi) = 
+            this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
+            this.send'("Send", ResizeArray [| msg :> obj |]) 
+            |> Async.AwaitPromise 
+            |> fun p -> Async.StartImmediate(p, cancellationToken)
+        
+        /// The server timeout in milliseconds.
+        /// 
+        /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
+        /// The default timeout value is 30,000 milliseconds (30 seconds).
+        [<Emit("$0.serverTimeoutInMilliseconds")>]
+        member _.serverTimeoutInMilliseconds : int = jsNative
+
+        /// Indicates the state of the HubConnection to the server.
+        [<Emit("$0.state()")>]
+        member _.state () : ConnectionState = jsNative
+
+        [<EditorBrowsable(EditorBrowsableState.Never)>]
+        [<Emit("$0.stream($1...)")>]
+        member _.stream (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : StreamResult<'ServerStreamApi> = jsNative
+
+        /// Streams from the hub.
+        member inline this.streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi> = 
+            this.stream("StreamFrom", ResizeArray [| msg :> obj |])
+        
+        [<Emit("$0.send($1, $2)")>]
+        member _.streamTo' (methodName: string, subscriber: ISubject<'ClientStreamToApi>) : JS.Promise<unit> = jsNative
+
+        /// Returns an async that when invoked, starts streaming to the hub.
+        member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = 
+            this.streamTo'("StreamTo", subject) |> Async.AwaitPromise
+
+        /// Streams to the hub immediately.
+        member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
+            this.streamTo'("StreamTo", subject)  |> Promise.start
+        /// Streams to the hub immediately.
+        member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>, cancellationToken: System.Threading.CancellationToken) =
+            this.streamTo'("StreamTo", subject)
+            |> Async.AwaitPromise 
+            |> fun p -> Async.StartImmediate(p, cancellationToken)
+
 type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     interface HubRegistration with
         member this.onClose handler = this.onClose handler
         member this.onReconnected handler = this.onReconnected handler
         member this.onReconnecting handler = this.onReconnecting handler
-    
+
     [<Emit("$0.baseUrl()")>]
     member _.baseUrl () : string = jsNative
 
@@ -223,12 +505,13 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     [<Emit("$0.invoke($1...)")>]
     member _.invoke' (methodName: string, [<ParamArray>] args: obj) : JS.Promise<'ServerApi> = jsNative
 
-    /// Invokes a hub method on the server using the specified name and arguments.
+    /// Invokes a hub method on the server.
     /// 
-    /// The Promise returned by this method resolves when the server indicates it has finished invoking the method. When the promise
-    /// resolves, the server has finished invoking the method. If the server method returns a result, it is produced as the result of
-    /// resolving the Promise.
-    member inline this.invoke (msg: 'ClientApi) : Async<'ServerApi> = this.invoke'("Send", msg) |> Async.AwaitPromise
+    /// The async returned by this method resolves when the server indicates it has finished invoking the method. When it finishes, 
+    /// the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+    /// resolving the async call.
+    member inline this.invoke (msg: 'ClientApi) : Async<'ServerApi> = 
+        this.invoke'("Send", msg) |> Async.AwaitPromise
     
     /// Default interval at which to ping the server.
     /// 
@@ -256,7 +539,8 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member _.onClose (callback: (exn option -> unit)) : unit = jsNative
 
     /// Registers a handler that will be invoked when the hub method with the specified method name is invoked.
-    member inline this.onMsg (callback: 'ServerApi -> unit) = this.on<'ServerApi>("Send", callback)
+    member inline this.onMsg (callback: 'ServerApi -> unit) = 
+        this.on<'ServerApi>("Send", callback)
     
     /// Registers a handler that will be invoked when the connection starts reconnecting.
     [<Emit("$0.onreconnecting($1)")>]
@@ -277,17 +561,21 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     [<Emit("$0.send($1...)")>]
     member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
 
-    /// Invokes a hub method on the server using the specified name and arguments. Does not wait for a response from the receiver.
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
     /// 
-    /// The Promise returned by this method resolves when the client has sent the invocation to the server. The server may still
+    /// The async returned by this method resolves when the client has sent the invocation to the server. The server may still
     /// be processing the invocation.
-    member inline this.send (msg: 'ClientApi) = this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
+    member inline this.send (msg: 'ClientApi) = 
+        this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
 
-    /// Invokes a hub method on the server using the specified name and arguments. Does not wait for a response from the receiver.
-    /// 
-    /// The Promise returned by this method resolves when the client has sent the invocation to the server. The server may still
-    /// be processing the invocation.
-    member inline this.sendNow (msg: 'ClientApi) = this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    member inline this.sendNow (msg: 'ClientApi) = 
+        this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
+        this.send'("Send", ResizeArray [| msg :> obj |]) 
+        |> Async.AwaitPromise 
+        |> fun p -> Async.StartImmediate(p, cancellationToken)
 
     /// The server timeout in milliseconds.
     /// 
@@ -300,10 +588,16 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     [<Emit("$0.start()")>]
     member _.startAsPromise () : JS.Promise<unit> = jsNative
     
+    /// Starts the connection.
     member inline this.start () = this.startAsPromise() |> Async.AwaitPromise
 
     /// Starts the connection immediately.
     member inline this.startNow () = this.startAsPromise() |> Promise.start
+    /// Starts the connection immediately.
+    member inline this.startNow (cancellationToken: System.Threading.CancellationToken) = 
+        this.startAsPromise() 
+        |> Async.AwaitPromise 
+        |> fun p -> Async.StartImmediate(p, cancellationToken)
 
     /// Indicates the state of the HubConnection to the server.
     [<Emit("$0.state()")>]
@@ -323,13 +617,24 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member _.stream (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : StreamResult<'ServerStreamApi> = jsNative
 
     /// Streams from the hub.
-    member inline this.streamFrom (msg: 'ClientStreamFromApi) = this.stream("StreamFrom", ResizeArray [| msg :> obj |])
+    member inline this.streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi> = 
+        this.stream("StreamFrom", ResizeArray [| msg :> obj |])
     
-    /// Returns an async that when invoked, starts streaming to the hub.
-    member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = this.send'("StreamTo", ResizeArray [| subject :> obj |]) |> Async.AwaitPromise
+    [<Emit("$0.send($1, $2)")>]
+    member _.streamTo' (methodName: string, subscriber: ISubject<'ClientStreamToApi>) : JS.Promise<unit> = jsNative
 
-    /// Streams to the hub.
-    member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>) = this.send'("StreamTo", ResizeArray [| subject :> obj |]) |> Promise.start
+    /// Returns an async that when invoked, starts streaming to the hub.
+    member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo'("StreamTo", subject) |> Async.AwaitPromise
+
+    /// Streams to the hub immediately.
+    member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo'("StreamTo", subject)  |> Promise.start
+    /// Streams to the hub immediately.
+    member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>, cancellationToken: System.Threading.CancellationToken) =
+        this.streamTo'("StreamTo", subject)
+        |> Async.AwaitPromise 
+        |> fun p -> Async.StartImmediate(p, cancellationToken)
     
 type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
     abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ServerApi>

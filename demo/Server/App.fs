@@ -3,7 +3,6 @@ namespace SignalRApp
 module App =
     open Fable.SignalR
     open Giraffe.ResponseWriters
-    open FSharp.Control.Tasks.V2
     open Saturn
     open System
 
@@ -16,7 +15,8 @@ module App =
                         configure_signalr {
                             endpoint Endpoints.Root
                             update SignalRHub.update
-                            stream_from SignalRHub.Stream.update
+                            stream_from SignalRHub.Stream.sendToClient
+                            stream_to SignalRHub.Stream.getFromClient
                         }
                     )
                     error_handler (fun e log -> text e.Message)
