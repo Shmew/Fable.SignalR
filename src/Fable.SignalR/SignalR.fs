@@ -62,10 +62,12 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         hub <- hub.withAutomaticReconnect(reconnectPolicy)
         this
 
+    /// Configures the HubConnection to callback when a new message is recieved.
     member this.onMessage (handler: 'ServerApi -> unit) = 
         onMsg <- Some handler
         this
 
+    /// Configures the HubConnection to callback for certain conditions are met.
     member this.addHandlers (handler: HubRegistration -> unit) =
         handlers <- Some handler
         this
@@ -96,6 +98,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
 
 [<Erase>]
 type SignalR =
+    /// Starts a connection to a SignalR hub.
     #if FABLE_COMPILER
     static member inline connect<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
     #else
@@ -108,4 +111,8 @@ type SignalR =
         |> config 
         |> fun hubBuilder -> hubBuilder.build()
 
+    /// Gets an instance of the NullLogger.
     static member inline NullLogger () = Bindings.signalR.NullLogger()
+
+    /// Creates a new stream implementation to stream items to the server.
+    static member inline Subject<'T> () = Bindings.signalR.Subject<'T>()

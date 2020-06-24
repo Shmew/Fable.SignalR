@@ -7,8 +7,12 @@ module internal Bindings =
     [<Erase>]
     type SignalR =
         [<Emit("new $0.HubConnectionBuilder()")>]
-        member inline _.HubConnectionBuilder () : IHubConnectionBuilder<'ClientApi,'ServerApi> = jsNative
+        member _.HubConnectionBuilder () : IHubConnectionBuilder<'ClientApi,'ServerApi> = jsNative
+
         [<Emit("$0.NullLogger.instance")>]
-        member inline _.NullLogger () : NullLogger = jsNative
+        member _.NullLogger () : NullLogger = jsNative
+
+        [<Emit("$0.Subject()")>]
+        member _.Subject<'T> () : Subject<'T> = jsNative
 
     let signalR : SignalR = importAll "@microsoft/signalr"

@@ -1,7 +1,6 @@
 ﻿namespace Fable.SignalR
 
 open Fable.Core
-open System.ComponentModel
 
 /// Represents a signal that can be monitored to 
 /// determine if a request has been aborted.
@@ -32,6 +31,7 @@ type ILogger =
     abstract log: logLevel: LogLevel -> message: string -> unit
 
 /// A logger that does nothing when log messages are sent to it.
+[<Erase>]
 type NullLogger =
     interface ILogger with
         member this.log logLevel message = this.log logLevel message
@@ -66,18 +66,33 @@ type RetryPolicy =
       /// retryContext - Details related to the retry event to help determine how long to wait for the next retry.
       nextRetryDelayInMilliseconds: RetryContext -> int option }
 
-/// An interface that allows an IStreamSubscriber to be disconnected from a stream.
-type Subscription<'T> =
-    [<EditorBrowsable(EditorBrowsableState.Never)>]
-    [<Emit("$0.dispose()")>]
-    member _.dispose' () : unit = jsNative
+/// an interface that allows an IStreamsubscriber to be disconnected from a stream.
+type ISubscription =
+    abstract dispose: unit -> unit
+
+type IStreamSubscriber<'T> =
+    /// Sends a new item to the server.
+    abstract next: value: 'T -> unit
+    /// Sends an error to the server.
+    abstract error: exn option -> unit
+    /// Completes the stream.
+    abstract complete: unit -> unit
 
 type StreamSubscriber<'T> =
-    { next: 'T -> unit
+    { /// Sends a new item to the server.
+      next: 'T -> unit
+      /// Sends an error to the server.
       error: exn option -> unit
+      /// Completes the stream.
       complete: unit -> unit }
 
+    interface IStreamSubscriber<'T> with
+        member this.next (value: 'T) = this.next(value)
+        member this.error (error: exn option) = this.error(error)
+        member this.complete () = this.complete()
+
+[<Erase>]
 type StreamResult<'T> =
-    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    /// Attaches aa IStreamSubscriber, which will be invoked when new items are available from the stream.
     [<Emit("$0.subscribe($1)")>]
-    member _.subscribe (subscriber: StreamSubscriber<'T>) : Subscription<'T> = jsNative
+    member _.subscribe (subscriber: IStreamSubscriber<'T>) : ISubscription = jsNative

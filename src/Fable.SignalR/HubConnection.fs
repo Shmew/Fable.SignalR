@@ -162,15 +162,31 @@ type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
     /// If IHubProtocol.transferFormat is 'Text', the result of this method will be a string, otherwise it will be an ArrayBuffer.
     abstract writeMessage: message: Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> U2<string, JS.ArrayBuffer>
 
-/// Stream implementation to stream items to the server.
-type Subject<'T> =
+type ISubject<'T> =
     abstract next: item: 'T -> unit
 
-    abstract error: err: exn option -> unit
+    abstract error: err: exn -> unit
 
     abstract complete: unit -> unit
 
-    abstract subscribe: observer: StreamSubscriber<'T> -> Subscription<'T>
+    abstract subscribe: observer: IStreamSubscriber<'T> -> ISubscription
+
+/// Stream implementation to stream items to the server.
+type Subject<'T> =
+    interface ISubject<'T> with
+        member this.next (item: 'T) = this.next(item)
+        member this.error (err: exn) = this.error(err)
+        member this.complete () = this.complete()
+        member this.subscribe (observer: IStreamSubscriber<'T>) = this.subscribe(observer)
+
+    [<Emit("$0.next($1)")>]
+    member _.next (item: 'T) : unit = jsNative
+    [<Emit("$0.error($1)")>]
+    member _.error (err: exn) : unit = jsNative
+    [<Emit("$0.complete()")>]
+    member _.complete () : unit = jsNative
+    [<Emit("$0.subscribe($1)")>]
+    member _.subscribe (observer: IStreamSubscriber<'T>) : ISubscription = jsNative
 
 [<EditorBrowsable(EditorBrowsableState.Never)>] 
 type HubRegistration =
@@ -202,7 +218,8 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     [<Emit("$0.connectionId()")>]
     member _.connectionId () : string option = jsNative
-
+    
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
     [<Emit("$0.invoke($1...)")>]
     member _.invoke' (methodName: string, [<ParamArray>] args: obj) : JS.Promise<'ServerApi> = jsNative
 
@@ -249,9 +266,11 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     [<Emit("$0.onreconnected($1)")>]
     member _.onReconnected (callback: (string option -> unit)) : unit = jsNative
 
+    /// Callback when streaming from the server is started.
     member inline this.onStreamFrom (callback: StreamResult<'ServerStreamApi> -> unit) = 
         this.on<StreamResult<'ServerStreamApi>>("StreamFrom", callback)
     
+    /// Callback when streaming to the server is started.
     member inline this.onStreamTo (callback: unit -> unit) = 
         this.on<unit>("StreamTo", callback)
 
@@ -288,7 +307,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     /// Indicates the state of the HubConnection to the server.
     [<Emit("$0.state()")>]
-    member _.state () = jsNative
+    member _.state () : ConnectionState = jsNative
 
     /// Stops the connection.
     [<Emit("$0.stop()")>]
@@ -304,13 +323,13 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member _.stream (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : StreamResult<'ServerStreamApi> = jsNative
 
     /// Streams from the hub.
-    member inline this.streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi> = this.stream("StreamFrom", ResizeArray [| msg :> obj |])
+    member inline this.streamFrom (msg: 'ClientStreamFromApi) = this.stream("StreamFrom", ResizeArray [| msg :> obj |])
     
-    /// Streams to the hub.
-    member inline this.streamTo (subject: Subject<'ClientStreamToApi>) = this.send'("StreamTo", ResizeArray [| subject :> obj |]) |> Async.AwaitPromise
+    /// Returns an async that when invoked, starts streaming to the hub.
+    member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = this.send'("StreamTo", ResizeArray [| subject :> obj |]) |> Async.AwaitPromise
 
-    /// Streams to the hub and starts the computation.
-    member inline this.streamToNow (subject: Subject<'ClientStreamToApi>) = this.send'("StreamTo", ResizeArray [| subject :> obj |]) |> Promise.start
+    /// Streams to the hub.
+    member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>) = this.send'("StreamTo", ResizeArray [| subject :> obj |]) |> Promise.start
     
 type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
     abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ServerApi>
