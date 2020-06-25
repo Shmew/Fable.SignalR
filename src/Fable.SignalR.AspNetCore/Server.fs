@@ -18,8 +18,7 @@ type FableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi 
     abstract Send : 'ClientApi -> Task
     abstract Dispose : unit -> unit
 
-[<EditorBrowsable(EditorBrowsableState.Never)>]
-type NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
+type internal NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
     (updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task) =
     
     inherit Hub<IFableHubCallerClients<'ServerApi>>()
@@ -33,14 +32,13 @@ type NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'Serv
 
     member this.Send msg = updater msg this
 
-[<EditorBrowsable(EditorBrowsableState.Never)>]
-type StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+type internal StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
       StreamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi> }
 
-and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+and internal StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct>
     (settings: StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
         
@@ -56,13 +54,13 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientAp
     member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
 
-type StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi
+type internal StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
       StreamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task }
 
-and StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
+and internal StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
     when 'ClientApi : not struct and 'ServerApi : not struct>
     (settings: StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi>) =
         
@@ -78,14 +76,14 @@ and StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
     member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
-type StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+type internal StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task }
 
-and StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+and internal StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct>
     (settings: StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
         
@@ -107,11 +105,10 @@ module internal Task =
     let toGen (f: 'a -> 'b -> #Task) =
         fun a b -> f a b :> Task
 
-[<EditorBrowsable(EditorBrowsableState.Never);RequireQualifiedAccess>]
-module FableHub =
-    [<RequireQualifiedAccess>]
+[<RequireQualifiedAccess>]
+module internal FableHub =
     module OnConnected =
-        type internal IOverride<'ClientApi,'ServerApi
+        type IOverride<'ClientApi,'ServerApi
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -124,7 +121,7 @@ module FableHub =
     
     type OnConnected<'ClientApi,'ServerApi
         when 'ClientApi : not struct and 'ServerApi : not struct> 
-        internal (settings: OnConnected.IOverride<'ClientApi,'ServerApi>) =
+        (settings: OnConnected.IOverride<'ClientApi,'ServerApi>) =
 
         inherit NormalFableHub<'ClientApi,'ServerApi>(settings.Update)
 
@@ -132,9 +129,8 @@ module FableHub =
             this :> FableHub<'ClientApi,'ServerApi>
             |> settings.OnConnected :> Task
 
-    [<RequireQualifiedAccess>]
     module OnDisconnected =
-        type internal IOverride<'ClientApi,'ServerApi
+        type IOverride<'ClientApi,'ServerApi
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -147,7 +143,7 @@ module FableHub =
     
     type OnDisconnected<'ClientApi,'ServerApi
         when 'ClientApi : not struct and 'ServerApi : not struct>
-        internal (settings: OnDisconnected.IOverride<'ClientApi,'ServerApi>) =
+        (settings: OnDisconnected.IOverride<'ClientApi,'ServerApi>) =
 
         inherit NormalFableHub<'ClientApi,'ServerApi>(settings.Update)
 
@@ -155,9 +151,8 @@ module FableHub =
             this :> FableHub<'ClientApi,'ServerApi>
             |> settings.OnDisconnected err :> Task
 
-    [<RequireQualifiedAccess>]
     module Both =
-        type internal IOverride<'ClientApi,'ServerApi
+        type IOverride<'ClientApi,'ServerApi
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -171,7 +166,7 @@ module FableHub =
 
     type Both<'ClientApi,'ServerApi
         when 'ClientApi : not struct and 'ServerApi : not struct> 
-        internal (settings: Both.IOverride<'ClientApi,'ServerApi>) =
+        (settings: Both.IOverride<'ClientApi,'ServerApi>) =
 
         inherit NormalFableHub<'ClientApi,'ServerApi>(settings.Update)
 
@@ -185,9 +180,8 @@ module FableHub =
 
     module Stream =
         module Both =
-            [<RequireQualifiedAccess>]
             module OnConnected =
-                type internal IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+                type IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -202,7 +196,7 @@ module FableHub =
         
             type OnConnected<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
-                internal (settings: OnConnected.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
+                (settings: OnConnected.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
                     ({ Updater = settings.Update; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
@@ -211,9 +205,8 @@ module FableHub =
                     this :> FableHub<'ClientApi,'ServerApi>
                     |> settings.OnConnected :> Task
 
-            [<RequireQualifiedAccess>]
             module OnDisconnected =
-                type internal IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+                type IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -228,7 +221,7 @@ module FableHub =
         
             type OnDisconnected<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct>
-                internal (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
+                (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
                     ({ Updater = settings.Update; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
@@ -237,9 +230,8 @@ module FableHub =
                     this :> FableHub<'ClientApi,'ServerApi>
                     |> settings.OnDisconnected err :> Task
 
-            [<RequireQualifiedAccess>]
             module Both =
-                type internal IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+                type IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -274,9 +266,8 @@ module FableHub =
                         (fun _ -> settings)
 
         module From =
-            [<RequireQualifiedAccess>]
             module OnConnected =
-                type internal IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+                type IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -290,7 +281,7 @@ module FableHub =
         
             type OnConnected<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
-                internal (settings: OnConnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
+                (settings: OnConnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Updater = settings.Update; StreamFrom = settings.Stream })
 
@@ -298,9 +289,8 @@ module FableHub =
                     this :> FableHub<'ClientApi,'ServerApi>
                     |> settings.OnConnected :> Task
 
-            [<RequireQualifiedAccess>]
             module OnDisconnected =
-                type internal IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+                type IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -314,7 +304,7 @@ module FableHub =
         
             type OnDisconnected<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct>
-                internal (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
+                (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Updater = settings.Update; StreamFrom = settings.Stream })
 
@@ -322,9 +312,8 @@ module FableHub =
                     this :> FableHub<'ClientApi,'ServerApi>
                     |> settings.OnDisconnected err :> Task
 
-            [<RequireQualifiedAccess>]
             module Both =
-                type internal IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+                type IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -339,7 +328,7 @@ module FableHub =
 
             type Both<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
-                internal (settings: Both.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
+                (settings: Both.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Updater = settings.Update; StreamFrom = settings.Stream })
 
@@ -357,9 +346,8 @@ module FableHub =
                         (fun _ -> settings)
 
         module To =
-            [<RequireQualifiedAccess>]
             module OnConnected =
-                type internal IOverride<'ClientApi,'ClientStreamApi,'ServerApi
+                type IOverride<'ClientApi,'ClientStreamApi,'ServerApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -373,7 +361,7 @@ module FableHub =
         
             type OnConnected<'ClientApi,'ClientStreamApi,'ServerApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
-                internal (settings: OnConnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
+                (settings: OnConnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
 
                 inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Updater = settings.Update; StreamTo = settings.Stream })
 
@@ -381,9 +369,8 @@ module FableHub =
                     this :> FableHub<'ClientApi,'ServerApi>
                     |> settings.OnConnected :> Task
 
-            [<RequireQualifiedAccess>]
             module OnDisconnected =
-                type internal IOverride<'ClientApi,'ClientStreamApi,'ServerApi
+                type IOverride<'ClientApi,'ClientStreamApi,'ServerApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -397,7 +384,7 @@ module FableHub =
         
             type OnDisconnected<'ClientApi,'ClientStreamApi,'ServerApi
                 when 'ClientApi : not struct and 'ServerApi : not struct>
-                internal (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
+                (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
 
                 inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Updater = settings.Update; StreamTo = settings.Stream })
 
@@ -405,9 +392,8 @@ module FableHub =
                     this :> FableHub<'ClientApi,'ServerApi>
                     |> settings.OnDisconnected err :> Task
 
-            [<RequireQualifiedAccess>]
             module Both =
-                type internal IOverride<'ClientApi,'ClientStreamApi,'ServerApi
+                type IOverride<'ClientApi,'ClientStreamApi,'ServerApi
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
@@ -422,7 +408,7 @@ module FableHub =
 
             type Both<'ClientApi,'ClientStreamApi,'ServerApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
-                internal (settings: Both.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
+                (settings: Both.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
 
                 inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Updater = settings.Update; StreamTo = settings.Stream })
 
