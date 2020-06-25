@@ -355,7 +355,7 @@ Target.create "PackageJson" <| fun _ ->
                 |> Some
             Bugs = 
                 { Json.BugsValue.Url = 
-                    @"https://github.com/Shmew/Feliz.UseBridge/issues/new/choose" |> Some } |> Some
+                    @"https://github.com/Shmew/Fable.SignalR/issues/new/choose" |> Some } |> Some
             License = "MIT" |> Some
             Author = author |> Some
             Private = true |> Some }

@@ -18,7 +18,8 @@ type FableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi 
     abstract Send : 'ClientApi -> Task
     abstract Dispose : unit -> unit
 
-type internal NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
+[<EditorBrowsable(EditorBrowsableState.Never)>]
+type NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
     (updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task) =
     
     inherit Hub<IFableHubCallerClients<'ServerApi>>()
@@ -32,13 +33,14 @@ type internal NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct 
 
     member this.Send msg = updater msg this
 
-type internal StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+[<EditorBrowsable(EditorBrowsableState.Never)>]
+type StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
       StreamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi> }
 
-and internal StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
+and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct>
     (settings: StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
         
@@ -54,13 +56,13 @@ and internal StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerSt
     member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
 
-type internal StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi
+type [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
       StreamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task }
 
-and internal StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
+and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
     when 'ClientApi : not struct and 'ServerApi : not struct>
     (settings: StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi>) =
         
@@ -76,14 +78,14 @@ and internal StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
     member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
-type internal StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+type [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task }
 
-and internal StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
+and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct>
     (settings: StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
         
@@ -105,8 +107,8 @@ module internal Task =
     let toGen (f: 'a -> 'b -> #Task) =
         fun a b -> f a b :> Task
 
-[<RequireQualifiedAccess>]
-module internal FableHub =
+[<EditorBrowsable(EditorBrowsableState.Never);RequireQualifiedAccess>]
+module FableHub =
     module OnConnected =
         type IOverride<'ClientApi,'ServerApi
             when 'ClientApi : not struct and 'ServerApi : not struct> =

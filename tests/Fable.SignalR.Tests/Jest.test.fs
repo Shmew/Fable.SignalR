@@ -1,79 +1,43 @@
 ﻿module Tests
 
+open Fable.FastCheck
+open Fable.FastCheck.Jest
 open Fable.Jester
+open Fable.ReactTestingLibrary
+open HubComponents
+open SignalRApp
+open SignalRApp.SignalRHub
 
-[<RequireQualifiedAccess>]
-module Async =
-    let map f computation =
-        async {
-            let! res = computation
-            return f res
-        }
+Jest.describe("Elmish SignalR", fun () ->
+    let asserter msg (oldModel: Elmish.Model) (newModel: Elmish.Model) =
+        match msg with
+        | Elmish.RegisterHub hub -> 
+            Jest.expect(hub).toEqual(newModel.Hub)
+            Jest.expect(newModel.Hub).toBeDefined()
+        | Elmish.SignalRMsg rsp ->
+            match rsp with
+            | Response.Howdy _ -> Jest.expect(newModel).toEqual(oldModel)
+            | Response.RandomCharacter c -> Jest.expect(newModel.Text).toEqual(c)
+            | Response.NewCount i ->
+                Jest.expect(oldModel.Count).not.toBe(newModel.Count)
+                Jest.expect(oldModel.Count).toBe(i)
+        | Elmish.SignalRStreamMsg (StreamFrom.Response.GetInts i) ->
+            Jest.expect(oldModel.SFCount).not.toBe(newModel.SFCount)
+            Jest.expect(newModel.SFCount).toBe(i)
+            Jest.expect(oldModel.SFCount).not.toBe(i)
+        | Elmish.Subscription sub -> 
+            Jest.expect(newModel.StreamSubscription).toBeDefined()
+            Jest.expect(newModel.StreamSubscription).toBe(sub)
+        | Elmish.StreamStatus ss -> Jest.expect(newModel.StreamStatus).toBe(ss)
+        | Elmish.ClientStreamStatus ss -> Jest.expect(newModel.ClientStreamStatus).toBe(ss)
+        | Elmish.IncrementCount
+        | Elmish.DecrementCount
+        | Elmish.RandomCharacter
+        | Elmish.SayHello
+        | Elmish.StartClientStream
+        | Elmish.StartServerStream ->
+            Jest.expect(newModel).toBe(expect.anything())
 
-let myPromise = promise { return 1 + 1 }
-    
-let myAsync = async { return 1 + 1 }
+    Jest.test.elmish("Updates work properly", Elmish.init, Elmish.update, asserter)
 
-Jest.describe("can run basic tests", (fun () ->
-    Jest.test("running a test", (fun () ->
-        Jest.expect(1+1).toEqual(2)
-    ))
-
-    Jest.test("running a promise test", (fun () ->
-        Jest.expect(myPromise).resolves.toEqual(2)
-    ))
-    Jest.test("running a promise test", promise {
-        do! Jest.expect(myPromise).resolves.toEqual(2)
-        do! Jest.expect(myPromise |> Promise.map ((+) 1)).resolves.toEqual(3)
-    })
-
-    Jest.test("running an async test", (fun () ->
-        Jest.expect(myAsync).toEqual(2)
-    ))
-    Jest.test("running an async test", async {
-        do! Jest.expect(myAsync).toEqual(2)
-        do! Jest.expect(myAsync |> Async.map ((+) 1)).toEqual(3)
-    })
-))
-
-Jest.describe("how to run a test like test.each", (fun () ->
-    Jest.test("same functionality as test.each", (fun () ->
-        for (input, output) in [|(1, 2);(2, 3);(3, 4)|] do 
-            Jest.expect(input + 1).toEqual(output)
-    ))
-))
-
-Jest.describe("how to run a describe like describe.each", (fun () ->
-    let myTestCases = [
-        (1, 1, 2)
-        (1, 2, 3)
-        (2, 1, 3)
-    ]
-
-    for (a, b, expected) in myTestCases do
-        Jest.test(sprintf "%i + %i returns %i" a b expected, (fun () ->
-            Jest.expect(a + b).toBe(expected)    
-        ))
-))
-
-Jest.describe("tests with the skip modifier don't get run", (fun () ->
-    Jest.test.skip("adds", (fun () ->
-        Jest.expect(true).toEqual(false)
-    ))
-    Jest.test("this should execute", (fun () ->
-        Jest.expect(true).toEqual(true)
-    ))
-))
-
-Jest.describe("todo tests give us our todo", (fun () ->
-    Jest.test.todo "Do this!"
-))
-
-Jest.describe.skip("these shouldn't run", (fun () ->
-    Jest.test("this shouldn't run", (fun () ->
-        Jest.expect(true).toEqual(false)
-    ))
-    Jest.test("this shouldn't run either", (fun () ->
-        Jest.expect(true).toEqual(false)
-    ))
-))
+)

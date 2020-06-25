@@ -1,7 +1,6 @@
 ﻿group Fable.SignalR.Tests
     Fable.Browser.Dom
     Fable.Browser.Url
-    Fable.Browser.WebSocket
     Fable.Core
     Fable.FastCheck
     Fable.FastCheck.Jest
@@ -9,4 +8,5 @@
     Fable.ReactTestingLibrary
     Fable.Promise
     Feliz
+    Feliz.UseElmish
     FSharp.Core

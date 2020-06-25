@@ -169,8 +169,7 @@ type ISubject<'T> =
 
     abstract complete: unit -> unit
 
-    abstract subscribe: observer: IStreamSubscriber<'T> -> ISubscription
-    abstract subscribe: observer: StreamSubscriber<'T> -> ISubscription
+    abstract subscribe: observer: #IStreamSubscriber<'T> -> ISubscription
 
 /// Stream implementation to stream items to the server.
 type Subject<'T> =
@@ -178,8 +177,7 @@ type Subject<'T> =
         member this.next (item: 'T) = this.next(item)
         member this.error (err: exn) = this.error(err)
         member this.complete () = this.complete()
-        member this.subscribe (observer: IStreamSubscriber<'T>) = this.subscribe(observer)
-        member this.subscribe (observer: StreamSubscriber<'T>) = this.subscribe(observer)
+        member this.subscribe (observer: #IStreamSubscriber<'T>) = this.subscribe(observer)
 
     [<Emit("$0.next($1)")>]
     member _.next (item: 'T) : unit = jsNative
@@ -188,7 +186,7 @@ type Subject<'T> =
     [<Emit("$0.complete()")>]
     member _.complete () : unit = jsNative
     [<Emit("$0.subscribe($1)")>]
-    member _.subscribe (observer: IStreamSubscriber<'T>) : ISubscription = jsNative
+    member _.subscribe (observer: #IStreamSubscriber<'T>) : ISubscription = jsNative
     [<Emit("$0.subscribe($1)")>]
     member _.subscribe (observer: StreamSubscriber<'T>) : ISubscription = jsNative
 
@@ -212,9 +210,11 @@ type ConnectionState =
     | Reconnecting
 
 type Hub<'ClientApi,'ServerApi> =
+    /// Returns the base url of the hub connection.
     [<Emit("$0.baseUrl()")>]
     member _.baseUrl () : string = jsNative
 
+    /// Returns the connectionId to the hub of this client.
     [<Emit("$0.connectionId()")>]
     member _.connectionId () : string option = jsNative
     
@@ -235,7 +235,7 @@ type Hub<'ClientApi,'ServerApi> =
     /// The default value is 15,000 milliseconds (15 seconds).
     /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
     [<Emit("$0.keepAliveIntervalInMilliseconds")>]
-    member _.keepAliveIntervalInMilliseconds : int = jsNative
+    member _.keepAliveInterval : int = jsNative
 
     [<Emit("$0.send($1...)")>]
     member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
@@ -247,10 +247,12 @@ type Hub<'ClientApi,'ServerApi> =
     member inline this.send (msg: 'ClientApi) = 
         this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
 
-    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+    /// be processing the invocation.
     member inline this.sendNow (msg: 'ClientApi) = 
         this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
-    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+    /// be processing the invocation.
     member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
         this.send'("Send", ResizeArray [| msg :> obj |]) 
         |> Async.AwaitPromise 
@@ -261,18 +263,20 @@ type Hub<'ClientApi,'ServerApi> =
     /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
     /// The default timeout value is 30,000 milliseconds (30 seconds).
     [<Emit("$0.serverTimeoutInMilliseconds")>]
-    member _.serverTimeoutInMilliseconds : int = jsNative
+    member _.serverTimeout : int = jsNative
 
-    /// Indicates the state of the HubConnection to the server.
+    /// Returns the state of the Hub connection to the server.
     [<Emit("$0.state()")>]
     member _.state () : ConnectionState = jsNative
     
 [<RequireQualifiedAccess>]
 module StreamHub =
     type ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> = 
+        /// Returns the base url of the hub connection.
         [<Emit("$0.baseUrl()")>]
         member _.baseUrl () : string = jsNative
-
+        
+        /// Returns the connectionId to the hub of this client.
         [<Emit("$0.connectionId()")>]
         member _.connectionId () : string option = jsNative
         
@@ -293,7 +297,7 @@ module StreamHub =
         /// The default value is 15,000 milliseconds (15 seconds).
         /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
         [<Emit("$0.keepAliveIntervalInMilliseconds")>]
-        member _.keepAliveIntervalInMilliseconds : int = jsNative
+        member _.keepAliveInterval : int = jsNative
 
         [<Emit("$0.send($1...)")>]
         member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
@@ -305,10 +309,12 @@ module StreamHub =
         member inline this.send (msg: 'ClientApi) = 
             this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
 
-        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+        /// be processing the invocation.
         member inline this.sendNow (msg: 'ClientApi) = 
             this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
-        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+        /// be processing the invocation.
         member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
             this.send'("Send", ResizeArray [| msg :> obj |]) 
             |> Async.AwaitPromise 
@@ -319,9 +325,9 @@ module StreamHub =
         /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
         /// The default timeout value is 30,000 milliseconds (30 seconds).
         [<Emit("$0.serverTimeoutInMilliseconds")>]
-        member _.serverTimeoutInMilliseconds : int = jsNative
+        member _.serverTimeout : int = jsNative
 
-        /// Indicates the state of the HubConnection to the server.
+        /// Returns the state of the Hub connection to the server.
         [<Emit("$0.state()")>]
         member _.state () : ConnectionState = jsNative
 
@@ -346,9 +352,11 @@ module StreamHub =
             |> fun p -> Async.StartImmediate(p, cancellationToken)
          
     type ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> = 
+        /// Returns the base url of the hub connection.
         [<Emit("$0.baseUrl()")>]
         member _.baseUrl () : string = jsNative
-
+        
+        /// Returns the connectionId to the hub of this client.
         [<Emit("$0.connectionId()")>]
         member _.connectionId () : string option = jsNative
         
@@ -369,7 +377,7 @@ module StreamHub =
         /// The default value is 15,000 milliseconds (15 seconds).
         /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
         [<Emit("$0.keepAliveIntervalInMilliseconds")>]
-        member _.keepAliveIntervalInMilliseconds : int = jsNative
+        member _.keepAliveInterval : int = jsNative
 
         [<Emit("$0.send($1...)")>]
         member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
@@ -395,9 +403,9 @@ module StreamHub =
         /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
         /// The default timeout value is 30,000 milliseconds (30 seconds).
         [<Emit("$0.serverTimeoutInMilliseconds")>]
-        member _.serverTimeoutInMilliseconds : int = jsNative
+        member _.serverTimeout : int = jsNative
 
-        /// Indicates the state of the HubConnection to the server.
+        /// Returns the state of the Hub connection to the server.
         [<Emit("$0.state()")>]
         member _.state () : ConnectionState = jsNative
 
@@ -410,9 +418,11 @@ module StreamHub =
             this.stream("StreamFrom", ResizeArray [| msg :> obj |])
 
     type Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
+        /// Returns the base url of the hub connection.
         [<Emit("$0.baseUrl()")>]
         member _.baseUrl () : string = jsNative
-
+        
+        /// Returns the connectionId to the hub of this client.
         [<Emit("$0.connectionId()")>]
         member _.connectionId () : string option = jsNative
         
@@ -433,7 +443,7 @@ module StreamHub =
         /// The default value is 15,000 milliseconds (15 seconds).
         /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
         [<Emit("$0.keepAliveIntervalInMilliseconds")>]
-        member _.keepAliveIntervalInMilliseconds : int = jsNative
+        member _.keepAliveInterval : int = jsNative
 
         [<Emit("$0.send($1...)")>]
         member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
@@ -445,10 +455,12 @@ module StreamHub =
         member inline this.send (msg: 'ClientApi) = 
             this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
 
-        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+        /// be processing the invocation.
         member inline this.sendNow (msg: 'ClientApi) = 
             this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
-        /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+        /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+        /// be processing the invocation.
         member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
             this.send'("Send", ResizeArray [| msg :> obj |]) 
             |> Async.AwaitPromise 
@@ -459,9 +471,9 @@ module StreamHub =
         /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
         /// The default timeout value is 30,000 milliseconds (30 seconds).
         [<Emit("$0.serverTimeoutInMilliseconds")>]
-        member _.serverTimeoutInMilliseconds : int = jsNative
+        member _.serverTimeout : int = jsNative
 
-        /// Indicates the state of the HubConnection to the server.
+        /// Returns the state of the Hub connection to the server.
         [<Emit("$0.state()")>]
         member _.state () : ConnectionState = jsNative
 
@@ -495,9 +507,11 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
         member this.onReconnected handler = this.onReconnected handler
         member this.onReconnecting handler = this.onReconnecting handler
 
+    /// Returns the base url of the hub connection.
     [<Emit("$0.baseUrl()")>]
     member _.baseUrl () : string = jsNative
-
+    
+    /// Returns the connectionId to the hub of this client.
     [<Emit("$0.connectionId()")>]
     member _.connectionId () : string option = jsNative
     
@@ -518,7 +532,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     /// The default value is 15,000 milliseconds (15 seconds).
     /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
     [<Emit("$0.keepAliveIntervalInMilliseconds")>]
-    member _.keepAliveIntervalInMilliseconds : int = jsNative
+    member _.keepAliveInterval : int = jsNative
     
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     [<Emit("$0.off($1)")>]
@@ -582,7 +596,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     /// If this timeout elapses without receiving any messages from the server, the connection will be terminated with an error.
     /// The default timeout value is 30,000 milliseconds (30 seconds).
     [<Emit("$0.serverTimeoutInMilliseconds")>]
-    member _.serverTimeoutInMilliseconds : int = jsNative
+    member _.serverTimeout : int = jsNative
 
     /// Starts the connection.
     [<Emit("$0.start()")>]
@@ -599,7 +613,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
         |> Async.AwaitPromise 
         |> fun p -> Async.StartImmediate(p, cancellationToken)
 
-    /// Indicates the state of the HubConnection to the server.
+    /// Returns the state of the Hub connection to the server.
     [<Emit("$0.state()")>]
     member _.state () : ConnectionState = jsNative
 

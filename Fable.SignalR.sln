@@ -43,6 +43,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "web", "web", "{7F29BFE8-02B
 		.yarnrc = .yarnrc
 		package.json = package.json
 		publish.js = publish.js
+		startServer.js = startServer.js
 		webpack.config.js = webpack.config.js
 	EndProjectSection
 EndProject

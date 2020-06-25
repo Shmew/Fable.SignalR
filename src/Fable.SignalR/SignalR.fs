@@ -111,6 +111,9 @@ type SignalR =
         |> config 
         |> fun hubBuilder -> hubBuilder.build()
 
+    /// Creates the default http client.
+    static member inline HttpClient (logger: ILogger) = Bindings.signalR.HttpClient(logger)
+
     /// Gets an instance of the NullLogger.
     static member inline NullLogger () = Bindings.signalR.NullLogger()
 

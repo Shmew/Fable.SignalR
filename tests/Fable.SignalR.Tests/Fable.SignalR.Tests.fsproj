@@ -1,12 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="HubComponents.fs" />
     <Compile Include="Jest.test.fs" />
     <None Include="paket.references" />
     <None Include="splitter.config.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\demo\Shared\Shared.fsproj" />
+    <ProjectReference Include="..\..\src\Fable.SignalR.Elmish\Fable.SignalR.Elmish.fsproj" />
+    <ProjectReference Include="..\..\src\Fable.SignalR.Feliz\Fable.SignalR.Feliz.fsproj" />
+    <ProjectReference Include="..\..\src\Fable.SignalR\Fable.SignalR.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

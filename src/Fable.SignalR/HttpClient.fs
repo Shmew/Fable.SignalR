@@ -1,7 +1,6 @@
 ﻿namespace Fable.SignalR
 
 open Fable.Core
-open System.ComponentModel
 
 [<RequireQualifiedAccess>]
 module Http =
@@ -24,7 +23,7 @@ module Http =
         | HEAD
         | OPTIONS
 
-    type IRequestOptionsRecord =
+    type internal RequestOptionsRecord =
         { method: Method option
           url: string option
           content: U2<string, JS.ArrayBuffer> option

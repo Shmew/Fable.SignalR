@@ -4,7 +4,7 @@
   "description": "Fable and server bindings for SignalR.",
   "homepage": "https://github.com/Shmew/Fable.SignalR",
   "bugs": {
-    "url": "https://github.com/Shmew/Feliz.UseBridge/issues/new/choose"
+    "url": "https://github.com/Shmew/Fable.SignalR/issues/new/choose"
   },
   "license": "MIT",
   "author": "Cody Johnson",
@@ -14,14 +14,17 @@
   },
   "scripts": {
     "build": "webpack -p",
-    "dev": "webpack-dev-server",
+    "dev": "concurrently --kill-others \"yarn start-server\" \"webpack-dev-server\"",
     "pretest": "fable-splitter -c tests/Fable.SignalR.Tests/splitter.config.js",
     "publish-docs": "node publish.js",
     "start": "live-server --port=8080 docs/",
-    "test": "yarn pretest && yarn jest"
+    "start-server": "npx nodemon -e fs,fsproj,fsi --watch ./demo/Server --watch ./src/Fable.SignalR.AspNetCore --watch ./src/Fable.SignalR.Saturn --exec npx ./startServer.js",
+    "test": "jest",
+    "test-server": "concurrently --kill-others \"yarn start-server\" \"yarn test\""
   },
   "dependencies": {
     "@microsoft/signalr": "^3.1.4",
+    "nodemon": "^2.0.4",
     "react": "^16",
     "react-dom": "^16"
   },
@@ -36,6 +39,7 @@
     "@testing-library/user-event": "^10",
     "babel-loader": "^8",
     "clean-webpack-plugin": "^3",
+    "concurrently": "^5.2.0",
     "copy-webpack-plugin": "^5",
     "core-js": "^3",
     "css-loader": "^3",
@@ -50,6 +54,7 @@
     "live-server": "^1",
     "mini-css-extract-plugin": "^0.9.0",
     "node-sass": "^4",
+    "npx": "^10.2.2",
     "prettier": "^2",
     "remotedev": "^0.2.9",
     "resolve-url-loader": "^3",

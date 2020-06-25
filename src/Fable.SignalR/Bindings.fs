@@ -9,6 +9,9 @@ module internal Bindings =
         [<Emit("new $0.HubConnectionBuilder()")>]
         member _.HubConnectionBuilder () : IHubConnectionBuilder<'ClientApi,'ServerApi> = jsNative
 
+        [<Emit("new $0.HttpClient($1)")>]
+        member _.HttpClient (logger: ILogger) : Http.DefaultClient = jsNative
+
         [<Emit("$0.NullLogger.instance")>]
         member _.NullLogger () : NullLogger = jsNative
 

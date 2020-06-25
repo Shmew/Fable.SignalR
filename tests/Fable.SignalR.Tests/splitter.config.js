@@ -3,7 +3,7 @@ const testsDir = path.join(__dirname, "../../dist/tests");
 
 module.exports = {
     allFiles: true,
-    entry: path.join(__dirname, "./Feliz.UseBridge.Tests.fsproj"),
+    entry: path.join(__dirname, "./Fable.SignalR.Tests.fsproj"),
     outDir: testsDir,
     babel: {
         plugins: [
