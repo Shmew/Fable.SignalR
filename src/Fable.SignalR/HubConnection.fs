@@ -265,9 +265,9 @@ type Hub<'ClientApi,'ServerApi> =
     [<Emit("$0.serverTimeoutInMilliseconds")>]
     member _.serverTimeout : int = jsNative
 
-    /// Returns the state of the Hub connection to the server.
-    [<Emit("$0.state()")>]
-    member _.state () : ConnectionState = jsNative
+    /// The state of the hub connection to the server.
+    [<Emit("$0.state")>]
+    member _.state : ConnectionState = jsNative
     
 [<RequireQualifiedAccess>]
 module StreamHub =
@@ -327,9 +327,9 @@ module StreamHub =
         [<Emit("$0.serverTimeoutInMilliseconds")>]
         member _.serverTimeout : int = jsNative
 
-        /// Returns the state of the Hub connection to the server.
-        [<Emit("$0.state()")>]
-        member _.state () : ConnectionState = jsNative
+        /// The state of the hub connection to the server.
+        [<Emit("$0.state")>]
+        member _.state : ConnectionState = jsNative
 
         [<EditorBrowsable(EditorBrowsableState.Never)>]
         [<Emit("$0.stream($1...)")>]
@@ -405,9 +405,9 @@ module StreamHub =
         [<Emit("$0.serverTimeoutInMilliseconds")>]
         member _.serverTimeout : int = jsNative
 
-        /// Returns the state of the Hub connection to the server.
-        [<Emit("$0.state()")>]
-        member _.state () : ConnectionState = jsNative
+        /// The state of the hub connection to the server.
+        [<Emit("$0.state")>]
+        member _.state : ConnectionState = jsNative
 
         [<EditorBrowsable(EditorBrowsableState.Never)>]
         [<Emit("$0.stream($1...)")>]
@@ -473,9 +473,9 @@ module StreamHub =
         [<Emit("$0.serverTimeoutInMilliseconds")>]
         member _.serverTimeout : int = jsNative
 
-        /// Returns the state of the Hub connection to the server.
-        [<Emit("$0.state()")>]
-        member _.state () : ConnectionState = jsNative
+        /// The state of the hub connection to the server.
+        [<Emit("$0.state")>]
+        member _.state : ConnectionState = jsNative
 
         [<EditorBrowsable(EditorBrowsableState.Never)>]
         [<Emit("$0.stream($1...)")>]
@@ -552,26 +552,19 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     [<Emit("$0.onclose($1)")>]
     member _.onClose (callback: (exn option -> unit)) : unit = jsNative
 
-    /// Registers a handler that will be invoked when the hub method with the specified method name is invoked.
-    member inline this.onMsg (callback: 'ServerApi -> unit) = 
+    /// Callback when a new message is recieved.
+    member inline this.onMessage (callback: 'ServerApi -> unit) = 
         this.on<'ServerApi>("Send", callback)
     
-    /// Registers a handler that will be invoked when the connection starts reconnecting.
-    [<Emit("$0.onreconnecting($1)")>]
-    member _.onReconnecting (callback: (exn option -> unit)) : unit = jsNative
-    
-    /// Registers a handler that will be invoked when the connection successfully reconnects.
+    /// Callback when the connection successfully reconnects.
     [<Emit("$0.onreconnected($1)")>]
     member _.onReconnected (callback: (string option -> unit)) : unit = jsNative
 
-    /// Callback when streaming from the server is started.
-    member inline this.onStreamFrom (callback: StreamResult<'ServerStreamApi> -> unit) = 
-        this.on<StreamResult<'ServerStreamApi>>("StreamFrom", callback)
-    
-    /// Callback when streaming to the server is started.
-    member inline this.onStreamTo (callback: unit -> unit) = 
-        this.on<unit>("StreamTo", callback)
-
+    /// Callback when the connection starts reconnecting.
+    [<Emit("$0.onreconnecting($1)")>]
+    member _.onReconnecting (callback: (exn option -> unit)) : unit = jsNative
+        
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
     [<Emit("$0.send($1...)")>]
     member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
 
@@ -613,14 +606,15 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
         |> Async.AwaitPromise 
         |> fun p -> Async.StartImmediate(p, cancellationToken)
 
-    /// Returns the state of the Hub connection to the server.
-    [<Emit("$0.state()")>]
-    member _.state () : ConnectionState = jsNative
+    /// The state of the hub connection to the server.
+    [<Emit("$0.state")>]
+    member _.state : ConnectionState = jsNative
 
-    /// Stops the connection.
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
     [<Emit("$0.stop()")>]
     member _.stop' () : JS.Promise<unit> = jsNative
     
+    /// Stops the connection.
     member inline this.stop () = this.stop'() |> Async.AwaitPromise
 
     /// Stops the connection immediately.
@@ -634,6 +628,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member inline this.streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi> = 
         this.stream("StreamFrom", ResizeArray [| msg :> obj |])
     
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
     [<Emit("$0.send($1, $2)")>]
     member _.streamTo' (methodName: string, subscriber: ISubject<'ClientStreamToApi>) : JS.Promise<unit> = jsNative
 

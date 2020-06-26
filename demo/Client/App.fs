@@ -31,10 +31,11 @@ module App =
             { Count = 0
               Text = ""
               Hub = None }
-            , Cmd.SignalR.connect RegisterHub SignalRMsg (fun hub -> 
+            , Cmd.SignalR.connect RegisterHub (fun hub -> 
                 hub.withUrl(Endpoints.Root)
                     .withAutomaticReconnect()
-                    .configureLogging(LogLevel.Debug))
+                    .configureLogging(LogLevel.Debug)
+                    .onMessage SignalRMsg)
 
         let update msg model =
             match msg with
@@ -133,10 +134,11 @@ module App =
               StreamSubscription = None
               StreamStatus = StreamStatus.NotStarted
               ClientStreamStatus = StreamStatus.NotStarted }
-            , Cmd.SignalR.Stream.Bidrectional.connect RegisterHub SignalRMsg (fun hub -> 
+            , Cmd.SignalR.Stream.Bidrectional.connect RegisterHub (fun hub -> 
                 hub.withUrl(Endpoints.Root)
                     .withAutomaticReconnect()
-                    .configureLogging(LogLevel.Debug))
+                    .configureLogging(LogLevel.Debug)
+                    .onMessage SignalRMsg)
 
         let update msg model =
             match msg with

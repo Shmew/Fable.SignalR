@@ -3,13 +3,31 @@
 open Fable.Core
 open System.ComponentModel
 
+type internal Handlers =
+    { onClose: (exn option -> unit) option
+      onMessage: (obj -> unit) option
+      onReconnected: (string option -> unit) option
+      onReconnecting: (exn option -> unit) option }
+
+    member inline this.apply (hub: HubConnection<_,_,_,_,_>) =
+        Option.iter hub.onClose this.onClose
+        Option.iter hub.onMessage (unbox this.onMessage)
+        Option.iter hub.onReconnected this.onReconnected
+        Option.iter hub.onReconnecting this.onReconnecting
+        hub
+
+    static member empty =
+        { onClose = None
+          onMessage = None
+          onReconnecting = None
+          onReconnected = None }
+
 /// A builder for configuring HubConnection instances.
-type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
+type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
     internal (hub: IHubConnectionBuilder<'ClientApi,'ServerApi>) =
 
     let mutable hub = hub
-    let mutable onMsg : ('ServerApi -> unit) option = None
-    let mutable handlers : (HubRegistration -> unit) option = None
+    let mutable handlers = Handlers.empty
 
     /// Configures console logging for the HubConnection.
     member this.configureLogging (logLevel: LogLevel) = 
@@ -62,14 +80,24 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         hub <- hub.withAutomaticReconnect(reconnectPolicy)
         this
 
-    /// Configures the HubConnection to callback when a new message is recieved.
-    member this.onMessage (handler: 'ServerApi -> unit) = 
-        onMsg <- Some handler
+    /// Callback when the connection is closed.
+    member this.onClose callback =
+        handlers <- { handlers with onClose = Some callback }
         this
 
-    /// Configures the HubConnection to callback for certain conditions are met.
-    member this.addHandlers (handler: HubRegistration -> unit) =
-        handlers <- Some handler
+    /// Callback when a new message is recieved.
+    member this.onMessage (callback: 'ServerApi -> unit) = 
+        handlers <- { handlers with onMessage = Some (unbox callback) }
+        this
+    
+    /// Callback when the connection successfully reconnects.
+    member this.onReconnected (callback: (string option -> unit)) =
+        handlers <- { handlers with onReconnected = Some callback }
+        this
+
+    /// Callback when the connection starts reconnecting.
+    member this.onReconnecting (callback: (exn option -> unit)) =
+        handlers <- { handlers with onReconnecting = Some callback }
         this
 
     /// Creates a HubConnection from the configuration options specified in this builder.
@@ -88,13 +116,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
            parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
         |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
         |> fun protocol -> hub.withHubProtocol(protocol).build()
-        |> fun res -> 
-            if onMsg.IsSome then
-                res.onMsg onMsg.Value
-            if handlers.IsSome then
-                res :> HubRegistration
-                |> handlers.Value
-            res
+        |> handlers.apply
 
 [<Erase>]
 type SignalR =
@@ -119,3 +141,6 @@ type SignalR =
 
     /// Creates a new stream implementation to stream items to the server.
     static member inline Subject<'T> () = Bindings.signalR.Subject<'T>()
+
+[<assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Fable.SignalR.Elmish")>]
+do ()

@@ -12,6 +12,13 @@ const runServer = () => {
     ps.stderr.on('data', (data) => {
         console.error(data.toString())
     })
+
+    process.on('exit', () => {
+        ps.kill()
+    })
+
+    process.on('SIGINT', () => ps.kill())
+    process.on('SIGTERM', () => ps.kill())
 }
 
 runServer()

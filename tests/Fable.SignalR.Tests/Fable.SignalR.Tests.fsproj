@@ -4,8 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="HubComponents.fs" />
-    <Compile Include="Jest.test.fs" />
+    <Compile Include="SignalR.test.fs" />
     <None Include="paket.references" />
     <None Include="splitter.config.js" />
   </ItemGroup>

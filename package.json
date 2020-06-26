@@ -18,9 +18,10 @@
     "pretest": "fable-splitter -c tests/Fable.SignalR.Tests/splitter.config.js",
     "publish-docs": "node publish.js",
     "start": "live-server --port=8080 docs/",
-    "start-server": "npx nodemon -e fs,fsproj,fsi --watch ./demo/Server --watch ./src/Fable.SignalR.AspNetCore --watch ./src/Fable.SignalR.Saturn --exec npx ./startServer.js",
+    "start-server": "npx nodemon -e fs,fsproj,fsi --watch ./demo/Server --watch src --watch tests --exec npx ./startServer.js",
     "test": "jest",
-    "test-server": "concurrently --kill-others \"yarn start-server\" \"yarn test\""
+    "test-watch": "npx nodemon -e fs,fsproj,fsi --watch tests --watch src --exec yarn test",
+    "test-server": "concurrently --kill-others \"yarn start-server\" \"yarn test-watch\""
   },
   "dependencies": {
     "@microsoft/signalr": "^3.1.4",

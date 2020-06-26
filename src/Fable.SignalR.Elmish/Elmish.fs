@@ -7,6 +7,96 @@ open System.ComponentModel
 module Elmish =
     [<RequireQualifiedAccess>]
     module Elmish =
+        type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi,'Msg> 
+            internal (hub: Fable.SignalR.IHubConnectionBuilder<'ClientApi,'ServerApi>, dispatch: 'Msg -> unit) =
+            
+            let mutable hub = hub
+            let mutable handlers = Handlers.empty
+            
+            /// Configures console logging for the HubConnection.
+            member this.configureLogging (logLevel: LogLevel) = 
+                hub <- hub.configureLogging(logLevel)
+                this
+            /// Configures custom logging for the HubConnection.
+            member this.configureLogging (logger: ILogger) = 
+                hub <- hub.configureLogging(logger)
+                this
+            /// Configures custom logging for the HubConnection.
+            member this.configureLogging (logLevel: string) = 
+                hub <- hub.configureLogging(logLevel)
+                this
+            
+            /// Configures the HubConnection to use HTTP-based transports to connect to the specified URL.
+            /// 
+            /// The transport will be selected automatically based on what the server and client support.
+            member this.withUrl (url: string) = 
+                hub <- hub.withUrl(url)
+                this
+            
+            /// Configures the HubConnection to use the specified HTTP-based transport to connect to the specified URL.
+            member this.withUrl (url: string, transportType: TransportType) = 
+                hub <- hub.withUrl(url, transportType)
+                this
+            /// Configures the HubConnection to use HTTP-based transports to connect to the specified URL.
+            member this.withUrl (url: string, options: Http.ConnectionBuilder -> Http.ConnectionBuilder) = 
+                hub <- hub.withUrl(url, (Http.ConnectionBuilder() |> options).build())
+                this
+            
+            /// Configures the HubConnection to use the specified Hub Protocol.
+            member this.withHubProtocol (protocol: IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>) = 
+                hub <- hub.withHubProtocol(protocol)
+                this
+            
+            /// Configures the HubConnection to automatically attempt to reconnect if the connection is lost.
+            /// By default, the client will wait 0, 2, 10 and 30 seconds respectively before trying up to 4 reconnect attempts.
+            member this.withAutomaticReconnect () = 
+                hub <- hub.withAutomaticReconnect()
+                this
+            /// Configures the HubConnection to automatically attempt to reconnect if the connection is lost.
+            /// 
+            /// An array containing the delays in milliseconds before trying each reconnect attempt.
+            /// The length of the array represents how many failed reconnect attempts it takes before the client will stop attempting to reconnect.
+            member this.withAutomaticReconnect (retryDelays: int list) = 
+                hub <- hub.withAutomaticReconnect(ResizeArray retryDelays)
+                this
+            /// Configures the HubConnection to automatically attempt to reconnect if the connection is lost.
+            member this.withAutomaticReconnect (reconnectPolicy: RetryPolicy) = 
+                hub <- hub.withAutomaticReconnect(reconnectPolicy)
+                this
+            
+            /// Configures the HubConnection to callback when a new message is recieved.
+            member this.onMessage (callback: 'ServerApi -> 'Msg) = 
+                handlers <- { handlers with onMessage = Some (unbox (callback >> dispatch)) }
+                this
+            
+            /// Registers a handler that will be invoked when the connection successfully reconnects.
+            member this.onReconnected (callback: (string option -> 'Msg)) =
+                handlers <- { handlers with onReconnected = Some (callback >> dispatch) }
+                this
+
+            /// Registers a handler that will be invoked when the connection starts reconnecting.
+            member this.onReconnecting (callback: (exn option -> 'Msg)) =
+                handlers <- { handlers with onReconnecting = Some (callback >> dispatch) }
+                this
+            
+            /// Creates a HubConnection from the configuration options specified in this builder.
+            [<EditorBrowsable(EditorBrowsableState.Never)>]
+            #if FABLE_COMPILER
+            member inline _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
+            #else
+            member _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
+            #endif
+                let jsonParser = Parser.JsonProtocol()
+            
+                {| name = jsonParser.name
+                   version = jsonParser.version
+                   transferFormat = jsonParser.transferFormat
+                   writeMessage = jsonParser.writeMessage
+                   parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
+                |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
+                |> fun protocol -> hub.withHubProtocol(protocol).build()
+                |> handlers.apply
+
         type Hub<'ClientApi,'ServerApi> [<EditorBrowsable(EditorBrowsableState.Never)>] (hub: HubConnection<'ClientApi,unit,unit,'ServerApi,unit>) =
             interface System.IDisposable with
                 member this.Dispose () = this.Dispose()
@@ -140,119 +230,56 @@ module Elmish =
                     /// Starts a connection to a SignalR hub with server and client streaming enabled.
                     let inline connect
                         (registerHub: Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
-                        (registerMsgs: 'ServerApi -> 'Msg)
-                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
-                            -> HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) : Cmd<'Msg> =
+                        (config: Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi,'Msg> 
+                            -> Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi,'Msg>) : Cmd<'Msg> =
             
                         [ fun dispatch -> 
-                            let connection = SignalR.connect(config)
-
-                            connection.onMsg(registerMsgs >> dispatch) 
+                            let connection =
+                                Elmish.HubConnectionBuilder(Bindings.signalR.HubConnectionBuilder(), dispatch) 
+                                |> config 
+                                |> fun hubBuilder -> hubBuilder.build()
 
                             connection.startNow()
 
                             registerHub (new Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(connection))
                             |> dispatch ]
                     
-                    /// Starts a connection to a SignalR hub with server and client streaming enabled.
-                    let inline connectWith
-                        (registerHub: Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
-                        (registerMsgs: 'ServerApi -> 'Msg)
-                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
-                            -> HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) 
-                        (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
-            
-                        [ fun dispatch -> 
-                            let connection =
-                                SignalR.connect(config)
-
-                            registerHandlers (connection :> HubRegistration) dispatch
-
-                            connection.onMsg(registerMsgs >> dispatch)
-
-                            connection.startNow()
-
-                            registerHub (new Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(connection))
-                            |> dispatch ]
-
                 module ServerToClient =
                     /// Starts a connection to a SignalR hub with server streaming enabled.
                     let inline connect
-                        (registerHub: Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
-                        (registerMsgs: 'ServerApi -> 'Msg)
-                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi> 
-                            -> HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi>) : Cmd<'Msg> =
+                        (registerHub: Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg)
+                        (config: Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi,'Msg> 
+                            -> Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi,'Msg>) : Cmd<'Msg> =
             
                         [ fun dispatch -> 
-                            let connection = SignalR.connect(config)
-
-                            connection.onMsg(registerMsgs >> dispatch) 
+                            let connection =
+                                Elmish.HubConnectionBuilder(Bindings.signalR.HubConnectionBuilder(), dispatch) 
+                                |> config 
+                                |> fun hubBuilder -> hubBuilder.build()
 
                             connection.startNow()
 
                             registerHub (new Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>(connection))
                             |> dispatch ]
                     
-                    /// Starts a connection to a SignalR hub with server streaming enabled.
-                    let inline connectWith
-                        (registerHub: Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
-                        (registerMsgs: 'ServerApi -> 'Msg)
-                        (config: HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi> 
-                            -> HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi>) 
-                        (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
-            
-                        [ fun dispatch -> 
-                            let connection =
-                                SignalR.connect(config)
-
-                            registerHandlers (connection :> HubRegistration) dispatch
-
-                            connection.onMsg(registerMsgs >> dispatch)
-
-                            connection.startNow()
-
-                            registerHub (new Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>(connection))
-                            |> dispatch ]
-
                 module ClientToServer =
                     /// Starts a connection to a SignalR hub with client streaming enabled.
                     let inline connect
-                        (registerHub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> -> 'Msg) 
-                        (registerMsgs: 'ServerApi -> 'Msg)
-                        (config: HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit> 
-                            -> HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit>) : Cmd<'Msg> =
-            
-                        [ fun dispatch -> 
-                            let connection = SignalR.connect(config)
-
-                            connection.onMsg(registerMsgs >> dispatch) 
-
-                            connection.startNow()
-
-                            registerHub (new Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi>(connection))
-                            |> dispatch ]
-                    
-                    /// Starts a connection to a SignalR hub with client streaming enabled.
-                    let inline connectWith
-                        (registerHub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> -> 'Msg) 
-                        (registerMsgs: 'ServerApi -> 'Msg)
-                        (config: HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit> 
-                            -> HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit>) 
-                        (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
+                        (registerHub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> -> 'Msg)
+                        (config: Elmish.HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit,'Msg> 
+                            -> Elmish.HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit,'Msg>) : Cmd<'Msg> =
             
                         [ fun dispatch -> 
                             let connection =
-                                SignalR.connect(config)
-
-                            registerHandlers (connection :> HubRegistration) dispatch
-
-                            connection.onMsg(registerMsgs >> dispatch)
+                                Elmish.HubConnectionBuilder(Bindings.signalR.HubConnectionBuilder(), dispatch) 
+                                |> config 
+                                |> fun hubBuilder -> hubBuilder.build()
 
                             connection.startNow()
 
                             registerHub (new Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi>(connection))
                             |> dispatch ]
-                            
+                                                
             /// Returns the base url of the hub connection.
             let baseUrl (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string -> 'Msg) : Cmd<_> =
                 [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.baseUrl() |> msg |> dispatch) ]
@@ -263,40 +290,21 @@ module Elmish =
             
             /// Starts a connection to a SignalR hub.
             let inline connect 
-                (registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg) 
-                (registerMsgs: 'ServerApi -> 'Msg)
-                (config: HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit> -> HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit>) : Cmd<'Msg> =
-            
-                [ fun dispatch -> 
-                    let connection = SignalR.connect(config)
-
-                    connection.onMsg(registerMsgs >> dispatch) 
-
-                    connection.startNow()
-
-                    registerHub (new Elmish.Hub<'ClientApi,'ServerApi>(connection))
-                    |> dispatch ]
-            
-            /// Starts a connection to a SignalR hub.
-            let inline connectWith
-                (registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg) 
-                (registerMsgs: 'ServerApi -> 'Msg)
-                (config: HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit> -> HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit>) 
-                (registerHandlers: HubRegistration -> ('Msg -> unit) -> unit) : Cmd<'Msg> =
+                (registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg)
+                (config: Elmish.HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit,'Msg> 
+                    -> Elmish.HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit,'Msg>) : Cmd<'Msg> =
             
                 [ fun dispatch -> 
                     let connection =
-                        SignalR.connect(config)
-
-                    registerHandlers (connection :> HubRegistration) dispatch
-
-                    connection.onMsg(registerMsgs >> dispatch)
+                        Elmish.HubConnectionBuilder(Bindings.signalR.HubConnectionBuilder(), dispatch) 
+                        |> config 
+                        |> fun hubBuilder -> hubBuilder.build()
 
                     connection.startNow()
 
                     registerHub (new Elmish.Hub<'ClientApi,'ServerApi>(connection))
                     |> dispatch ]
-
+            
             /// Invokes a hub method on the server.
             /// 
             /// This method resolves when the server indicates it has finished invoking the method. When it finishes, 
@@ -326,7 +334,7 @@ module Elmish =
 
             /// Returns the state of the Hub connection to the server.
             let state (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: ConnectionState -> 'Msg) : Cmd<_> =
-                [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.state() |> msg |> dispatch) ]
+                [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.state |> msg |> dispatch) ]
 
         [<Erase>]
         type SignalR =

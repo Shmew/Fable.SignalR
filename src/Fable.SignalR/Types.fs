@@ -94,3 +94,10 @@ type StreamResult<'T> =
     /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
     [<Emit("$0.subscribe($1)")>]
     member _.subscribe (subscriber: StreamSubscriber<'T>) : ISubscription = jsNative
+
+    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    static member inline subscribe (subscriber: IStreamSubscriber<'T>) =
+        fun (streamRes: StreamResult<'T>) -> streamRes.subscribe(subscriber)
+    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    static member inline subscribe (subscriber: StreamSubscriber<'T>) =
+        fun (streamRes: StreamResult<'T>) -> streamRes.subscribe(subscriber)
