@@ -8,9 +8,23 @@ module SignalRExtension =
     open Microsoft.AspNetCore.SignalR
     open Microsoft.AspNetCore.Routing
     open Microsoft.Extensions.DependencyInjection
+    open Microsoft.Extensions.Hosting
+    open Microsoft.Extensions.Logging
     open System.Collections.Generic
     open System.Threading.Tasks
     
+    type IHostBuilder with
+        member this.SignalRLogLevel (logLevel: Microsoft.Extensions.Logging.LogLevel) =
+            this.ConfigureLogging(fun l -> l.AddFilter("Microsoft.AspNetCore.SignalR", logLevel) |> ignore)
+        
+        member this.SignalRLogLevel (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
+            settings.Config
+            |> Option.bind(fun o -> o.LogLevel)
+            |> function
+            | Some logLevel ->
+                this.ConfigureLogging(fun l -> l.AddFilter("Microsoft.AspNetCore.SignalR", logLevel) |> ignore)
+            | None -> this
+
     type IServiceCollection with
         member this.AddSignalR (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
 
@@ -19,18 +33,18 @@ module SignalRExtension =
 
                 match settings.Config with
                 | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.OnConnected.addTransient onConnect settings.Update
+                    {| Transient = FableHub.OnConnected.addTransient onConnect settings.Update settings.Invoke
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.OnDisconnected.addTransient onDisconnect settings.Update
+                    {| Transient = FableHub.OnDisconnected.addTransient onDisconnect settings.Update settings.Invoke
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Both.addTransient onConnect onDisconnect settings.Update
+                    {| Transient = FableHub.Both.addTransient onConnect onDisconnect settings.Update settings.Invoke
                        HubOptions = hubOptions |}
                 | _ ->
-                    {| Transient = FableHub.addUpdateTransient settings.Update
+                    {| Transient = FableHub.addUpdateTransient settings.Update settings.Invoke
                        HubOptions = hubOptions |}
 
             match config.HubOptions with
@@ -56,19 +70,20 @@ module SignalRExtension =
 
                 match settings.Config with
                 | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.Stream.From.OnConnected.addTransient onConnect settings.Update streamFrom
+                    {| Transient = FableHub.Stream.From.OnConnected.addTransient onConnect settings.Update settings.Invoke streamFrom
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.From.OnDisconnected.addTransient onDisconnect settings.Update streamFrom
+                    {| Transient = FableHub.Stream.From.OnDisconnected.addTransient onDisconnect settings.Update settings.Invoke streamFrom
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.From.Both.addTransient onConnect onDisconnect settings.Update streamFrom
+                    {| Transient = FableHub.Stream.From.Both.addTransient onConnect onDisconnect settings.Update settings.Invoke streamFrom
                        HubOptions = hubOptions |}
                 | _ ->
                     {| Transient = 
-                        { Updater = (fun msg hub -> settings.Update msg hub)
+                        { Update = settings.Update
+                          Invoke = settings.Invoke
                           StreamFrom = streamFrom }
                         |> FableHub.Stream.From.addTransient
                        HubOptions = hubOptions |}
@@ -96,19 +111,20 @@ module SignalRExtension =
 
                 match settings.Config with
                 | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.Stream.To.OnConnected.addTransient onConnect settings.Update (Task.toGen streamTo)
+                    {| Transient = FableHub.Stream.To.OnConnected.addTransient onConnect settings.Update settings.Invoke (Task.toGen streamTo)
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.To.OnDisconnected.addTransient onDisconnect settings.Update (Task.toGen streamTo)
+                    {| Transient = FableHub.Stream.To.OnDisconnected.addTransient onDisconnect settings.Update settings.Invoke (Task.toGen streamTo)
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.To.Both.addTransient onConnect onDisconnect settings.Update (Task.toGen streamTo)
+                    {| Transient = FableHub.Stream.To.Both.addTransient onConnect onDisconnect settings.Update settings.Invoke (Task.toGen streamTo)
                        HubOptions = hubOptions |}
                 | _ ->
                     {| Transient = 
-                        { Updater = (fun msg hub -> settings.Update msg hub)
+                        { Update = settings.Update
+                          Invoke = settings.Invoke
                           StreamTo = (Task.toGen streamTo) }
                         |> FableHub.Stream.To.addTransient
                        HubOptions = hubOptions |}
@@ -137,19 +153,20 @@ module SignalRExtension =
 
                 match settings.Config with
                 | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.Stream.Both.OnConnected.addTransient onConnect settings.Update streamFrom (Task.toGen streamTo)
+                    {| Transient = FableHub.Stream.Both.OnConnected.addTransient onConnect settings.Update settings.Invoke streamFrom (Task.toGen streamTo)
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.Both.OnDisconnected.addTransient onDisconnect settings.Update streamFrom (Task.toGen streamTo)
+                    {| Transient = FableHub.Stream.Both.OnDisconnected.addTransient onDisconnect settings.Update settings.Invoke streamFrom (Task.toGen streamTo)
                        HubOptions = hubOptions |}
 
                 | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.Both.Both.addTransient onConnect onDisconnect settings.Update streamFrom (Task.toGen streamTo)
+                    {| Transient = FableHub.Stream.Both.Both.addTransient onConnect onDisconnect settings.Update settings.Invoke streamFrom (Task.toGen streamTo)
                        HubOptions = hubOptions |}
                 | _ ->
                     {| Transient = 
-                        { Updater = (fun msg hub -> settings.Update msg hub)
+                        { Update = settings.Update
+                          Invoke = settings.Invoke
                           StreamFrom = streamFrom
                           StreamTo = (Task.toGen streamTo) }
                         |> FableHub.Stream.Both.addTransient
@@ -169,38 +186,42 @@ module SignalRExtension =
                     .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
                     .Services |> config.Transient
 
-        member this.AddSignalR(endpoint: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task) =
-            SignalR.ConfigBuilder(endpoint, Task.toGen update).Build()
+        member this.AddSignalR(endpoint: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, invoke: 'ClientApi -> 'ServerApi) =
+            SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build()
             |> this.AddSignalR
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) =
             
-            this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update).Build(), streamFrom)
+            this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build(), streamFrom)
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
             
-            this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update).Build(), Task.toGen streamTo)
+            this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build(), Task.toGen streamTo)
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
             
-            this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update).Build(), streamFrom, Task.toGen streamTo)
+            this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build(), streamFrom, Task.toGen streamTo)
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
-            SignalR.ConfigBuilder(endpoint, Task.toGen update) 
+            SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke) 
             |> config 
             |> fun res -> res.Build()
             |> this.AddSignalR
@@ -208,31 +229,34 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
-            SignalR.ConfigBuilder(endpoint, Task.toGen update) 
+            SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke) 
             |> config 
             |> fun res -> this.AddSignalR(res.Build(), streamFrom)
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
-            SignalR.ConfigBuilder(endpoint, Task.toGen update) 
+            SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke) 
             |> config 
             |> fun res -> this.AddSignalR(res.Build(), Task.toGen streamTo)
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
+             invoke: 'ClientApi -> 'ServerApi,
              streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
-            SignalR.ConfigBuilder(endpoint, Task.toGen update) 
+            SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke) 
             |> config 
             |> fun res -> this.AddSignalR(res.Build(), streamFrom, Task.toGen streamTo)
 

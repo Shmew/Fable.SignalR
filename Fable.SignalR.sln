@@ -45,73 +45,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "web", "web", "{7F29BFE8-02B
 		publish.js = publish.js
 		startServer.js = startServer.js
 		webpack.config.js = webpack.config.js
+		yarn.lock = yarn.lock
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{27F9F1A6-C6B4-4539-B013-8549B4A6E1B5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}"
 	ProjectSection(SolutionItems) = preProject
-		docs\acknowledgment.md = docs\acknowledgment.md
 		docs\contributing.md = docs\contributing.md
-		docs\creating-tests.md = docs\creating-tests.md
 		docs\index.html = docs\index.html
+		docs\installation.md = docs\installation.md
 		docs\README.md = docs\README.md
-		docs\running-tests.md = docs\running-tests.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "installation", "installation", "{BE0829CD-A553-4C7B-AF61-146B1732B44E}"
-	ProjectSection(SolutionItems) = preProject
-		docs\installation\fast-check-jest.md = docs\installation\fast-check-jest.md
-		docs\installation\fast-check.md = docs\installation\fast-check.md
-		docs\installation\jest.md = docs\installation\jest.md
-		docs\installation\react-testing-library.md = docs\installation\react-testing-library.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "jest", "jest", "{3312B9A9-80A1-4CE8-AC6F-708A2DDF2D41}"
-	ProjectSection(SolutionItems) = preProject
-		docs\jest\describe.md = docs\jest\describe.md
-		docs\jest\expect-helpers.md = docs\jest\expect-helpers.md
-		docs\jest\expect.md = docs\jest\expect.md
-		docs\jest\globals.md = docs\jest\globals.md
-		docs\jest\README.md = docs\jest\README.md
-		docs\jest\test.md = docs\jest\test.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rtl", "rtl", "{FB9E5277-7525-4AD5-92D6-DFEC55530DC2}"
-	ProjectSection(SolutionItems) = preProject
-		docs\rtl\queries-for-element.md = docs\rtl\queries-for-element.md
-		docs\rtl\README.md = docs\rtl\README.md
-		docs\rtl\render.md = docs\rtl\render.md
-		docs\rtl\rtl.md = docs\rtl\rtl.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "styles", "styles", "{80A18350-F484-458A-BAC0-64EE73830C5F}"
 	ProjectSection(SolutionItems) = preProject
 		docs\styles\website.css = docs\styles\website.css
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fast-check", "fast-check", "{DCC97AAF-315E-45E7-BB43-CDACB5313758}"
-	ProjectSection(SolutionItems) = preProject
-		docs\fast-check\elmish-model-testing.md = docs\fast-check\elmish-model-testing.md
-		docs\fast-check\fast-check.md = docs\fast-check\fast-check.md
-		docs\fast-check\jest-extension.md = docs\fast-check\jest-extension.md
-		docs\fast-check\model-testing.md = docs\fast-check\model-testing.md
-		docs\fast-check\README.md = docs\fast-check\README.md
-		docs\fast-check\scheduler.md = docs\fast-check\scheduler.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "arbitrary", "arbitrary", "{C8B206F1-2629-47F1-A6C6-255718289E88}"
-	ProjectSection(SolutionItems) = preProject
-		docs\fast-check\arbitrary\array.md = docs\fast-check\arbitrary\array.md
-		docs\fast-check\arbitrary\ce.md = docs\fast-check\arbitrary\ce.md
-		docs\fast-check\arbitrary\constrained-defaults.md = docs\fast-check\arbitrary\constrained-defaults.md
-		docs\fast-check\arbitrary\defaults.md = docs\fast-check\arbitrary\defaults.md
-		docs\fast-check\arbitrary\list.md = docs\fast-check\arbitrary\list.md
-		docs\fast-check\arbitrary\map.md = docs\fast-check\arbitrary\map.md
-		docs\fast-check\arbitrary\README.md = docs\fast-check\arbitrary\README.md
-		docs\fast-check\arbitrary\resizearray.md = docs\fast-check\arbitrary\resizearray.md
-		docs\fast-check\arbitrary\seq.md = docs\fast-check\arbitrary\seq.md
-		docs\fast-check\arbitrary\set.md = docs\fast-check\arbitrary\set.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{EC117A2E-CAE1-4143-81F8-6F6B41AC48B4}"
@@ -133,6 +82,25 @@ EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.Elmish", "src\Fable.SignalR.Elmish\Fable.SignalR.Elmish.fsproj", "{7FBCC628-33B0-42E7-BE7C-77BB089B5E1F}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.Feliz", "src\Fable.SignalR.Feliz\Fable.SignalR.Feliz.fsproj", "{07054AA0-E8D5-4CD2-A774-A515CB4F2EBD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "signalr-client", "signalr-client", "{C6935C85-DA7D-47B2-934B-2E90568EB4EC}"
+	ProjectSection(SolutionItems) = preProject
+		docs\signalr-client\api.md = docs\signalr-client\api.md
+		docs\signalr-client\connecting.md = docs\signalr-client\connecting.md
+		docs\signalr-client\messages.md = docs\signalr-client\messages.md
+		docs\signalr-client\README.md = docs\signalr-client\README.md
+		docs\signalr-client\streaming-bidirectional.md = docs\signalr-client\streaming-bidirectional.md
+		docs\signalr-client\streaming-client.md = docs\signalr-client\streaming-client.md
+		docs\signalr-client\streaming-server.md = docs\signalr-client\streaming-server.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "signalr-server", "signalr-server", "{5336DEEE-6183-44BE-9A9F-DAF2F85C9465}"
+	ProjectSection(SolutionItems) = preProject
+		docs\signalr-server\api.md = docs\signalr-server\api.md
+		docs\signalr-server\giraffe.md = docs\signalr-server\giraffe.md
+		docs\signalr-server\README.md = docs\signalr-server\README.md
+		docs\signalr-server\saturn.md = docs\signalr-server\saturn.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -186,16 +154,13 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E03A3045-EEAB-4616-B0D8-A50A1B75F72B} = {55637037-300B-4FA5-8D14-B2CECCCD4B0D}
-		{BE0829CD-A553-4C7B-AF61-146B1732B44E} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
-		{3312B9A9-80A1-4CE8-AC6F-708A2DDF2D41} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
-		{FB9E5277-7525-4AD5-92D6-DFEC55530DC2} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
 		{80A18350-F484-458A-BAC0-64EE73830C5F} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
-		{DCC97AAF-315E-45E7-BB43-CDACB5313758} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
-		{C8B206F1-2629-47F1-A6C6-255718289E88} = {DCC97AAF-315E-45E7-BB43-CDACB5313758}
 		{0F05C164-FC1E-4FC1-B213-3ED677592D25} = {EC117A2E-CAE1-4143-81F8-6F6B41AC48B4}
 		{FE5C8B58-E228-404F-9EA8-E4808CAEE9D4} = {EC117A2E-CAE1-4143-81F8-6F6B41AC48B4}
 		{59F17747-6D36-474F-B11E-3D904C511587} = {EC117A2E-CAE1-4143-81F8-6F6B41AC48B4}
 		{20AEA7CD-4388-4F1B-ADA5-B547CE69709A} = {27F9F1A6-C6B4-4539-B013-8549B4A6E1B5}
+		{C6935C85-DA7D-47B2-934B-2E90568EB4EC} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
+		{5336DEEE-6183-44BE-9A9F-DAF2F85C9465} = {D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {96DAE6A9-B1CC-4FF7-B08C-D5FBFD55B385}

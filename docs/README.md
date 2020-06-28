@@ -1,23 +1,105 @@
-# Fable.Jester [![Nuget](https://img.shields.io/nuget/v/Fable.Jester.svg?maxAge=0&colorB=brightgreen&label=Fable.Jester)](https://www.nuget.org/packages/Fable.Jester) [![Nuget](https://img.shields.io/nuget/v/Fable.ReactTestingLibrary.svg?maxAge=0&colorB=brightgreen&label=Fable.ReactTestingLibrary)](https://www.nuget.org/packages/Fable.ReactTestingLibrary) [![Nuget](https://img.shields.io/nuget/v/Fable.FastCheck.svg?maxAge=0&colorB=brightgreen&label=Fable.FastCheck)](https://www.nuget.org/packages/Fable.FastCheck) [![Nuget](https://img.shields.io/nuget/v/Fable.FastCheck.Jest.svg?maxAge=0&colorB=brightgreen&label=Fable.FastCheck.Jest)](https://www.nuget.org/packages/Fable.FastCheck.Jest)
+# Fable.SignalR [![Nuget](https://img.shields.io/nuget/v/Fable.SignalR.svg?maxAge=0&colorB=brightgreen&label=Fable.SignalR)](https://www.nuget.org/packages/Fable.SignalR)
 
-Fable bindings for [jest](https://github.com/facebook/jest) and friends for delightful Fable testing:
- * [fast-check](https://github.com/dubzzz/fast-check)
- * [jest-dom](https://github.com/testing-library/jest-dom)
- * [react-testing-library](https://github.com/testing-library/react-testing-library)
- * [user-event](https://github.com/testing-library/user-event)
+Fable bindings for the SignalR client, and ASP.NET Core/Giraffe/Saturn wrappers for SignalR server hubs.
 
 A quick look:
 
+On the client:
 ```fsharp
-Jest.describe("my tests", fun () ->
-    Jest.test("water is wet", fun () ->
-        Jest.expect("test").toBe("test")
-        Jest.expect("test").not.toBe("somethingElse")
-        Jest.expect("hi").toHaveLength(2)
-        Jest.expect("hi").not.toHaveLength(3)
+let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
+    React.fragment [
+        Html.div input.count
+        Html.div input.text
+    ])
+
+let buttons = React.functionComponent(fun (input: {| count: int; hub: Hub<Action,Response> |}) ->
+    React.fragment [
+        Html.button [
+            prop.text "Increment"
+            prop.onClick <| fun _ -> input.hub.current.sendNow (Action.IncrementCount input.count)
+        ]
+        Html.button [
+            prop.text "Decrement"
+            prop.onClick <| fun _ -> input.hub.current.sendNow (Action.DecrementCount input.count)
+        ]
+        Html.button [
+            prop.text "Get Random Character"
+            prop.onClick <| fun _ -> input.hub.current.sendNow Action.RandomCharacter
+        ]
+    ])
+
+let render = React.functionComponent(fun () ->
+    let count,setCount = React.useState 0
+    let text,setText = React.useState ""
+
+    let hub =
+        React.useSignalR<Action,Response>(fun hub -> 
+            hub.withUrl(Endpoints.Root)
+                .withAutomaticReconnect()
+                .configureLogging(LogLevel.Debug)
+                .onMessage <|
+                    function
+                    | Response.Howdy -> JS.console.log("Howdy!")
+                    | Response.NewCount i -> setCount i
+                    | Response.RandomCharacter str -> setText str
+        )
+            
+    Html.div [
+        prop.children [
+            textDisplay {| count = count; text = text |}
+            buttons {| count = count; hub = hub |}
+        ]
+    ])
+```
+
+On the server:
+
+```fs
+module SignalRHub =
+    let update (msg: Action) (hubContext: FableHub<Action,Response>) =
+        printfn "New Msg: %A" msg
+            
+        match msg with
+        | Action.SayHello -> Response.Howdy
+        | Action.IncrementCount i -> Response.NewCount(i + 1)
+        | Action.DecrementCount i -> Response.NewCount(i - 1)
+        | Action.RandomCharacter ->
+            let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+            
+            System.Random().Next(0,characters.Length-1)
+            |> fun i -> characters.ToCharArray().[i]
+            |> string
+            |> Response.RandomCharacter
+        |> hubContext.Clients.Caller.Send
+
+application {
+    use_signalr (
+        configure_signalr {
+            endpoint Endpoints.Root
+            update SignalRHub.update
+        }
     )
-    Jest.test.prop("Is positive", Arbitrary.ConstrainedDefaults.integer(1,100), fun i ->
-        Jest.expect(i).toBeGreaterThan(0)
-    )
-)
+    ...
+}
+```
+
+The shared file:
+
+```fs
+[<RequireQualifiedAccess>]
+type Action =
+    | IncrementCount of int
+    | DecrementCount of int
+    | RandomCharacter
+    | SayHello
+
+[<RequireQualifiedAccess>]
+type Response =
+    | Howdy
+    | NewCount of int
+    | RandomCharacter of string
+
+module Endpoints =
+    let [<Literal>] Root = "/SignalR"
+
 ```

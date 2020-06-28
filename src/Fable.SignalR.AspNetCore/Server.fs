@@ -10,17 +10,23 @@ open System.Threading.Tasks
 [<EditorBrowsable(EditorBrowsableState.Never)>]
 type IFableHubCallerClients<'ServerApi when 'ServerApi : not struct> =
     abstract Send: 'ServerApi -> Task
+    abstract Invoke: {| connectionId: string; message: 'ServerApi |} -> Task
 
 type FableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
     abstract Clients : IHubCallerClients<IFableHubCallerClients<'ServerApi>>
     abstract Context : HubCallerContext
     abstract Groups : IGroupManager
+    abstract Invoke: 'ClientApi -> Task
     abstract Send : 'ClientApi -> Task
     abstract Dispose : unit -> unit
 
 [<EditorBrowsable(EditorBrowsableState.Never)>]
-type NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
-    (updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task) =
+type NormalFableHubOptions<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
+    { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+      Invoke: 'ClientApi -> 'ServerApi }
+
+and [<EditorBrowsable(EditorBrowsableState.Never)>] NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
+    (settings: NormalFableHubOptions<'ClientApi,'ServerApi>) =
     
     inherit Hub<IFableHubCallerClients<'ServerApi>>()
 
@@ -28,16 +34,20 @@ type NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'Serv
         member this.Clients = this.Clients
         member this.Context = this.Context
         member this.Groups = this.Groups
+        member this.Invoke msg = this.Invoke msg
         member this.Send msg = this.Send msg
         member this.Dispose () = this.Dispose()
-
-    member this.Send msg = updater msg this
+        
+    member this.Invoke msg = 
+        this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = settings.Invoke msg |})
+    member this.Send msg = settings.Update msg (this :> FableHub<'ClientApi,'ServerApi>)
 
 [<EditorBrowsable(EditorBrowsableState.Never)>]
 type StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
-    { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+    { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+      Invoke: 'ClientApi -> 'ServerApi
       StreamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi> }
 
 and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
@@ -50,16 +60,19 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientAp
         member this.Clients = this.Clients
         member this.Context = this.Context
         member this.Groups = this.Groups
+        member this.Invoke msg = this.Invoke msg
         member this.Send msg = this.Send msg
         member this.Dispose () = this.Dispose()
-
-    member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
+    
+    member this.Invoke msg = this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = settings.Invoke msg |})
+    member this.Send msg = settings.Update msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
 
 type [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
-    { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+    { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+      Invoke: 'ClientApi -> 'ServerApi
       StreamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task }
 
 and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi
@@ -72,16 +85,19 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,
         member this.Clients = this.Clients
         member this.Context = this.Context
         member this.Groups = this.Groups
+        member this.Invoke msg = this.Invoke msg
         member this.Send msg = this.Send msg
         member this.Dispose () = this.Dispose()
-
-    member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
+        
+    member this.Invoke msg = this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = settings.Invoke msg |})
+    member this.Send msg = settings.Update msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
 type [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHubOptions<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
-    { Updater: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+    { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+      Invoke: 'ClientApi -> 'ServerApi
       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task }
 
@@ -95,10 +111,12 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHub<'ClientAp
         member this.Clients = this.Clients
         member this.Context = this.Context
         member this.Groups = this.Groups
+        member this.Invoke msg = this.Invoke msg
         member this.Send msg = this.Send msg
         member this.Dispose () = this.Dispose()
-
-    member this.Send msg = settings.Updater msg (this :> FableHub<'ClientApi,'ServerApi>)
+        
+    member this.Invoke msg = this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = settings.Invoke msg |})
+    member this.Send msg = settings.Update msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
@@ -114,18 +132,23 @@ module FableHub =
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+              Invoke: 'ClientApi -> 'ServerApi
               OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-        let addTransient onConnected update (s: IServiceCollection) =
+            member this.AsNormalOptions : NormalFableHubOptions<'ClientApi,'ServerApi> =
+                { Update = this.Update
+                  Invoke = this.Invoke }
+
+        let addTransient onConnected update invoke (s: IServiceCollection) =
             s.AddTransient<IOverride<'ClientApi,'ServerApi>> <|
                 System.Func<System.IServiceProvider,IOverride<'ClientApi,'ServerApi>>
-                    (fun _ -> { Update = update; OnConnected = onConnected })
+                    (fun _ -> { Update = update; Invoke = invoke; OnConnected = onConnected })
     
     type OnConnected<'ClientApi,'ServerApi
         when 'ClientApi : not struct and 'ServerApi : not struct> 
         (settings: OnConnected.IOverride<'ClientApi,'ServerApi>) =
 
-        inherit NormalFableHub<'ClientApi,'ServerApi>(settings.Update)
+        inherit NormalFableHub<'ClientApi,'ServerApi>(settings.AsNormalOptions)
 
         override this.OnConnectedAsync () = 
             this :> FableHub<'ClientApi,'ServerApi>
@@ -136,18 +159,23 @@ module FableHub =
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+              Invoke: 'ClientApi -> 'ServerApi
               OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-        let addTransient onDisconnected update (s: IServiceCollection) =
+            member this.AsNormalOptions : NormalFableHubOptions<'ClientApi,'ServerApi> =
+                { Update = this.Update
+                  Invoke = this.Invoke }
+
+        let addTransient onDisconnected update invoke (s: IServiceCollection) =
             s.AddTransient<IOverride<'ClientApi,'ServerApi>> <|
                 System.Func<System.IServiceProvider,IOverride<'ClientApi,'ServerApi>>
-                    (fun _ -> { Update = update; OnDisconnected = onDisconnected })
+                    (fun _ -> { Update = update; Invoke = invoke; OnDisconnected = onDisconnected })
     
     type OnDisconnected<'ClientApi,'ServerApi
         when 'ClientApi : not struct and 'ServerApi : not struct>
         (settings: OnDisconnected.IOverride<'ClientApi,'ServerApi>) =
 
-        inherit NormalFableHub<'ClientApi,'ServerApi>(settings.Update)
+        inherit NormalFableHub<'ClientApi,'ServerApi>(settings.AsNormalOptions)
 
         override this.OnDisconnectedAsync (err: exn) =
             this :> FableHub<'ClientApi,'ServerApi>
@@ -158,19 +186,24 @@ module FableHub =
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+              Invoke: 'ClientApi -> 'ServerApi
               OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
               OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-        let addTransient onConnected onDisconnected update (s: IServiceCollection) =
+            member this.AsNormalOptions : NormalFableHubOptions<'ClientApi,'ServerApi> =
+                { Update = this.Update
+                  Invoke = this.Invoke }
+
+        let addTransient onConnected onDisconnected update invoke (s: IServiceCollection) =
             s.AddTransient<IOverride<'ClientApi,'ServerApi>> <|
                 System.Func<System.IServiceProvider,IOverride<'ClientApi,'ServerApi>>
-                    (fun _ -> { Update = update; OnConnected = onConnected; OnDisconnected = onDisconnected })
+                    (fun _ -> { Update = update; Invoke = invoke; OnConnected = onConnected; OnDisconnected = onDisconnected })
 
     type Both<'ClientApi,'ServerApi
         when 'ClientApi : not struct and 'ServerApi : not struct> 
         (settings: Both.IOverride<'ClientApi,'ServerApi>) =
 
-        inherit NormalFableHub<'ClientApi,'ServerApi>(settings.Update)
+        inherit NormalFableHub<'ClientApi,'ServerApi>(settings.AsNormalOptions)
 
         override this.OnConnectedAsync () =
             this :> FableHub<'ClientApi,'ServerApi>
@@ -187,21 +220,22 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onConnected update streamFrom streamTo (s: IServiceCollection) =
+                let addTransient onConnected update invoke streamFrom streamTo (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>
-                            (fun _ -> { Update = update; StreamFrom = streamFrom; StreamTo = streamTo; OnConnected = onConnected })
+                            (fun _ -> { Update = update; Invoke = invoke; StreamFrom = streamFrom; StreamTo = streamTo; OnConnected = onConnected })
         
             type OnConnected<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
                 (settings: OnConnected.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
-                    ({ Updater = settings.Update; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
+                    ({ Update = settings.Update; Invoke = settings.Invoke; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
 
                 override this.OnConnectedAsync () = 
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -212,21 +246,22 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onDisconnected update streamFrom streamTo (s: IServiceCollection) =
+                let addTransient onDisconnected update invoke streamFrom streamTo (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>
-                            (fun _ -> { Update = update; StreamFrom = streamFrom; StreamTo = streamTo; OnDisconnected = onDisconnected })
+                            (fun _ -> { Update = update; Invoke = invoke; StreamFrom = streamFrom; StreamTo = streamTo; OnDisconnected = onDisconnected })
         
             type OnDisconnected<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct>
                 (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
-                    ({ Updater = settings.Update; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
+                    ({ Update = settings.Update; Invoke = settings.Invoke; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
 
                 override this.OnDisconnectedAsync (err: exn) =
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -237,22 +272,23 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onConnected onDisconnected update streamFrom streamTo (s: IServiceCollection) =
+                let addTransient onConnected onDisconnected update invoke streamFrom streamTo (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>
-                            (fun _ -> { Update = update; StreamFrom = streamFrom; StreamTo = streamTo; OnConnected = onConnected; OnDisconnected = onDisconnected })
+                            (fun _ -> { Update = update; Invoke = invoke; StreamFrom = streamFrom; StreamTo = streamTo; OnConnected = onConnected; OnDisconnected = onDisconnected })
 
             type Both<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
                 internal (settings: Both.IOverride<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
 
                 inherit StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
-                    ({ Updater = settings.Update; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
+                    ({ Update = settings.Update; Invoke = settings.Invoke; StreamFrom = settings.StreamFrom; StreamTo = settings.StreamTo })
 
                 override this.OnConnectedAsync () =
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -273,19 +309,20 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       Stream: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onConnected update stream (s: IServiceCollection) =
+                let addTransient onConnected update invoke stream (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>
-                            (fun _ -> { Update = update; Stream = stream; OnConnected = onConnected })
+                            (fun _ -> { Update = update; Invoke = invoke; Stream = stream; OnConnected = onConnected })
         
             type OnConnected<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
                 (settings: OnConnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
 
-                inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Updater = settings.Update; StreamFrom = settings.Stream })
+                inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Update = settings.Update; Invoke = settings.Invoke; StreamFrom = settings.Stream })
 
                 override this.OnConnectedAsync () = 
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -296,19 +333,20 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       Stream: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onDisconnected update stream (s: IServiceCollection) =
+                let addTransient onDisconnected update invoke stream (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>
-                            (fun _ -> { Update = update; Stream = stream; OnDisconnected = onDisconnected })
+                            (fun _ -> { Update = update; Invoke = invoke; Stream = stream; OnDisconnected = onDisconnected })
         
             type OnDisconnected<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct>
                 (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
 
-                inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Updater = settings.Update; StreamFrom = settings.Stream })
+                inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Update = settings.Update; Invoke = settings.Invoke; StreamFrom = settings.Stream })
 
                 override this.OnDisconnectedAsync (err: exn) =
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -319,20 +357,21 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       Stream: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onConnected onDisconnected update stream (s: IServiceCollection) =
+                let addTransient onConnected onDisconnected update invoke stream (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>
-                            (fun _ -> { Update = update; Stream = stream; OnConnected = onConnected; OnDisconnected = onDisconnected })
+                            (fun _ -> { Update = update; Stream = stream; Invoke = invoke; OnConnected = onConnected; OnDisconnected = onDisconnected })
 
             type Both<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
                 (settings: Both.IOverride<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>) =
 
-                inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Updater = settings.Update; StreamFrom = settings.Stream })
+                inherit StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>({ Update = settings.Update; Invoke = settings.Invoke; StreamFrom = settings.Stream })
 
                 override this.OnConnectedAsync () =
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -353,19 +392,24 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       Stream: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onConnected update stream (s: IServiceCollection) =
+                    member this.AsNormalOptions : NormalFableHubOptions<'ClientApi,'ServerApi> =
+                        { Update = this.Update
+                          Invoke = this.Invoke }
+
+                let addTransient onConnected update invoke stream (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamApi,'ServerApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamApi,'ServerApi>>
-                            (fun _ -> { Update = update; Stream = stream; OnConnected = onConnected })
+                            (fun _ -> { Update = update; Invoke = invoke; Stream = stream; OnConnected = onConnected })
         
             type OnConnected<'ClientApi,'ClientStreamApi,'ServerApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
                 (settings: OnConnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
 
-                inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Updater = settings.Update; StreamTo = settings.Stream })
+                inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Update = settings.Update; Invoke = settings.Invoke; StreamTo = settings.Stream })
 
                 override this.OnConnectedAsync () = 
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -376,19 +420,20 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       Stream: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onDisconnected update stream (s: IServiceCollection) =
+                let addTransient onDisconnected update invoke stream (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamApi,'ServerApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamApi,'ServerApi>>
-                            (fun _ -> { Update = update; Stream = stream; OnDisconnected = onDisconnected })
+                            (fun _ -> { Update = update; Invoke = invoke; Stream = stream; OnDisconnected = onDisconnected })
         
             type OnDisconnected<'ClientApi,'ClientStreamApi,'ServerApi
                 when 'ClientApi : not struct and 'ServerApi : not struct>
                 (settings: OnDisconnected.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
 
-                inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Updater = settings.Update; StreamTo = settings.Stream })
+                inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Update = settings.Update; Invoke = settings.Invoke; StreamTo = settings.Stream })
 
                 override this.OnDisconnectedAsync (err: exn) =
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -399,20 +444,21 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+                      Invoke: 'ClientApi -> 'ServerApi
                       Stream: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit> }
 
-                let addTransient onConnected onDisconnected update stream (s: IServiceCollection) =
+                let addTransient onConnected onDisconnected update invoke stream (s: IServiceCollection) =
                     s.AddTransient<IOverride<'ClientApi,'ClientStreamApi,'ServerApi>> <|
                         System.Func<System.IServiceProvider,IOverride<'ClientApi,'ClientStreamApi,'ServerApi>>
-                            (fun _ -> { Update = update; Stream = stream; OnConnected = onConnected; OnDisconnected = onDisconnected })
+                            (fun _ -> { Update = update; Invoke = invoke; Stream = stream; OnConnected = onConnected; OnDisconnected = onDisconnected })
 
             type Both<'ClientApi,'ClientStreamApi,'ServerApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> 
                 (settings: Both.IOverride<'ClientApi,'ClientStreamApi,'ServerApi>) =
 
-                inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Updater = settings.Update; StreamTo = settings.Stream })
+                inherit StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>({ Update = settings.Update; Invoke = settings.Invoke; StreamTo = settings.Stream })
 
                 override this.OnConnectedAsync () =
                     this :> FableHub<'ClientApi,'ServerApi>
@@ -427,10 +473,10 @@ module FableHub =
                     System.Func<System.IServiceProvider,StreamToFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi>>
                         (fun _ -> settings)
 
-    let addUpdateTransient update (s: IServiceCollection) =
-        s.AddTransient<'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task> <|
-            System.Func<System.IServiceProvider,'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task>
-                (fun _ -> update)
+    let addUpdateTransient update invoke (s: IServiceCollection) =
+        s.AddTransient<NormalFableHubOptions<'ClientApi,'ServerApi>> <|
+            System.Func<System.IServiceProvider,NormalFableHubOptions<'ClientApi,'ServerApi>>
+                (fun _ -> { Update = update; Invoke = invoke })
 
 [<RequireQualifiedAccess>]
 module SignalR =
@@ -439,12 +485,14 @@ module SignalR =
 
         { EndpointConfig: (HubEndpointConventionBuilder -> HubEndpointConventionBuilder) option
           HubOptions: (HubOptions -> unit) option
+          LogLevel: Microsoft.Extensions.Logging.LogLevel option
           OnConnected: (FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
           OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option }
 
         static member Default () =
             { EndpointConfig = None 
               HubOptions = None
+              LogLevel = None
               OnConnected = None
               OnDisconnected = None }
 
@@ -458,6 +506,7 @@ module SignalR =
     type Settings<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
         { EndpointPattern: string
           Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
+          Invoke: 'ClientApi -> 'ServerApi
           Config: Config<'ClientApi,'ServerApi> option }
 
         static member GetConfigOrDefault (settings: Settings<'ClientApi,'ServerApi>) =
@@ -465,16 +514,18 @@ module SignalR =
             | None -> Config<'ClientApi,'ServerApi>.Default()
             | Some config -> config
 
-        static member Create (endpointPattern: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task) =    
-            ConfigBuilder<'ClientApi,'ServerApi>(endpointPattern, update)
+        static member Create (endpointPattern: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task, invoke: 'ClientApi -> 'ServerApi) =    
+            ConfigBuilder<'ClientApi,'ServerApi>(endpointPattern, update, invoke)
 
     and ConfigBuilder<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct>
         (endpoint: string, 
-         update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task) =
+         update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task,
+         invoke: 'ClientApi -> 'ServerApi) =
 
         let mutable state =
             { EndpointPattern = endpoint
               Update = update
+              Invoke = invoke
               Config = None }
 
         member this.EndpointConfig (f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =
@@ -492,6 +543,15 @@ module SignalR =
                     Config =
                         { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
                             HubOptions = Some f }
+                        |> Some }
+            this
+
+        member this.LogLevel (logLevel: Microsoft.Extensions.Logging.LogLevel) =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            LogLevel = Some logLevel }
                         |> Some }
             this
 

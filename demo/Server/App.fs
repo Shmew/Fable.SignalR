@@ -3,6 +3,7 @@ namespace SignalRApp
 module App =
     open Fable.SignalR
     open Giraffe.ResponseWriters
+    open Microsoft.Extensions.Logging
     open Saturn
     open System
 
@@ -14,14 +15,24 @@ module App =
                     use_signalr (
                         configure_signalr {
                             endpoint Endpoints.Root
-                            update SignalRHub.update
+                            send SignalRHub.send
+                            invoke SignalRHub.update
                             stream_from SignalRHub.Stream.sendToClient
                             stream_to SignalRHub.Stream.getFromClient
+                            with_log_level Microsoft.Extensions.Logging.LogLevel.None
                         }
                     )
+                    logging (fun l -> l.AddFilter("Microsoft", LogLevel.Error) |> ignore)
                     error_handler (fun e log -> text e.Message)
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
-                    use_router Router.appRouter
+                    use_cors "Any" (fun policy -> 
+                        policy
+                            .WithOrigins("localhost", "http://localhost:8080")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                        |> ignore
+                    )
+                    no_router
                     use_static (Env.clientPath args)
                     use_developer_exceptions
                 }

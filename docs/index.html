@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Fable.Jester</title>
+    <title>Fable.SignalR</title>
     <link rel="stylesheet" href="https://unpkg.com/docute@4/dist/docute.css">
     <link rel="stylesheet" type="text/css" href="styles/website.css">
 </head>
@@ -41,7 +41,7 @@
                 sidebarLinkArrowColor: "hsl(171, 100%, 41%)"
             },
             nav: [
-                { title: "GitHub Repository", link: "https://github.com/Shmew/Fable.Jester" }
+                { title: "GitHub Repository", link: "https://github.com/Shmew/Fable.SignalR" }
             ],
             sidebar: [
                 {
@@ -50,68 +50,32 @@
                 },
                 {
                     title: "Installation",
-                    links: [
-                        { title: "Fable.Jester", link: "/installation/jest" },
-                        { title: "Fable.ReactTestingLibrary", link: "/installation/react-testing-library" },
-                        { title: "Fable.FastCheck", link: "/installation/fast-check" },
-                        { title: "Fable.FastCheck.Jest", link: "/installation/fast-check-jest" }
-                    ]
+                    link: "/installation" 
                 },
                 {
                     title: "Release Notes",
                     link: "/RELEASE_NOTES"
                 },
                 {
-                    title: "Fable.Jester",
+                    title: "Fable client",
                     links: [
-                        { title: "Introduction", link: "/jest/" },
-                        { title: "Describe", link: "/jest/describe" },
-                        { title: "Test", link: "/jest/test" },
-                        { title: "Globals", link: "/jest/globals" },
-                        { title: "Expect", link: "/jest/expect" },
-                        { title: "Expect Helpers", link: "/jest/expect-helpers" }
+                        { title: "Introduction", link: "/signalr-client/" },
+                        { title: "Connecting to SignalR", link: "/signalr-client/connecting" },
+                        { title: "Sending Messages", link: "/signalr-client/messages" },
+                        { title: "Server Streaming", link: "/signalr-client/streaming-server" },
+                        { title: "Client Streaming", link: "/signalr-client/streaming-client" },
+                        { title: "Bidirectional Streaming", link: "/signalr-client/streaming-bidirectional" },
+                        { title: "API Reference", link: "/signalr-client/api" }
                     ]
                 },
                 {
-                    title: "Fable.ReactTestingLibrary",
+                    title: "Server Configuration",
                     links: [
-                        { title: "Introduction", link: "/rtl/" },
-                        { title: "RTL", link: "/rtl/rtl" },
-                        { title: "Queries", link: "/rtl/queries-for-element" },
-                        { title: "Render", link: "/rtl/render"}
+                        { title: "Introduction", link: "/signalr-server/" },
+                        { title: "AspNetCore/Giraffe", link: "/signalr-server/giraffe" },
+                        { title: "Saturn", link: "/signalr-server/saturn" },
+                        { title: "API Reference", link: "/signalr-server/api" }
                     ]
-                },
-                {
-                    title: "Fable.FastCheck",
-                    links: [
-                        { title: "Introduction", link: "/fast-check/" },
-                        { title: "FastCheck", link: "/fast-check/fast-check" },
-                        { title: "Arbitrary", link: "/fast-check/arbitrary/" },
-                        { title: "Arbitrary.Defaults", link: "/fast-check/arbitrary/defaults" },
-                        { title: "Arbitrary.ConstrainedDefaults", link: "/fast-check/arbitrary/constrained-defaults" },
-                        { title: "Arbitrary.Array", link: "/fast-check/arbitrary/array" },
-                        { title: "Arbitrary.List", link: "/fast-check/arbitrary/list" },
-                        { title: "Arbitrary.ResizeArray", link: "/fast-check/arbitrary/resizearray" },
-                        { title: "Arbitrary.Map", link: "/fast-check/arbitrary/map" },
-                        { title: "Arbitrary.Set", link: "/fast-check/arbitrary/set" },
-                        { title: "Computation Expression", link: "/fast-check/arbitrary/ce" },
-                        { title: "Jest Extension", link: "/fast-check/jest-extension" },
-                        { title: "Model Testing", link: "/fast-check/model-testing" },
-                        { title: "Elmish Model Testing", link: "/fast-check/elmish-model-testing" },
-                        { title: "Scheduler", link: "/fast-check/scheduler" }
-                    ]
-                },
-                {
-                    title: "Creating Tests",
-                    link: "/creating-tests"
-                },
-                {
-                    title: "Running Tests",
-                    link: "/running-tests"
-                },
-                {
-                    title: "Acknowledgment",
-                    link: "/acknowledgment"
                 },
                 {
                     title: "Contributing",

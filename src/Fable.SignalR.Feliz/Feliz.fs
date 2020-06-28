@@ -48,7 +48,7 @@ module Feliz =
                 React.createDisposable(connection.current.stopNow)
             )
 
-            React.useRef((connection.current) |> unbox<Fable.SignalR.Hub<'ClientApi,'ServerApi>>)
+            React.useRef(connection.current :> Fable.SignalR.Hub<'ClientApi,'ServerApi>)
         
         static member inline useSignalR<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> 
             (config: StreamHub.ServerToClient.Config<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>, ?dependencies: obj []) =
@@ -63,7 +63,7 @@ module Feliz =
                 React.createDisposable(connection.current.stopNow)
             )
 
-            React.useRef(connection.current |> unbox<Fable.SignalR.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>)
+            React.useRef(connection.current :> Fable.SignalR.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>)
 
         static member inline useSignalR<'ClientApi,'ClientStreamApi,'ServerApi> 
             (config: StreamHub.ClientToServer.Config<'ClientApi,'ClientStreamApi,'ServerApi>, ?dependencies: obj []) =
@@ -78,7 +78,7 @@ module Feliz =
                 React.createDisposable(connection.current.stopNow)
             )
 
-            React.useRef(connection.current |> unbox<Fable.SignalR.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi>>)
+            React.useRef(connection.current :> Fable.SignalR.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi>)
 
         static member inline useSignalR<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
             (config: StreamHub.Bidrectional.Config<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>, 
@@ -94,4 +94,4 @@ module Feliz =
                 React.createDisposable(connection.current.stopNow)
             )
 
-            React.useRef(connection.current |> unbox<Fable.SignalR.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>)
+            React.useRef(connection.current :> Fable.SignalR.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>)

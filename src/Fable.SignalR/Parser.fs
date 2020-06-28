@@ -107,25 +107,29 @@ module Parser =
             match msgType with
             | MessageType.Invocation ->
                 Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<'ServerApi>> parsedRaw
-                |> Result.map (HubRecords.InvocationMessage.Validate >> unbox<InvocationMessage<'ServerApi>> >> U7.Case1)
+                |> function
+                | Ok res -> Ok (HubRecords.InvocationMessage.Validate res |> unbox<InvocationMessage<'ServerApi>> |> U8.Case1)
+                | Error _ ->
+                    Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<{| connectionId: string; message: 'ServerApi |}>> parsedRaw
+                    |> Result.map (HubRecords.InvocationMessage.Validate >> unbox<InvocationMessage<{| connectionId: string; message: 'ServerApi |}>> >> U8.Case2)
             | MessageType.StreamItem -> 
                 Json.tryConvertFromJsonAs<HubRecords.StreamItemMessage<'ServerStreamApi>> parsedRaw
-                |> Result.map (HubRecords.StreamItemMessage.Validate >> unbox<StreamItemMessage<'ServerStreamApi>> >> U7.Case2)
+                |> Result.map (HubRecords.StreamItemMessage.Validate >> unbox<StreamItemMessage<'ServerStreamApi>> >> U8.Case3)
             | MessageType.Completion -> 
                 Json.tryConvertFromJsonAs<HubRecords.CompletionMessage<'ServerApi>> parsedRaw
-                |> Result.map (HubRecords.CompletionMessage.Validate >> unbox<CompletionMessage<'ServerApi>> >> U7.Case3)
+                |> Result.map (HubRecords.CompletionMessage.Validate >> unbox<CompletionMessage<'ServerApi>> >> U8.Case4)
             | MessageType.StreamInvocation -> 
                 Json.tryConvertFromJsonAs<HubRecords.StreamInvocationMessage<'ClientStreamApi>> parsedRaw
-                |> Result.map (unbox<StreamInvocationMessage<'ClientStreamApi>> >> U7.Case4)
+                |> Result.map (unbox<StreamInvocationMessage<'ClientStreamApi>> >> U8.Case5)
             | MessageType.CancelInvocation -> 
                 Json.tryConvertFromJsonAs<HubRecords.CancelInvocationMessage> parsedRaw
-                |> Result.map (unbox<CancelInvocationMessage> >> U7.Case5)
+                |> Result.map (unbox<CancelInvocationMessage> >> U8.Case6)
             | MessageType.Ping -> 
                 Json.tryConvertFromJsonAs<HubRecords.PingMessage> parsedRaw
-                |> Result.map (unbox<PingMessage> >> U7.Case6)
+                |> Result.map (unbox<PingMessage> >> U8.Case7)
             | _ -> 
                 Json.tryConvertFromJsonAs<HubRecords.CloseMessage> parsedRaw
-                |> Result.map (unbox<CloseMessage> >> U7.Case7)
+                |> Result.map (unbox<CloseMessage> >> U8.Case8)
 
         #if FABLE_COMPILER
         member inline this.parseMsgs<'ClientStreamApi,'ServerApi,'ServerStreamApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =

@@ -9,7 +9,7 @@ type internal Handlers =
       onReconnected: (string option -> unit) option
       onReconnecting: (exn option -> unit) option }
 
-    member inline this.apply (hub: HubConnection<_,_,_,_,_>) =
+    member inline this.apply (hub: IHubConnection<_,_,_,_,_>) =
         Option.iter hub.onClose this.onClose
         Option.iter hub.onMessage (unbox this.onMessage)
         Option.iter hub.onReconnected this.onReconnected
@@ -42,18 +42,23 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         hub <- hub.configureLogging(logLevel)
         this
 
-    /// Configures the HubConnection to use HTTP-based transports to connect to the specified URL.
+    /// Configures the HubConnection to use HTTP-based transports to connect 
+    /// to the specified URL.
     /// 
-    /// The transport will be selected automatically based on what the server and client support.
+    /// The transport will be selected automatically based on what the server 
+    /// and client support.
     member this.withUrl (url: string) = 
         hub <- hub.withUrl(url)
         this
 
-    /// Configures the HubConnection to use the specified HTTP-based transport to connect to the specified URL.
+    /// Configures the HubConnection to use the specified HTTP-based transport
+    /// to connect to the specified URL.
     member this.withUrl (url: string, transportType: TransportType) = 
         hub <- hub.withUrl(url, transportType)
         this
-    /// Configures the HubConnection to use HTTP-based transports to connect to the specified URL.
+
+    /// Configures the HubConnection to use HTTP-based transports to connect to
+    /// the specified URL.
     member this.withUrl (url: string, options: Http.ConnectionBuilder -> Http.ConnectionBuilder) = 
         hub <- hub.withUrl(url, (Http.ConnectionBuilder() |> options).build())
         this
@@ -63,19 +68,27 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         hub <- hub.withHubProtocol(protocol)
         this
 
-    /// Configures the HubConnection to automatically attempt to reconnect if the connection is lost.
-    /// By default, the client will wait 0, 2, 10 and 30 seconds respectively before trying up to 4 reconnect attempts.
+    /// Configures the HubConnection to automatically attempt to reconnect 
+    /// if the connection is lost.
+    /// 
+    /// By default, the client will wait 0, 2, 10 and 30 seconds respectively 
+    /// before trying up to 4 reconnect attempts.
     member this.withAutomaticReconnect () = 
         hub <- hub.withAutomaticReconnect()
         this
-    /// Configures the HubConnection to automatically attempt to reconnect if the connection is lost.
+
+    /// Configures the HubConnection to automatically attempt to reconnect if the 
+    /// connection is lost.
     /// 
-    /// An array containing the delays in milliseconds before trying each reconnect attempt.
-    /// The length of the array represents how many failed reconnect attempts it takes before the client will stop attempting to reconnect.
+    /// An array containing the delays in milliseconds before trying each reconnect 
+    /// attempt. The length of the array represents how many failed reconnect attempts 
+    /// it takes before the client will stop attempting to reconnect.
     member this.withAutomaticReconnect (retryDelays: int list) = 
         hub <- hub.withAutomaticReconnect(ResizeArray retryDelays)
         this
-    /// Configures the HubConnection to automatically attempt to reconnect if the connection is lost.
+
+    /// Configures the HubConnection to automatically attempt to reconnect if the 
+    /// connection is lost.
     member this.withAutomaticReconnect (reconnectPolicy: RetryPolicy) = 
         hub <- hub.withAutomaticReconnect(reconnectPolicy)
         this
@@ -100,7 +113,6 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         handlers <- { handlers with onReconnecting = Some callback }
         this
 
-    /// Creates a HubConnection from the configuration options specified in this builder.
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     #if FABLE_COMPILER
     member inline _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
@@ -117,6 +129,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
         |> fun protocol -> hub.withHubProtocol(protocol).build()
         |> handlers.apply
+        |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub)
 
 [<Erase>]
 type SignalR =

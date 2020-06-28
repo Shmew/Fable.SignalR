@@ -5,6 +5,7 @@ module SignalRExtension =
     open Fable.SignalR
     open Microsoft.AspNetCore.Builder
     open Microsoft.AspNetCore.SignalR
+    open Microsoft.Extensions.Logging
     open System.Collections.Generic
     open System.ComponentModel
     open System.Threading.Tasks
@@ -15,6 +16,9 @@ module SignalRExtension =
             type Empty = | Init
     
             type Endpoint = | Value of string
+
+            type Send<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> = 
+                | Value of endpoint:string * send:('ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task)
 
             type Settings<'ClientApi,'ClientStreamToApi,'ClientStreamFromApi,'ServerApi,'ServerStreamApi
                 when 'ClientApi : not struct and 'ServerApi : not struct> =
@@ -40,14 +44,22 @@ module SignalRExtension =
             member _.Endpoint (State.Empty.Init, value: string) = 
                 State.Endpoint.Value value
     
-            [<CustomOperation("update")>]
-            member _.Update (State.Endpoint.Value state, f: 'a -> FableHub<'a,'d> -> #Task) = 
+            [<CustomOperation("send")>]
+            member _.Send (State.Endpoint.Value state, f: 'a -> FableHub<'a,'d> -> #Task) = 
 
                 let f = (fun msg hub -> (f msg hub) :> Task)
 
-                let settings : SignalR.Settings< ^a, ^d> =
-                    { EndpointPattern = state
-                      Update = f
+                let send : State.Send<_,_> = State.Send.Value(state, f)
+
+                send
+
+            [<CustomOperation("invoke")>]
+            member _.Invoke (State.Send.Value (endpoint,send), f: 'a ->'b) = 
+
+                let settings : SignalR.Settings<'a,'b> =
+                    { EndpointPattern = endpoint
+                      Update = send
+                      Invoke = f
                       Config = None }
 
                 State.Settings.NoStream settings
@@ -81,6 +93,15 @@ module SignalRExtension =
                                 EndpointConfig = Some f }
                             |> Some }
     
+            [<CustomOperation("with_log_level")>]
+            member _.LogLevel (state: State.Settings<_,_,_,_,_>, logLevel: Microsoft.Extensions.Logging.LogLevel) =
+                state.mapSettings <| fun state ->
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                LogLevel = Some logLevel }
+                            |> Some }
+
             [<CustomOperation("with_hub_options")>]
             member _.HubOptions (state: State.Settings<_,_,_,_,_>, f: HubOptions -> unit) =
                 state.mapSettings <| fun state ->
@@ -142,3 +163,9 @@ module SignalRExtension =
             | _ ->
                 this.ServiceConfig(state, fun services -> services.AddSignalR(settings))
                 |> fun state -> this.AppConfig(state, fun app -> app.UseSignalR(settings))
+            |> fun state -> 
+                settings.Config
+                |> Option.bind(fun o -> o.LogLevel)
+                |> function
+                | Some logLevel -> this.Logging(state, fun l -> l.AddFilter("Microsoft.AspNetCore.SignalR", logLevel) |> ignore)
+                | None -> state

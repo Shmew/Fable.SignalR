@@ -24,9 +24,7 @@ type LogLevel =
 
 /// An abstraction that provides a sink for diagnostic messages.
 type ILogger =
-    /// <summary>Called by the framework to emit a diagnostic message.</summary>
-    /// <param name="logLevel">The severity level of the message.</param>
-    /// <param name="message">The message.</param>
+    /// Called by the framework to emit a diagnostic message.
     [<Emit("$0.log($1, $2)")>]
     abstract log: logLevel: LogLevel -> message: string -> unit
 
@@ -63,13 +61,20 @@ type RetryContext =
 type RetryPolicy =
     { /// Called after the transport loses the connection.
       ///
-      /// retryContext - Details related to the retry event to help determine how long to wait for the next retry.
+      /// retryContext - Details related to the retry event to help determine how 
+      /// long to wait for the next retry.
       nextRetryDelayInMilliseconds: RetryContext -> int option }
 
-/// an interface that allows an IStreamsubscriber to be disconnected from a stream.
+/// An interface that allows an IStreamsubscriber to be disconnected from a stream.
 type ISubscription =
     abstract dispose: unit -> unit
 
+module ISubscription =
+    /// Converts a subscription into a System.IDisposable.
+    let toDisposable (sub: #ISubscription) =
+        { new System.IDisposable with member _.Dispose () = sub.dispose() }
+
+/// Interface to observe a stream.
 type IStreamSubscriber<'T> =
     /// Sends a new item to the server.
     abstract next: value: 'T -> unit
@@ -78,6 +83,7 @@ type IStreamSubscriber<'T> =
     /// Completes the stream.
     abstract complete: unit -> unit
 
+/// Used to observe a stream.
 type StreamSubscriber<'T> =
     { /// Sends a new item to the server.
       next: 'T -> unit
@@ -86,18 +92,31 @@ type StreamSubscriber<'T> =
       /// Completes the stream.
       complete: unit -> unit }
 
+    /// Casts this StreamSubscriber to an IStreamSubscriber.
+    member inline this.cast () =
+        unbox<IStreamSubscriber<'T>>(this)
+    
+    /// Casts a StreamSubscriber to an IStreamSubscriber.
+    static member inline cast (subscriber: StreamSubscriber<'T>) =
+        subscriber.cast()
+
+/// Allows attaching a subscribr to a stream.
 [<Erase>]
 type StreamResult<'T> =
-    /// Attaches an IStreamSubscriber, which will be invoked when new items are available from the stream.
+    /// Attaches an IStreamSubscriber, which will be invoked when new items are 
+    /// available from the stream.
     [<Emit("$0.subscribe($1)")>]
     member _.subscribe (subscriber: IStreamSubscriber<'T>) : ISubscription = jsNative
-    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    /// Attaches a StreamSubscriber, which will be invoked when new items are 
+    /// available from the stream.
     [<Emit("$0.subscribe($1)")>]
     member _.subscribe (subscriber: StreamSubscriber<'T>) : ISubscription = jsNative
 
-    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    /// Attaches a StreamSubscriber, which will be invoked when new items are 
+    /// available from the stream.
     static member inline subscribe (subscriber: IStreamSubscriber<'T>) =
         fun (streamRes: StreamResult<'T>) -> streamRes.subscribe(subscriber)
-    /// Attaches a StreamSubscriber, which will be invoked when new items are available from the stream.
+    /// Attaches a StreamSubscriber, which will be invoked when new items are 
+    /// available from the stream.
     static member inline subscribe (subscriber: StreamSubscriber<'T>) =
         fun (streamRes: StreamResult<'T>) -> streamRes.subscribe(subscriber)

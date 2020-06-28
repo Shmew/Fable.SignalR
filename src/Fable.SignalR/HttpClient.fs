@@ -33,6 +33,7 @@ module Http =
           timeout: int option
           withCredentials: bool option }
 
+    /// Settings builder for creating Http requests.
     type Request internal () =
         let mutable state =
             { method = None
@@ -90,6 +91,7 @@ module Http =
 
         member internal _.build () = state
 
+    /// A http request response.
     type Response = 
         { statusCode: int
           statusText: string option
@@ -97,38 +99,30 @@ module Http =
 
     /// Abstraction over an HTTP client.
     /// 
-    /// This class provides an abstraction over an HTTP client so that a different implementation can be provided on different platforms.
+    /// This class provides an abstraction over an HTTP client so that a different 
+    /// implementation can be provided on different platforms.
     type Client =
-        /// <summary>Issues an HTTP GET request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="url">The URL for the request.</param>
+        /// Issues an HTTP GET request to the specified URL, returning a Promise that 
+        /// resolves with an HttpResponse representing the result.
         abstract get: url: string -> JS.Promise<Response>
-        /// <summary>Issues an HTTP GET request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="url">The URL for the request.</param>
-        /// <param name="options">Additional options to configure the request. The 'url' field in this object will be overridden by the url parameter.</param>
+        /// Issues an HTTP GET request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract get: url: string * options: Request -> JS.Promise<Response>
 
-        /// <summary>Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="url">The URL for the request.</param>
+        /// Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
         abstract post: url: string -> JS.Promise<Response>
-        /// <summary>Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="url">The URL for the request.</param>
-        /// <param name="options">Additional options to configure the request. The 'url' field in this object will be overridden by the url parameter.</param>
+        /// Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
         abstract post: url: string * options: Request -> JS.Promise<Response>
 
-        /// <summary>Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="url">The URL for the request.</param>
+        /// Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
         abstract delete: url: string -> JS.Promise<Response>
-        /// <summary>Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="url">The URL for the request.</param>
-        /// <param name="options">Additional options to configure the request. The 'url' field in this object will be overridden by the url parameter.</param>
+        /// Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
         abstract delete: url: string * options: Request -> JS.Promise<Response>
 
-        /// <summary>Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.</summary>
-        /// <param name="request">An {@link</param>
+        /// Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
         abstract send: request: Request -> JS.Promise<Response>
 
-        /// <summary>Gets all cookies that apply to the specified URL.</summary>
-        /// <param name="url">The URL that the cookies are valid for.</param>
+        ///Gets all cookies that apply to the specified URL.
         abstract getCookieString: url: string -> string
 
     type DefaultClient =
@@ -136,9 +130,6 @@ module Http =
 
         /// Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
         abstract send: request: Request -> JS.Promise<Response>
-
-        /// Gets all cookies that apply to the specified URL.
-        abstract getCookieString: url: string -> string
 
     type internal ConnectionOptions =
         { headers: Map<string,string> option
@@ -150,6 +141,7 @@ module Http =
           skipNegotiation: bool option
           withCredentials: bool option }
 
+    /// Configures the SignalR connection.
     type ConnectionBuilder internal () =
         let mutable state =
             { headers = None

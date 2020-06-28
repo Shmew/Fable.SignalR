@@ -14,14 +14,16 @@
   },
   "scripts": {
     "build": "webpack -p",
-    "dev": "concurrently --kill-others \"yarn start-server\" \"webpack-dev-server\"",
+    "dev": "concurrently --kill-others \"yarn start-server-watch\" \"webpack-dev-server\"",
     "pretest": "fable-splitter -c tests/Fable.SignalR.Tests/splitter.config.js",
     "publish-docs": "node publish.js",
     "start": "live-server --port=8080 docs/",
-    "start-server": "npx nodemon -e fs,fsproj,fsi --watch ./demo/Server --watch src --watch tests --exec npx ./startServer.js",
+    "start-server": "npx ./startServer.js",
+    "start-server-watch": "npx nodemon -e fs,fsproj,fsi --watch ./demo/Server --watch src --watch tests --exec npx ./startServer.js",
     "test": "jest",
-    "test-watch": "npx nodemon -e fs,fsproj,fsi --watch tests --watch src --exec yarn test",
-    "test-server": "concurrently --kill-others \"yarn start-server\" \"yarn test-watch\""
+    "test-watch": "npx nodemon -e fs,fsproj,fsi --watch tests --watch src --watch demo --exec yarn test",
+    "test-server": "concurrently --success first --kill-others \"yarn start-server\" \"yarn test\"",
+    "test-server-watch": "concurrently --kill-others \"yarn start-server-watch\" \"yarn test-watch\""
   },
   "dependencies": {
     "@microsoft/signalr": "^3.1.4",
@@ -71,6 +73,7 @@
   "jest": {
     "roots": [
       "./dist/tests"
-    ]
+    ],
+    "testEnvironment": "node"
   }
 }

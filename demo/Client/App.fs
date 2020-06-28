@@ -88,8 +88,86 @@ module App =
                 ]
             ])
 
+    module InvokeElmish =
+        type Model =
+            { Count: int
+              Text: string
+              Hub: Elmish.Hub<Action,Response> option }
+
+            interface System.IDisposable with
+                member this.Dispose () =
+                    this.Hub |> Option.iter (fun hub -> hub.Dispose())
+
+        type Msg =
+            | SignalRMsg of Response
+            | IncrementCount
+            | DecrementCount
+            | RandomCharacter
+            | SayHello
+            | RegisterHub of Elmish.Hub<Action,Response>
+
+        let init =
+            { Count = 0
+              Text = ""
+              Hub = None }
+            , Cmd.SignalR.connect RegisterHub (fun hub -> 
+                hub.withUrl(Endpoints.Root)
+                    .withAutomaticReconnect()
+                    .configureLogging(LogLevel.Debug))
+
+        let update msg model =
+            match msg with
+            | RegisterHub hub -> { model with Hub = Some hub }, Cmd.none
+            | SignalRMsg rsp ->
+                match rsp with
+                | Response.Howdy -> model, Cmd.none
+                | Response.RandomCharacter str ->
+                    { model with Text = str }, Cmd.none
+                | Response.NewCount i ->
+                    { model with Count = i }, Cmd.none
+            | IncrementCount ->
+                model, Cmd.SignalR.perform model.Hub (Action.IncrementCount model.Count) SignalRMsg 
+            | DecrementCount ->
+                model, Cmd.SignalR.perform model.Hub (Action.DecrementCount model.Count) SignalRMsg
+            | RandomCharacter ->
+                model, Cmd.SignalR.perform model.Hub Action.RandomCharacter SignalRMsg
+            | SayHello ->
+                model, Cmd.SignalR.perform model.Hub Action.SayHello SignalRMsg
+
+        let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
+            React.fragment [
+                Html.div input.count
+                Html.div input.text
+            ])
+
+        let buttons = React.functionComponent(fun (input: {| dispatch: Msg -> unit |}) ->
+            React.fragment [
+                Html.button [
+                    prop.text "Increment"
+                    prop.onClick <| fun _ -> input.dispatch IncrementCount
+                ]
+                Html.button [
+                    prop.text "Decrement"
+                    prop.onClick <| fun _ -> input.dispatch DecrementCount
+                ]
+                Html.button [
+                    prop.text "Get Random Character"
+                    prop.onClick <| fun _ -> input.dispatch RandomCharacter
+                ]
+            ])
+
+        let render = React.functionComponent(fun () ->
+            let state,dispatch = React.useElmish(init, update, [||])
+
+            Html.div [
+                prop.children [
+                    textDisplay {| count = state.Count; text = state.Text |}
+                    buttons {| dispatch = dispatch |}
+                ]
+            ])
+
     module StreamingElmish =
-        type MyHub = Elmish.StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
+        type Hub = Elmish.StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
 
         [<RequireQualifiedAccess>]
         type StreamStatus =
@@ -101,7 +179,7 @@ module App =
         type Model =
             { Count: int
               Text: string
-              Hub: MyHub option
+              Hub: Hub option
               SFCount: int
               StreamSubscription: ISubscription option
               StreamStatus: StreamStatus
@@ -121,7 +199,7 @@ module App =
             | SayHello
             | StartClientStream
             | StartServerStream
-            | RegisterHub of MyHub
+            | RegisterHub of Hub
             | Subscription of ISubscription
             | StreamStatus of StreamStatus
             | ClientStreamStatus of StreamStatus
@@ -258,17 +336,14 @@ module App =
         let buttons = React.functionComponent(fun (input: {| count: int; hub: Hub<Action,Response> |}) ->
             React.fragment [
                 Html.button [
-                    prop.testId "buttons-increment"
                     prop.text "Increment"
                     prop.onClick <| fun _ -> input.hub.current.sendNow (Action.IncrementCount input.count)
                 ]
                 Html.button [
-                    prop.testId "buttons-decrement"
                     prop.text "Decrement"
                     prop.onClick <| fun _ -> input.hub.current.sendNow (Action.DecrementCount input.count)
                 ]
                 Html.button [
-                    prop.testId "buttons-random"
                     prop.text "Get Random Character"
                     prop.onClick <| fun _ -> input.hub.current.sendNow Action.RandomCharacter
                 ]
@@ -297,14 +372,79 @@ module App =
                 ]
             ])
 
+    module InvokeHook =
+        let display = React.functionComponent(fun (input: {| hub: Hub<Action,Response> |}) ->
+            let count,setCount = React.useState 0
+            let text,setText = React.useState ""
+
+            React.fragment [
+                Html.div [
+                    Html.div count
+                    Html.div text
+                ]
+                Html.button [
+                    prop.text "Increment"
+                    prop.onClick <| fun _ -> 
+                        async {
+                            let! rsp = input.hub.current.invoke (Action.IncrementCount count)
+                            
+                            match rsp with
+                            | Response.NewCount i -> setCount i
+                            | _ -> ()
+                        }
+                        |> Async.StartImmediate
+                ]
+                Html.button [
+                    prop.text "Decrement"
+                    prop.onClick <| fun _ -> 
+                        promise {
+                            let! rsp = input.hub.current.invokeAsPromise (Action.DecrementCount count)
+                            
+                            match rsp with
+                            | Response.NewCount i -> setCount i
+                            | _ -> ()
+                        }
+                        |> Promise.start
+                ]
+                Html.button [
+                    prop.text "Get Random Character"
+                    prop.onClick <| fun _ -> 
+                        async {
+                            let! rsp = input.hub.current.invoke Action.RandomCharacter
+                            
+                            match rsp with
+                            | Response.RandomCharacter str -> setText str
+                            | _ -> ()
+                        }
+                        |> Async.StartImmediate
+                ]
+            ])
+
+        let render = React.functionComponent(fun () ->
+            let hub =
+                React.useSignalR<Action,Response>(fun hub -> 
+                    hub.withUrl(Endpoints.Root)
+                        .withAutomaticReconnect()
+                        .configureLogging(LogLevel.Debug)
+                        .onMessage <| fun (msg: Response) -> JS.console.log("")
+                )
+            
+            Html.div [
+                prop.children [
+                    display {| hub = hub |}
+                ]
+            ])
+
     module StreamingHook =
         module Bidirectional =
+            type Hub = StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
+
             let textDisplay = React.functionComponent(fun (input: {| count: int |}) ->
                 Html.div [
                     prop.textf "From server: %i" input.count
                 ])
 
-            let display = React.functionComponent(fun (input: {| hub: StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response> |}) ->
+            let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
                 let count,setCount = React.useState 0
                 
                 let subscriber = 
@@ -367,13 +507,15 @@ module App =
                 ])
 
         module ClientToServer =
+            type Hub = StreamHub.ClientToServer<Action,StreamTo.Action,Response>
+            
             let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
                 React.fragment [
                     Html.div input.count
                     Html.div input.text
                 ])
 
-            let display = React.functionComponent(fun (input: {| count: int; hub: StreamHub.ClientToServer<Action,StreamTo.Action,Response> |}) ->
+            let display = React.functionComponent(fun (input: {| count: int; hub: Hub |}) ->
                 Html.button [
                     prop.text "Stream To"
                     prop.onClick <| fun _ -> 
@@ -415,7 +557,9 @@ module App =
                 ])
 
         module ServerToClient =
-            let display = React.functionComponent(fun (input: {| hub: StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response> |}) ->
+            type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response>
+
+            let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
                 let count,setCount = React.useState(0)
                 
                 let subscriber = 
@@ -427,9 +571,7 @@ module App =
                       error = fun err -> JS.console.log(err) }
 
                 React.fragment [
-                    Html.div [
-                        Html.div count
-                    ]
+                    Html.div count
                     Html.button [
                         prop.text "Stream From"
                         prop.onClick <| fun _ -> 
@@ -459,11 +601,21 @@ module App =
 
     let render = React.functionComponent(fun () ->
         Html.div [
+            Html.div "Elmish"
             Elmish.render()
+            Html.div "InvokeElmish"
+            InvokeElmish.render()
+            Html.div "StreamingElmish"
             StreamingElmish.render()
+            Html.div "Hook"
             Hook.render()
+            Html.div "InvokeHook"
+            InvokeHook.render()
+            Html.div "ClientToServer"
             StreamingHook.ClientToServer.render()
+            Html.div "ServerToClient"
             StreamingHook.ServerToClient.render()
+            Html.div "Bidirectional"
             StreamingHook.Bidirectional.render()
         ])
 
