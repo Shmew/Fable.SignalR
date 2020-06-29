@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Fable.SignalR</title>
+    <link rel="stylesheet" href="https://unpkg.com/docute@4/dist/docute.css">
+    <link rel="stylesheet" type="text/css" href="styles/website.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/docute@4/dist/docute.js"></script>
+    <script>
+        // make images work using absolute urls both in developement and when published to github
+        Vue.component("ResolvedImage", {
+            props: ["source"],
+            template: "<img :src='resolvedUrl' />",
+            computed: {
+                resolvedUrl: function () {
+                    let path = window.location.pathname;
+                    if (path.endsWith("/")) {
+                        return path.substr(0, path.length - 1) + this.source;
+                    } else {
+                        return path + this.source;
+                    }
+                }
+            }
+        });
+
+        var docs = new Docute({
+            detectSystemDarkTheme: true,
+            darkThemeToggler: true,
+            imageZoom: true,
+            layout: "wide",
+            target: "#root",
+            highlight: ["fsharp", "bash", "powershell", "json"],
+            cssVariables: {
+                accentColor: "hsl(171, 100%, 41%)",
+                sidebarWidth: "300px",
+                sidebarLinkActiveColor: "hsl(171, 100%, 41%)",
+                sidebarLinkArrowColor: "hsl(171, 100%, 41%)"
+            },
+            nav: [
+                { title: "GitHub Repository", link: "https://github.com/Shmew/Fable.SignalR" }
+            ],
+            sidebar: [
+                {
+                    title: "Introduction",
+                    link: "/"
+                },
+                {
+                    title: "Installation",
+                    link: "/installation" 
+                },
+                {
+                    title: "Release Notes",
+                    link: "/RELEASE_NOTES"
+                },
+                {
+                    title: "Fable client",
+                    links: [
+                        { title: "Introduction", link: "/signalr-client/" },
+                        { title: "Connecting to SignalR", link: "/signalr-client/connecting" },
+                        { title: "Sending Messages", link: "/signalr-client/messages" },
+                        { title: "Server Streaming", link: "/signalr-client/streaming-server" },
+                        { title: "Client Streaming", link: "/signalr-client/streaming-client" },
+                        { title: "API Reference", link: "/signalr-client/api" }
+                    ]
+                },
+                {
+                    title: "Server Configuration",
+                    links: [
+                        { title: "Introduction", link: "/signalr-server/" },
+                        { title: "ASP.NET Core/Giraffe", link: "/signalr-server/aspnetcore" },
+                        { title: "Saturn", link: "/signalr-server/saturn" },
+                        { title: "API Reference", link: "/signalr-server/api" }
+                    ]
+                },
+
+                {
+                    title: "Integration Testing",
+                    link: "/integration-testing"
+                },
+                {
+                    title: "Contributing",
+                    link: "/contributing"
+                }
+            ]
+        });
+    </script>
+</body>
+</html>
