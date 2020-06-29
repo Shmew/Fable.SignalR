@@ -1,0 +1,20 @@
+environment:
+  CLI_VERSION: 3.1.301
+image: Visual Studio 2019
+init:
+  - git config --global core.autocrlf input
+install:
+  - ps: Install-Product node 14
+  - yarn --cache-folder=.cache/yarn --no-progress --pure-lockfile
+  - cinst fake
+cache:
+  - .cache/yarn
+build_script:
+  - cmd: build.cmd -t CopyBinaries
+test: off
+test_script:
+  - yarn test-server
+version: 0.0.1.{build}
+artifacts:
+  - path: bin
+    name: bin
