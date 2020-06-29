@@ -436,168 +436,76 @@ module App =
             ])
 
     module StreamingHook =
-        module Bidirectional =
-            type Hub = StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
-
-            let textDisplay = React.functionComponent(fun (input: {| count: int |}) ->
+        type Hub = StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
+        
+        let textDisplay = React.functionComponent(fun (input: {| count: int |}) ->
+            Html.div [
+                prop.textf "%i" input.count
+            ])
+        
+        let display = React.functionComponent(fun (input: {| hub: Hub; callback: int -> unit |}) ->
+            let clientIsComplete,setClientIsComplete = React.useState false
+            let serverIsComplete,setServerIsComplete = React.useState false
+        
+            let subscriber = 
+                { next = fun (msg: StreamFrom.Response) -> 
+                    match msg with
+                    | StreamFrom.Response.GetInts i -> input.callback i
+                  complete = fun () -> setServerIsComplete true
+                  error = fun _ -> () }
+                    
+            React.fragment [
                 Html.div [
-                    prop.textf "From server: %i" input.count
-                ])
-
-            let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
-                let count,setCount = React.useState 0
-                
-                let subscriber = 
-                    { next = fun (msg: StreamFrom.Response) -> 
-                        match msg with
-                        | StreamFrom.Response.GetInts i ->
-                            setCount(i)
-                      complete = fun () -> JS.console.log("Complete!")
-                      error = fun err -> JS.console.log(err) }
-                
-                React.fragment [
-                    Html.div [
-                        prop.textf "From client: %i" count
-                    ]
-                    Html.button [
-                        prop.text "Stream To"
-                        prop.onClick <| fun _ -> 
-                            async {
-                                let subject = SignalR.Subject()
-                                
-                                do! input.hub.current.streamTo(subject)
-                                
-                                for i in [1..100] do
-                                    do! Async.Sleep 50
-                                    subject.next (StreamTo.Action.GiveInt i)
-                            }
-                            |> Async.StartImmediate
-                    ]
-                    Html.button [
-                        prop.text "Stream From"
-                        prop.onClick <| fun _ -> 
-                            promise {
-                                let stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                                stream.subscribe(subscriber)
-                                |> ignore
-                            }
-                            |> Promise.start
-                    ]
-                ])
-
-            let render = React.functionComponent(fun () ->
-                let count,setCount = React.useState 0
-
-                let hub =
-                    React.useSignalR<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub -> 
-                        hub.withUrl(Endpoints.Root)
-                            .withAutomaticReconnect()
-                            .configureLogging(LogLevel.Debug)
-                            .onMessage <| 
-                                function 
-                                | Response.NewCount i -> setCount i
-                                | _ -> ()
-                    )
-
+                    prop.textf "%b" clientIsComplete
+                ]
                 Html.div [
-                    prop.children [
-                        textDisplay {| count = count |}
-                        display {| hub = hub |}
-                    ]
-                ])
-
-        module ClientToServer =
-            type Hub = StreamHub.ClientToServer<Action,StreamTo.Action,Response>
-            
-            let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
-                React.fragment [
-                    Html.div input.count
-                    Html.div input.text
-                ])
-
-            let display = React.functionComponent(fun (input: {| count: int; hub: Hub |}) ->
+                    prop.textf "%b" serverIsComplete
+                ]
                 Html.button [
                     prop.text "Stream To"
                     prop.onClick <| fun _ -> 
                         async {
                             let subject = SignalR.Subject()
-                            
+                                    
                             do! input.hub.current.streamTo(subject)
                                     
                             for i in [1..100] do
-                                do! Async.Sleep 10
+                                do! Async.Sleep 50
                                 subject.next (StreamTo.Action.GiveInt i)
-
-                            subject.complete()
+                            setClientIsComplete(true)
                         }
                         |> Async.StartImmediate
-                ])
-
-            let render = React.functionComponent(fun () ->
-                let count,setCount = React.useState 0
-                let text,setText = React.useState ""
-
-                let hub =
-                    React.useSignalR<Action,StreamTo.Action,Response>(fun hub -> 
-                        hub.withUrl(Endpoints.Root)
-                            .withAutomaticReconnect()
-                            .configureLogging(LogLevel.Debug)
-                            .onMessage <|
-                                function
-                                | Response.Howdy -> JS.console.log("Howdy!")
-                                | Response.NewCount i -> setCount i
-                                | Response.RandomCharacter str -> setText str
-                    )
-
-                Html.div [
-                    prop.children [
-                        textDisplay {| count = count; text = text |}
-                        display {| count = count; hub = hub |}
-                    ]
-                ])
-
-        module ServerToClient =
-            type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response>
-
-            let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
-                let count,setCount = React.useState(0)
-                
-                let subscriber = 
-                    { next = fun (msg: StreamFrom.Response) -> 
-                        match msg with
-                        | StreamFrom.Response.GetInts i ->
-                            setCount(i)
-                      complete = fun () -> JS.console.log("Complete!")
-                      error = fun err -> JS.console.log(err) }
-
-                React.fragment [
-                    Html.div count
-                    Html.button [
-                        prop.text "Stream From"
-                        prop.onClick <| fun _ -> 
-                            promise {
-                                let stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                                stream.subscribe(subscriber)
-                                |> ignore
-                            }
-                            |> Promise.start
-                    ]
-                ])
-
-            let render = React.functionComponent(fun () ->
-                let hub =
-                    React.useSignalR<Action,StreamFrom.Action,Response,StreamFrom.Response>(fun hub -> 
-                        hub.withUrl(Endpoints.Root)
-                            .withAutomaticReconnect()
-                            .configureLogging(LogLevel.Debug)
-                            .onMessage <| function | _ -> ()
-                    )
-
-                Html.div [
-                    prop.children [
-                        display {| hub = hub |}
-                    ]
-                ])
+                ]
+                Html.button [
+                    prop.text "Stream From"
+                    prop.onClick <| fun _ -> 
+                        async {
+                            let! stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
+                            stream.subscribe(subscriber)
+                            |> ignore
+                        }
+                        |> Async.StartImmediate
+                ]
+            ])
+        
+        let render = React.functionComponent(fun () ->
+            let count,setCount = React.useState 0
+        
+            let setCount = React.useCallback(setCount, [||])
+        
+            let hub =
+                React.useSignalR<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub -> 
+                    hub.withUrl(Endpoints.Root)
+                        .withAutomaticReconnect()
+                        .configureLogging(LogLevel.Debug)
+                )
+        
+            Html.div [
+                prop.children [
+                    textDisplay {| count = count |}
+                    display {| hub = hub; callback = setCount |}
+                ]
+            ])
 
     let render = React.functionComponent(fun () ->
         Html.div [
@@ -611,12 +519,8 @@ module App =
             Hook.render()
             Html.div "InvokeHook"
             InvokeHook.render()
-            Html.div "ClientToServer"
-            StreamingHook.ClientToServer.render()
-            Html.div "ServerToClient"
-            StreamingHook.ServerToClient.render()
-            Html.div "Bidirectional"
-            StreamingHook.Bidirectional.render()
+            Html.div "StreamingHook"
+            StreamingHook.render()
         ])
 
     ReactDOM.render(render, Browser.Dom.document.getElementById "app")

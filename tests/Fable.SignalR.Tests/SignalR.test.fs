@@ -175,8 +175,10 @@ type HubModel () =
                   complete = fun () -> mailbox.Post(SetState(fun m -> { m with StreamState = StreamStatus.Finished }))
                   error = fun e -> mailbox.Post(SetState(fun m -> { m with StreamState = StreamStatus.Error e })) }
 
+            let! streamResult = hub.streamFrom StreamFrom.Action.GenInts
+
             use sub =
-                hub.streamFrom StreamFrom.Action.GenInts
+                streamResult
                 |> StreamResult.subscribe subscriber
                 |> ISubscription.toDisposable
 

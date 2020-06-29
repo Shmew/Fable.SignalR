@@ -201,7 +201,7 @@ module StreamingElmish =
 
     type Model =
         { Hub: Hub option
-          SFCount: int
+          Count: int
           StreamSubscription: ISubscription option
           StreamStatus: StreamStatus
           ClientStreamStatus: StreamStatus }
@@ -222,7 +222,7 @@ module StreamingElmish =
 
     let init =
         { Hub = None
-          SFCount = 0
+          Count = 0
           StreamSubscription = None
           StreamStatus = StreamStatus.NotStarted
           ClientStreamStatus = StreamStatus.NotStarted }
@@ -235,7 +235,7 @@ module StreamingElmish =
         match msg with
         | RegisterHub hub -> { model with Hub = Some hub }, Cmd.none
         | SignalRStreamMsg (StreamFrom.Response.GetInts i) ->
-            { model with SFCount = i }, Cmd.none
+            { model with Count = i }, Cmd.none
         | StartClientStream ->
             let subject = SignalR.Subject<StreamTo.Action>()
 
@@ -274,12 +274,15 @@ module StreamingElmish =
     let display = React.functionComponent(fun (input: Model) ->
         React.fragment [
             Html.div [
-                prop.text input.SFCount
+                prop.testId "count"
+                prop.text input.Count
             ]
             Html.div [
+                prop.testId "server-stream-status"
                 prop.textf "%A" input.StreamStatus
             ]
             Html.div [
+                prop.testId "client-stream-status"
                 prop.textf "%A" input.ClientStreamStatus
             ]
         ])
@@ -287,10 +290,12 @@ module StreamingElmish =
     let buttons = React.functionComponent(fun (input: {| dispatch: Msg -> unit |}) ->
         React.fragment [
             Html.button [
+                prop.testId "start-server-stream"
                 prop.text "Start Server Stream"
                 prop.onClick <| fun _ -> input.dispatch StartServerStream
             ]
             Html.button [
+                prop.testId "start-client-stream"
                 prop.text "Start Client Stream"
                 prop.onClick <| fun _ -> input.dispatch StartClientStream
             ]
@@ -309,21 +314,30 @@ module StreamingElmish =
 module Hook =
     let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
         React.fragment [
-            Html.div input.count
-            Html.div input.text
+            Html.div [
+                prop.testId "count"
+                prop.text input.count
+            ]
+            Html.div [
+                prop.testId "text"
+                prop.text input.text
+            ]
         ])
 
     let buttons = React.functionComponent(fun (input: {| count: int; hub: Hub<Action,Response> |}) ->
         React.fragment [
             Html.button [
+                prop.testId "increment"
                 prop.text "Increment"
                 prop.onClick <| fun _ -> input.hub.current.sendNow (Action.IncrementCount input.count)
             ]
             Html.button [
+                prop.testId "decrement"
                 prop.text "Decrement"
                 prop.onClick <| fun _ -> input.hub.current.sendNow (Action.DecrementCount input.count)
             ]
             Html.button [
+                prop.testId "random"
                 prop.text "Get Random Character"
                 prop.onClick <| fun _ -> input.hub.current.sendNow Action.RandomCharacter
             ]
@@ -359,10 +373,17 @@ module InvokeHook =
 
         React.fragment [
             Html.div [
-                Html.div count
-                Html.div text
+                Html.div [
+                    prop.testId "count"
+                    prop.text count
+                ]
+                Html.div [
+                    prop.testId "text"
+                    prop.text text
+                ]
             ]
             Html.button [
+                prop.testId "increment"
                 prop.text "Increment"
                 prop.onClick <| fun _ -> 
                     async {
@@ -375,6 +396,7 @@ module InvokeHook =
                     |> Async.StartImmediate
             ]
             Html.button [
+                prop.testId "decrement"
                 prop.text "Decrement"
                 prop.onClick <| fun _ -> 
                     promise {
@@ -387,6 +409,7 @@ module InvokeHook =
                     |> Promise.start
             ]
             Html.button [
+                prop.testId "random"
                 prop.text "Get Random Character"
                 prop.onClick <| fun _ -> 
                     async {
@@ -416,165 +439,77 @@ module InvokeHook =
         ])
 
 module StreamingHook =
-    module Bidirectional =
-        type Hub = StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
+    type Hub = StreamHub.Bidrectional<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
 
-        let textDisplay = React.functionComponent(fun (input: {| count: int |}) ->
-            Html.div [
-                prop.textf "From server: %i" input.count
-            ])
+    let textDisplay = React.functionComponent(fun (input: {| count: int |}) ->
+        Html.div [
+            prop.testId "count"
+            prop.textf "%i" input.count
+        ])
 
-        let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
-            let count,setCount = React.useState 0
+    let display = React.functionComponent(fun (input: {| hub: Hub; callback: int -> unit |}) ->
+        let clientIsComplete,setClientIsComplete = React.useState false
+        let serverIsComplete,setServerIsComplete = React.useState false
+
+        let subscriber = 
+            { next = fun (msg: StreamFrom.Response) -> 
+                match msg with
+                | StreamFrom.Response.GetInts i -> input.callback i
+              complete = fun () -> setServerIsComplete true
+              error = fun _ -> () }
             
-            let subscriber = 
-                { next = fun (msg: StreamFrom.Response) -> 
-                    match msg with
-                    | StreamFrom.Response.GetInts i ->
-                        setCount(i)
-                  complete = fun () -> JS.console.log("Complete!")
-                  error = fun err -> JS.console.log(err) }
-            
-            React.fragment [
-                Html.div [
-                    prop.textf "From client: %i" count
-                ]
-                Html.button [
-                    prop.text "Stream To"
-                    prop.onClick <| fun _ -> 
-                        async {
-                            let subject = SignalR.Subject()
-                            
-                            do! input.hub.current.streamTo(subject)
-                            
-                            for i in [1..100] do
-                                do! Async.Sleep 50
-                                subject.next (StreamTo.Action.GiveInt i)
-                        }
-                        |> Async.StartImmediate
-                ]
-                Html.button [
-                    prop.text "Stream From"
-                    prop.onClick <| fun _ -> 
-                        promise {
-                            let stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                            stream.subscribe(subscriber)
-                            |> ignore
-                        }
-                        |> Promise.start
-                ]
-            ])
-
-        let render = React.functionComponent(fun () ->
-            let count,setCount = React.useState 0
-
-            let hub =
-                React.useSignalR<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub -> 
-                    hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root)
-                        .withAutomaticReconnect()
-                        .configureLogging(LogLevel.None)
-                        .onMessage <| 
-                            function 
-                            | Response.NewCount i -> setCount i
-                            | _ -> ()
-                )
-
+        React.fragment [
             Html.div [
-                prop.children [
-                    textDisplay {| count = count |}
-                    display {| hub = hub |}
-                ]
-            ])
-
-    module ClientToServer =
-        type Hub = StreamHub.ClientToServer<Action,StreamTo.Action,Response>
-        
-        let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
-            React.fragment [
-                Html.div input.count
-                Html.div input.text
-            ])
-
-        let display = React.functionComponent(fun (input: {| count: int; hub: Hub |}) ->
+                prop.testId "client-complete"
+                prop.textf "%b" clientIsComplete
+            ]
+            Html.div [
+                prop.testId "server-complete"
+                prop.textf "%b" serverIsComplete
+            ]
             Html.button [
+                prop.testId "start-client-stream"
                 prop.text "Stream To"
                 prop.onClick <| fun _ -> 
                     async {
                         let subject = SignalR.Subject()
-                        
+                            
                         do! input.hub.current.streamTo(subject)
-                                
+                            
                         for i in [1..100] do
-                            do! Async.Sleep 10
                             subject.next (StreamTo.Action.GiveInt i)
-
-                        subject.complete()
+                        setClientIsComplete(true)
                     }
                     |> Async.StartImmediate
-            ])
+            ]
+            Html.button [
+                prop.testId "start-server-stream"
+                prop.text "Stream From"
+                prop.onClick <| fun _ -> 
+                    async {
+                        let! stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
+                        stream.subscribe(subscriber)
+                        |> ignore
+                    }
+                    |> Async.StartImmediate
+            ]
+        ])
 
-        let render = React.functionComponent(fun () ->
-            let count,setCount = React.useState 0
-            let text,setText = React.useState ""
+    let render = React.functionComponent(fun () ->
+        let count,setCount = React.useState 0
 
-            let hub =
-                React.useSignalR<Action,StreamTo.Action,Response>(fun hub -> 
-                    hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root)
-                        .withAutomaticReconnect()
-                        .configureLogging(LogLevel.None)
-                        .onMessage <|
-                            function
-                            | Response.Howdy -> JS.console.log("Howdy!")
-                            | Response.NewCount i -> setCount i
-                            | Response.RandomCharacter str -> setText str
-                )
+        let setCount = React.useCallback(setCount, [||])
 
-            Html.div [
-                prop.children [
-                    textDisplay {| count = count; text = text |}
-                    display {| count = count; hub = hub |}
-                ]
-            ])
+        let hub =
+            React.useSignalR<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub -> 
+                hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root)
+                    .withAutomaticReconnect()
+                    .configureLogging(LogLevel.None)
+            )
 
-    module ServerToClient =
-        type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response>
-
-        let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
-            let count,setCount = React.useState(0)
-            
-            let subscriber = 
-                { next = fun (msg: StreamFrom.Response) -> 
-                    match msg with
-                    | StreamFrom.Response.GetInts i ->
-                        setCount(i)
-                  complete = fun () -> JS.console.log("Complete!")
-                  error = fun err -> JS.console.log(err) }
-
-            React.fragment [
-                Html.div count
-                Html.button [
-                    prop.text "Stream From"
-                    prop.onClick <| fun _ -> 
-                        promise {
-                            let stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                            stream.subscribe(subscriber)
-                            |> ignore
-                        }
-                        |> Promise.start
-                ]
-            ])
-
-        let render = React.functionComponent(fun () ->
-            let hub =
-                React.useSignalR<Action,StreamFrom.Action,Response,StreamFrom.Response>(fun hub -> 
-                    hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root)
-                        .withAutomaticReconnect()
-                        .configureLogging(LogLevel.None)
-                        .onMessage <| function | _ -> ()
-                )
-
-            Html.div [
-                prop.children [
-                    display {| hub = hub |}
-                ]
-            ])
+        Html.div [
+            prop.children [
+                textDisplay {| count = count |}
+                display {| hub = hub; callback = setCount |}
+            ]
+        ])

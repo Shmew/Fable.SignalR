@@ -385,18 +385,26 @@ module Elmish =
                 fun (msg: 'ClientStreamApi) (subscription: ISubscription -> 'Msg) (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) ->
                     [ fun dispatch -> 
                         hub |> Option.iter (fun hub -> 
-                            hub.hub.streamFrom msg 
-                            |> fun rsp -> rsp.subscribe(subscriber dispatch) 
-                            |> subscription |> dispatch) ] : Cmd<'Msg>
+                            async {
+                                let! streamResult = hub.hub.streamFrom msg 
+                                
+                                streamResult.subscribe(subscriber dispatch) 
+                                |> subscription |> dispatch
+                            }
+                            |> fun a -> Async.StartImmediate(a, hub.cts.Token)) ] : Cmd<'Msg>
 
             /// Streams from the hub.
             static member inline streamFrom (hub: Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,_,'ServerApi,'ServerStreamApi> option) =
                 fun (msg: 'ClientStreamFromApi) (subscription: ISubscription -> 'Msg) (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) ->
                     [ fun dispatch -> 
                         hub |> Option.iter (fun hub -> 
-                            hub.hub.streamFrom msg 
-                            |> fun rsp -> rsp.subscribe(subscriber dispatch) 
-                            |> subscription |> dispatch) ] : Cmd<'Msg>
+                            async {
+                                let! streamResult = hub.hub.streamFrom msg 
+                                
+                                streamResult.subscribe(subscriber dispatch) 
+                                |> subscription |> dispatch
+                            }
+                            |> fun a -> Async.StartImmediate(a, hub.cts.Token)) ] : Cmd<'Msg>
 
             /// Streams to the hub.
             static member inline streamTo (hub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi> option) =

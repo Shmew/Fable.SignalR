@@ -8,7 +8,6 @@
     <Compile Include="Types.fs" />
     <Compile Include="HttpClient.fs" />
     <Compile Include="HubConnection.fs" />
-    <Compile Include="Bindings.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="SignalR.fs" />
     <None Include="paket.references" />

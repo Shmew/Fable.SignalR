@@ -212,89 +212,6 @@ type ConnectionState =
     | Reconnecting
 
 [<Erase>]
-type Hub<'ClientApi,'ServerApi> =
-    /// Returns the base url of the hub connection.
-    abstract baseUrl : string
-
-    /// Returns the connectionId to the hub of this client.
-    abstract connectionId : string option
-    
-    /// Invokes a hub method on the server.
-    /// 
-    /// The async returned by this method resolves when the server indicates it has finished invoking 
-    /// the method. When it finishes, the server has finished invoking the method. If the server 
-    /// method returns a result, it is produced as the result of resolving the async call.
-    abstract invoke: msg: 'ClientApi -> Async<'ServerApi>
-
-    /// Invokes a hub method on the server.
-    /// 
-    /// The promise returned by this method resolves when the server indicates it has finished invoking 
-    /// the method. When it finishes, the server has finished invoking the method. If the server 
-    /// method returns a result, it is produced as the result of resolving the promise.
-    abstract invokeAsPromise: msg: 'ClientApi -> JS.Promise<'ServerApi>
-
-    /// Default interval at which to ping the server.
-    /// 
-    /// The default value is 15,000 milliseconds (15 seconds).
-    /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
-    abstract keepAliveInterval : int
-    
-    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
-    /// 
-    /// The async returned by this method resolves when the client has sent the invocation to the server. 
-    /// The server may still be processing the invocation.
-    abstract send: msg: 'ClientApi -> Async<unit>
-
-    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
-    /// 
-    /// The promise returned by this method resolves when the client has sent the invocation to the server. 
-    /// The server may still be processing the invocation.
-    abstract sendAsPromise: msg: 'ClientApi -> JS.Promise<unit>
-
-    /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
-    /// be processing the invocation.
-    abstract sendNow: msg: 'ClientApi -> unit
-    
-    /// The server timeout in milliseconds.
-    /// 
-    /// If this timeout elapses without receiving any messages from the server, the connection will be 
-    /// terminated with an error.
-    ///
-    /// The default timeout value is 30,000 milliseconds (30 seconds).
-    abstract serverTimeout : int
-
-    /// The state of the hub connection to the server.
-    abstract state : ConnectionState
-
-[<RequireQualifiedAccess>]
-module StreamHub =
-    [<Erase>]
-    type ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> =
-        inherit Hub<'ClientApi,'ServerApi>
-
-        /// Returns an async that when invoked, starts streaming to the hub.
-        abstract streamTo: subject: ISubject<'ClientStreamApi> -> Async<unit>
-
-        /// Returns a promise that when invoked, starts streaming to the hub.
-        abstract streamToAsPromise: subject: ISubject<'ClientStreamApi> -> JS.Promise<unit>
-
-        /// Streams to the hub immediately.
-        abstract streamToNow: subject: ISubject<'ClientStreamApi> -> unit
-    
-    [<Erase>]   
-    type ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> =
-        inherit Hub<'ClientApi,'ServerApi>
-
-        /// Streams from the hub.
-        abstract streamFrom: msg: 'ClientStreamApi -> StreamResult<'ServerStreamApi>
-
-    [<Erase>]
-    type Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
-        inherit Hub<'ClientApi,'ServerApi>
-        inherit ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi>
-        inherit ServerToClient<'ClientApi,'ClientStreamFromApi,'ServerApi,'ServerStreamApi>
-
-[<Erase>]
 type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     [<Emit("$0.baseUrl")>]
     member _.baseUrl : string = jsNative
@@ -369,14 +286,137 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
 
     member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = 
         this.streamTo'("StreamTo", subject) |> Async.AwaitPromise
+
+type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
+    abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract configureLogging: logger: ILogger -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract configureLogging: logLevel: string -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+
+    abstract withUrl: url: string -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract withUrl: url: string * transportType: TransportType -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract withUrl: url: string * options: Http.ConnectionOptions -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+
+    abstract withHubProtocol : protocol: IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+
+    abstract withAutomaticReconnect: unit -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract withAutomaticReconnect: retryDelays: seq<int> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract withAutomaticReconnect: reconnectPolicy: RetryPolicy -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+
+    abstract build: unit -> IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+
+module internal Bindings =
+    open Fable.Core
+    open Fable.Core.JsInterop
+
+    [<Erase>]
+    type SignalR =
+        [<Emit("new $0.HubConnectionBuilder()")>]
+        member _.HubConnectionBuilder () : IHubConnectionBuilder<'ClientApi,'ServerApi> = jsNative
+
+        [<Emit("new $0.HttpClient($1)")>]
+        member _.HttpClient (logger: ILogger) : Http.DefaultClient = jsNative
+
+        [<Emit("$0.NullLogger.instance")>]
+        member _.NullLogger () : NullLogger = jsNative
+
+        [<Emit("new $0.Subject()")>]
+        member _.Subject<'T> () : Subject<'T> = jsNative
+
+    let signalR : SignalR = importAll "@microsoft/signalr"
+
+[<Erase>]
+type Hub<'ClientApi,'ServerApi> =
+    /// Returns the base url of the hub connection.
+    abstract baseUrl : string
+
+    /// Returns the connectionId to the hub of this client.
+    abstract connectionId : string option
+    
+    /// Invokes a hub method on the server.
+    /// 
+    /// The async returned by this method resolves when the server indicates it has finished invoking 
+    /// the method. When it finishes, the server has finished invoking the method. If the server 
+    /// method returns a result, it is produced as the result of resolving the async call.
+    abstract invoke: msg: 'ClientApi -> Async<'ServerApi>
+
+    /// Invokes a hub method on the server.
+    /// 
+    /// The promise returned by this method resolves when the server indicates it has finished invoking 
+    /// the method. When it finishes, the server has finished invoking the method. If the server 
+    /// method returns a result, it is produced as the result of resolving the promise.
+    abstract invokeAsPromise: msg: 'ClientApi -> JS.Promise<'ServerApi>
+
+    /// Default interval at which to ping the server.
+    /// 
+    /// The default value is 15,000 milliseconds (15 seconds).
+    /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
+    abstract keepAliveInterval : int
+    
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    /// 
+    /// The async returned by this method resolves when the client has sent the invocation to the server. 
+    /// The server may still be processing the invocation.
+    abstract send: msg: 'ClientApi -> Async<unit>
+
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver.
+    /// 
+    /// The promise returned by this method resolves when the client has sent the invocation to the server. 
+    /// The server may still be processing the invocation.
+    abstract sendAsPromise: msg: 'ClientApi -> JS.Promise<unit>
+
+    /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
+    /// be processing the invocation.
+    abstract sendNow: msg: 'ClientApi -> unit
+    
+    /// The server timeout in milliseconds.
+    /// 
+    /// If this timeout elapses without receiving any messages from the server, the connection will be 
+    /// terminated with an error.
+    ///
+    /// The default timeout value is 30,000 milliseconds (30 seconds).
+    abstract serverTimeout : int
+
+    /// The state of the hub connection to the server.
+    abstract state : ConnectionState
+
+[<RequireQualifiedAccess>]
+module StreamHub =
+    [<Erase>]
+    type ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> =
+        inherit Hub<'ClientApi,'ServerApi>
+
+        /// Returns an async that when invoked, starts streaming to the hub.
+        abstract streamTo: subject: ISubject<'ClientStreamApi> -> Async<unit>
+
+        /// Returns a promise that when invoked, starts streaming to the hub.
+        abstract streamToAsPromise: subject: ISubject<'ClientStreamApi> -> JS.Promise<unit>
+
+        /// Streams to the hub immediately.
+        abstract streamToNow: subject: ISubject<'ClientStreamApi> -> unit
+    
+    [<Erase>]   
+    type ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> =
+        inherit Hub<'ClientApi,'ServerApi>
+
+        /// Streams from the hub.
+        abstract streamFrom: msg: 'ClientStreamApi -> Async<StreamResult<'ServerStreamApi>>
+
+        /// Streams from the hub.
+        abstract streamFromAsPromise: msg: 'ClientStreamApi -> JS.Promise<StreamResult<'ServerStreamApi>>
+
+    [<Erase>]
+    type Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> = 
+        inherit Hub<'ClientApi,'ServerApi>
+        inherit ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi>
+        inherit ServerToClient<'ClientApi,'ClientStreamFromApi,'ServerApi,'ServerStreamApi>
     
 [<NoComparison;NoEquality>]
 [<RequireQualifiedAccess>]
 type internal HubMailbox<'ClientApi,'ServerApi> =
     | ProcessSends
-    | Send of (unit -> Async<unit>)
+    | Send of callback:(unit -> Async<unit>)
     | ServerRsp of connectionId:string * rsp:'ServerApi
-    | StartInvocation of 'ClientApi * AsyncReplyChannel<'ServerApi>
+    | StartInvocation of msg:'ClientApi * replyChannel:AsyncReplyChannel<'ServerApi>
 
 [<NoComparison;NoEquality>]
 type internal Handlers =
@@ -507,6 +547,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     interface StreamHub.ServerToClient<'ClientApi,'ClientStreamFromApi,'ServerApi,'ServerStreamApi> with
         member this.streamFrom msg = this.streamFrom msg
+        member this.streamFromAsPromise msg = this.streamFromAsPromise msg
 
     interface StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
@@ -610,33 +651,24 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member this.stopNow () = this.stop() |> fun a -> Async.StartImmediate(a, cts.Token)
     
     /// Streams from the hub.
-    member _.streamFrom (msg: 'ClientStreamFromApi) = hub.streamFrom(msg)
+    member _.streamFrom (msg: 'ClientStreamFromApi) = 
+        mailbox.PostAndAsyncReply <| fun reply -> 
+            HubMailbox.Send <| fun () -> 
+                async { return reply.Reply(hub.streamFrom(msg)) }
+
+    /// Streams from the hub.
+    member this.streamFromAsPromise (msg: 'ClientStreamFromApi) = 
+        this.streamFrom(msg) |> Async.StartAsPromise
 
     /// Returns an async that when invoked, starts streaming to the hub.
-    member _.streamTo (subject: ISubject<'ClientStreamToApi>) =
+    member _.streamTo (?subject: ISubject<'ClientStreamToApi>) =
+        let subject = Option.defaultValue (Bindings.signalR.Subject() :> ISubject<'ClientStreamToApi>) subject
         async { return mailbox.Post(HubMailbox.Send(fun () -> hub.streamTo(subject))) }
         
     /// Returns a promise that when invoked, starts streaming to the hub.
-    member this.streamToAsPromise (subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo(subject) |> Async.StartAsPromise
+    member this.streamToAsPromise (?subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo(?subject = subject) |> Async.StartAsPromise
 
     /// Streams to the hub immediately.
-    member this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo(subject) |> fun a -> Async.StartImmediate(a, cts.Token)
-
-type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
-    abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-    abstract configureLogging: logger: ILogger -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-    abstract configureLogging: logLevel: string -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-
-    abstract withUrl: url: string -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-    abstract withUrl: url: string * transportType: TransportType -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-    abstract withUrl: url: string * options: Http.ConnectionOptions -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-
-    abstract withHubProtocol : protocol: IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-
-    abstract withAutomaticReconnect: unit -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-    abstract withAutomaticReconnect: retryDelays: seq<int> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-    abstract withAutomaticReconnect: reconnectPolicy: RetryPolicy -> IHubConnectionBuilder<'ClientApi,'ServerApi>
-
-    abstract build: unit -> IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+    member this.streamToNow (?subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo(?subject = subject) |> fun a -> Async.StartImmediate(a, cts.Token)

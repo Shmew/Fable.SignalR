@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="Components.fs" />
     <Compile Include="SignalR.Elmish.test.fs" />
+    <Compile Include="SignalR.Feliz.test.fs" />
     <Compile Include="SignalR.test.fs" />
     <None Include="paket.references" />
     <None Include="splitter.config.js" />
