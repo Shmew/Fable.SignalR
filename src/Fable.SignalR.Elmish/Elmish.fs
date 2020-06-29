@@ -285,11 +285,11 @@ module Elmish =
                             |> dispatch ]
                                                 
             /// Returns the base url of the hub connection.
-            let baseUrl (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string -> 'Msg) : Cmd<_> =
+            let baseUrl (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string -> 'Msg) : Cmd<'Msg> =
                 [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.baseUrl |> msg |> dispatch) ]
                 
             /// Returns the connectionId to the hub of this client.
-            let connectionId (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string option -> 'Msg) : Cmd<_> =
+            let connectionId (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string option -> 'Msg) : Cmd<'Msg> =
                 [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.connectionId |> msg |> dispatch) ]
             
             /// Starts a connection to a SignalR hub.
@@ -371,11 +371,11 @@ module Elmish =
             /// 
             /// This method resolves when the client has sent the invocation to the server. The server may still
             /// be processing the invocation.
-            let send (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: 'ClientApi) : Cmd<_> =
+            let send (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: 'ClientApi) : Cmd<'Msg> =
                 [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.sendNow msg) ]
 
             /// Returns the state of the Hub connection to the server.
-            let state (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: ConnectionState -> 'Msg) : Cmd<_> =
+            let state (hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: ConnectionState -> 'Msg) : Cmd<'Msg> =
                 [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.state |> msg |> dispatch) ]
 
         [<Erase>]

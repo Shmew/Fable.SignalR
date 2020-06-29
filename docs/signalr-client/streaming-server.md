@@ -150,9 +150,12 @@ let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
         Html.button [
             prop.text "Stream From"
             prop.onClick <| fun _ -> 
-                let stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                stream.subscribe(subscriber)
-                |> ignore
+                async {
+                    let! stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
+                    stream.subscribe(subscriber)
+                    |> ignore
+                }
+                |> Async.StartImmediate
         ]
     ])
 

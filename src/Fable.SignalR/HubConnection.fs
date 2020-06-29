@@ -326,10 +326,10 @@ module internal Bindings =
 
 [<Erase>]
 type Hub<'ClientApi,'ServerApi> =
-    /// Returns the base url of the hub connection.
+    /// The base url of the hub connection.
     abstract baseUrl : string
 
-    /// Returns the connectionId to the hub of this client.
+    /// The connectionId to the hub of this client.
     abstract connectionId : string option
     
     /// Invokes a hub method on the server.
@@ -551,10 +551,10 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     interface StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
-    /// Returns the base url of the hub connection.
+    /// The base url of the hub connection.
     member _.baseUrl = hub.baseUrl
     
-    /// Returns the connectionId to the hub of this client.
+    /// The connectionId to the hub of this client.
     member _.connectionId = hub.connectionId
     
     /// Invokes a hub method on the server.
@@ -661,14 +661,13 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
         this.streamFrom(msg) |> Async.StartAsPromise
 
     /// Returns an async that when invoked, starts streaming to the hub.
-    member _.streamTo (?subject: ISubject<'ClientStreamToApi>) =
-        let subject = Option.defaultValue (Bindings.signalR.Subject() :> ISubject<'ClientStreamToApi>) subject
+    member _.streamTo (subject: ISubject<'ClientStreamToApi>) =
         async { return mailbox.Post(HubMailbox.Send(fun () -> hub.streamTo(subject))) }
         
     /// Returns a promise that when invoked, starts streaming to the hub.
-    member this.streamToAsPromise (?subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo(?subject = subject) |> Async.StartAsPromise
+    member this.streamToAsPromise (subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo(subject) |> Async.StartAsPromise
 
     /// Streams to the hub immediately.
-    member this.streamToNow (?subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo(?subject = subject) |> fun a -> Async.StartImmediate(a, cts.Token)
+    member this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo(subject) |> fun a -> Async.StartImmediate(a, cts.Token)

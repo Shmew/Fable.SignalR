@@ -12,10 +12,10 @@
     <None Include="splitter.config.js" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\demo\Shared\Shared.fsproj" />
     <ProjectReference Include="..\..\src\Fable.SignalR.Elmish\Fable.SignalR.Elmish.fsproj" />
     <ProjectReference Include="..\..\src\Fable.SignalR.Feliz\Fable.SignalR.Feliz.fsproj" />
     <ProjectReference Include="..\..\src\Fable.SignalR\Fable.SignalR.fsproj" />
+    <ProjectReference Include="..\Fable.SignalR.TestShared\Fable.SignalR.TestShared.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

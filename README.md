@@ -39,7 +39,6 @@ let render = React.functionComponent(fun () ->
                 .configureLogging(LogLevel.Debug)
                 .onMessage <|
                     function
-                    | Response.Howdy -> JS.console.log("Howdy!")
                     | Response.NewCount i -> setCount i
                     | Response.RandomCharacter str -> setText str
         )
@@ -60,7 +59,6 @@ module SignalRHub =
         printfn "New Msg: %A" msg
             
         match msg with
-        | Action.SayHello -> Response.Howdy
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
         | Action.RandomCharacter ->
@@ -91,15 +89,12 @@ type Action =
     | IncrementCount of int
     | DecrementCount of int
     | RandomCharacter
-    | SayHello
 
 [<RequireQualifiedAccess>]
 type Response =
-    | Howdy
     | NewCount of int
     | RandomCharacter of string
 
 module Endpoints =
     let [<Literal>] Root = "/SignalR"
-
 ```

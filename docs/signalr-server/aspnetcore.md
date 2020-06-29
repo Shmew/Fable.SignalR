@@ -1,7 +1,8 @@
-# SignalR with Saturn
+# SignalR with ASP.NET Core and Giraffe
 
-The use of Saturn computation expressions makes
-setting up a SignalR hub quite painless.
+The use of ASP.NET Core and Giraffe is a bit
+more involved than Saturn, but is only a couple extra
+steps of configuration.
 
 ## Setting up a basic hub
 
@@ -63,21 +64,35 @@ module SignalRHub =
 ### Adding it to the application
 
 Now that you have a shared model and defined the behavior of your hub, all
-that's left is to insert it into the Saturn pipeline.
+that's left is to add it to the application.
 
-<Note type="tip">For more information on the CE options see [here](api#configure_signalr)</Note>
+It's easiest if you go ahead and define your configuration instead of inline it
+in the fluent builders (but they support all of the overloads should you want to do so):
 
 ```fsharp
-application {
-    use_signalr (
-        configure_signalr {
-            endpoint Endpoints.Root
-            send SignalRHub.send
-            invoke SignalRHub.invoke
-        }
-    )
-    ...
-}
+let mySignalRConfig =
+    { EndpointPattern = Endpoints.Root
+      Send = SignalRHub.send
+      Invoke = SignalRHub.invoke 
+      Config = None }
+```
+
+#### IServiceCollection
+
+You will need to add SignalR to your `IServiceCollection`:
+
+```fsharp
+let myConfig serviceCollection =
+    serviceCollection.AddSignalR(mySignalRConfig)
+```
+
+#### IApplicationBuilder
+
+Lastly you will want to also add it to the `IApplicationBuilder`:
+
+```fsharp
+let myApp appBuilder =
+    appBuilder.UseSignalR(mySignalRConfig)
 ```
 
 That's it! You can now call your hub from the Fable client.
@@ -176,19 +191,32 @@ module SignalRHub =
 ### Adding it to the application
 
 Now that we've extended our model and defined our behavior we just
-add a couple new operations and we're good to go!
+modify our configurations a bit and we're good to go!
+
+#### IServiceCollection
+
+Adjusting our `IServiceCollection` config to:
 
 ```fsharp
-application {
-    use_signalr (
-        configure_signalr {
-            endpoint Endpoints.Root
-            send SignalRHub.send
-            invoke SignalRHub.invoke
-            stream_from SignalRHub.Stream.sendToClient
-            stream_to SignalRHub.Stream.getFromClient
-        }
+let myConfig serviceCollection =
+    serviceCollection.AddSignalR (
+        mySignalRConfig, 
+        SignalRHub.Stream.sendToClient, 
+        SignalRHub.Stream.getFromClient
     )
-    ...
-}
 ```
+
+#### IApplicationBuilder
+
+Adjusting our `IApplicationBuilder` config to:
+
+```fsharp
+let myApp appBuilder =
+    appBuilder.UseSignalR (
+        mySignalRConfig, 
+        SignalRHub.Stream.sendToClient, 
+        SignalRHub.Stream.getFromClient
+    )
+```
+
+That's it! You can now call your hub from the Fable client.

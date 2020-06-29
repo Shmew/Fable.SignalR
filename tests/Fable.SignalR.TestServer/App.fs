@@ -25,6 +25,14 @@ module App =
                     logging (fun l -> l.AddFilter("Microsoft", LogLevel.Error) |> ignore)
                     error_handler (fun e log -> text e.Message)
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
+                    use_cors "Any" (fun policy -> 
+                        policy
+                            .WithOrigins("http://localhost", "http://127.0.0.1:80")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials()
+                        |> ignore
+                    )
                     no_router
                     use_static (Env.clientPath args)
                     use_developer_exceptions

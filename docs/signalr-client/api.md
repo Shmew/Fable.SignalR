@@ -197,40 +197,9 @@ type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
     /// 
     /// If IHubProtocol.transferFormat is 'Text', the result of  method will be a string, 
     /// otherwise it will be an ArrayBuffer.
-    abstract writeMessage: message: Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> 
-        -> U2<string, JS.ArrayBuffer>
-```
-
-## IHubProtocol
-
-A protocol abstraction for communicating with SignalR Hubs.
-
-Signature:
-```fsharp
-type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
-    /// The name of the protocol.  is used by SignalR to resolve the protocol between the client 
-    /// and server.
-    abstract name: string
-
-    /// The version of the protocol.
-    abstract version: float
-
-    /// The TransferFormat of the protocol.
-    abstract transferFormat: TransferFormat
-
-    /// Creates an array of HubMessage objects from the specified serialized representation.
-    /// 
-    /// If IHubProtocol.transferFormat is 'Text', the `input` parameter must be a string, otherwise 
-    /// it must be an ArrayBuffer.
-    abstract parseMessages : input: U3<string,JS.ArrayBuffer,Buffer> * ?logger: ILogger 
-        -> ResizeArray<Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi>>
-
-    /// Writes the specified HubMessage to a string or ArrayBuffer and returns it.
-    /// 
-    /// If IHubProtocol.transferFormat is 'Text', the result of  method will be a string, 
-    /// otherwise it will be an ArrayBuffer.
-    abstract writeMessage: message: Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> 
-        -> U2<string, JS.ArrayBuffer>
+    abstract writeMessage: 
+        message: Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> 
+            -> U2<string, JS.ArrayBuffer>
 ```
 
 ## ISubject
@@ -284,11 +253,11 @@ type ConnectionState =
 Signature:
 ```fsharp
 type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
-    /// Returns the base url of the hub connection.
-    member baseUrl () : string
+    /// The base url of the hub connection.
+    member baseUrl : string
     
-    /// Returns the connectionId to the hub of  client.
-    member connectionId () : string option
+    /// The connectionId to the hub of  client.
+    member connectionId : string option
     
     /// Invokes a hub method on the server.
     /// 
@@ -310,7 +279,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     /// Allows the server to detect hard disconnects (like when a client unplugs their computer).
     member keepAliveInterval : int
     
-    /// Removes all handlers for the specified hub method.
+    /// Removes all handlers.
     member off () : unit
     
     /// Registers a handler that will be invoked when the connection is closed.
@@ -339,7 +308,6 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     /// Invokes a hub method on the server. Does not wait for a response from the receiver.
     member sendNow (msg: 'ClientApi) : unit
-    member sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) : unit
 
     /// The server timeout in milliseconds.
     /// 
@@ -357,7 +325,6 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     /// Starts the connection immediately.
     member startNow () : unit
-    member startNow (cancellationToken: System.Threading.CancellationToken) : unit
 
     /// The state of the hub connection to the server.
     member state : ConnectionState
@@ -372,8 +339,11 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member stopNow () : unit
 
     /// Streams from the hub.
-    member streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi>
+    member streamFrom (msg: 'ClientStreamFromApi) : Async<StreamResult<'ServerStreamApi>>
     
+    /// Streams from the hub.
+    member streamFromAsPromise (msg: 'ClientStreamFromApi) : Async<StreamResult<'ServerStreamApi>>
+
     /// Returns an async that when invoked, starts streaming to the hub.
     member streamTo (subject: ISubject<'ClientStreamToApi>) : Async<unit>
 
@@ -382,8 +352,6 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
     /// Streams to the hub immediately.
     member streamToNow (subject: ISubject<'ClientStreamToApi>) : unit
-    member streamToNow (subject: ISubject<'ClientStreamToApi>, 
-                        cancellationToken: System.Threading.CancellationToken) : unit
 ```
 
 ## HubConnectionBuilder
@@ -482,6 +450,151 @@ static member NullLogger () : NullLogger
 static member Subject<'T> () : Subject<'T>
 ```
 
+## Elmish
+
+All of the commands are in the `Cmd.SignalR` namespace.
+
+### baseUrl
+
+Returns the base url of the hub connection.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string -> 'Msg) : Cmd<'Msg>
+```
+
+### connectionId
+
+Returns the connectionId to the hub of this client.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: string option -> 'Msg) : Cmd<'Msg>
+```
+
+### connect
+
+Starts a connection to a SignalR hub.
+
+Signature:
+```fsharp
+(registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg)
+(config: Elmish.HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit,'Msg> 
+    -> Elmish.HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit,'Msg>) : Cmd<'Msg>
+```
+
+### attempt
+
+Invokes a hub method on the server and maps the error.
+
+This method resolves when the server indicates it has finished invoking the method. When it finishes, 
+the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+resolving the async call.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) 
+(msg: 'ClientApi) 
+(onError: exn -> 'Msg) : Cmd<'Msg>
+```
+### either
+
+Invokes a hub method on the server and maps the success or error.
+
+This method resolves when the server indicates it has finished invoking the method. When it finishes, 
+the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+resolving the async call.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) 
+(msg: 'ClientApi) 
+(onSuccess: 'ServerApi -> 'Msg) 
+(onError: exn -> 'Msg) : Cmd<'Msg>
+```
+
+### perform
+
+Invokes a hub method on the server and maps the success.
+
+This method resolves when the server indicates it has finished invoking the method. When it finishes, 
+the server has finished invoking the method. If the server method returns a result, it is produced as the result of
+resolving the async call.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) 
+(msg: 'ClientApi) 
+(onSuccess: 'ServerApi -> 'Msg) : Cmd<'Msg>
+```
+
+### send
+
+Invokes a hub method on the server. Does not wait for a response from the receiver.
+
+This method resolves when the client has sent the invocation to the server. The server may still
+be processing the invocation.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: 'ClientApi) : Cmd<'Msg>
+```
+
+### state
+
+Returns the state of the Hub connection to the server.
+
+Signature:
+```fsharp
+(hub: #Elmish.Hub<'ClientApi,'ServerApi> option) (msg: ConnectionState -> 'Msg) : Cmd<'Msg>
+```
+
+### streamFrom
+
+Streams from the hub.
+
+Signature:
+```fsharp
+(hub: Elmish.StreamHub.ServerToClient
+    <'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> option)
+(msg: 'ClientStreamApi) 
+(subscription: ISubscription -> 'Msg) 
+(subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) : Cmd<'Msg>
+
+(hub: Elmish.StreamHub.Bidrectional
+    <'ClientApi,'ClientStreamFromApi,_,'ServerApi,'ServerStreamApi> option)
+(msg: 'ClientStreamApi) 
+(subscription: ISubscription -> 'Msg) 
+(subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) : Cmd<'Msg>
+```
+
+### streamTo
+
+Streams to the hub.
+
+Signature:
+```fsharp
+(hub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi> option)
+(subject: #ISubject<'ClientStreamToApi>) : Cmd<'Msg>
+
+(hub: Elmish.StreamHub.Bidrectional<'ClientApi,_,'ClientStreamToApi,'ServerApi,_> option)
+(subject: #ISubject<'ClientStreamToApi>) : Cmd<'Msg>
+```
+
+## Feliz
+
+The api exposed from the Feliz extension package is quite simple:
+
+```fsharp
+React.useSignalR<Types> (config: HubConnectionBuilder -> HubConnectionBuilder) -> Hub
+```
+
+The type of builder depends on the type restrictions given to `useSignalR`:
+* No streaming - React.useSignalR<'ClientApi,'ServerApi>
+* Client streaming - React.useSignalRReact.useSignalR<'ClientApi,'ClientStreamApi,'ServerApi>
+* Server streaming - React.useSignalRReact.useSignalR<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>
+* Bidirectional streaming - React.useSignalRReact.useSignalR<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
+
 ## Http
 
 ### XMLHttpRequestResponseType
@@ -537,7 +650,9 @@ type Request =
     /// An AbortSignal that can be monitored for cancellation.
     member abortSignal (signal: AbortSignal) : Request
 
-    /// The time to wait for the request to complete before throwing a TimeoutError. Measured in milliseconds.
+    /// The time to wait for the request to complete before throwing a TimeoutError. 
+    /// 
+    /// Measured in milliseconds.
     member timeout (value: int) : Request
 
     ///  controls whether credentials such as cookies are sent in cross-site requests.
@@ -569,21 +684,20 @@ type Client =
     /// Issues an HTTP GET request to the specified URL, returning a Promise that 
     /// resolves with an HttpResponse representing the result.
     abstract get: url: string -> JS.Promise<Response>
-    /// Issues an HTTP GET request to the specified URL, returning a Promise 
-    /// that resolves with an HttpResponse representing the result.
     abstract get: url: string * options: Request -> JS.Promise<Response>
 
-    /// Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+    /// Issues an HTTP POST request to the specified URL, returning a Promise 
+    /// that resolves with an HttpResponse representing the result.
     abstract post: url: string -> JS.Promise<Response>
-    /// Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
     abstract post: url: string * options: Request -> JS.Promise<Response>
 
-    /// Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+    /// Issues an HTTP DELETE request to the specified URL, returning a Promise 
+    /// that resolves with an HttpResponse representing the result.
     abstract delete: url: string -> JS.Promise<Response>
-    /// Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
     abstract delete: url: string * options: Request -> JS.Promise<Response>
 
-    /// Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+    /// Issues an HTTP request to the specified URL, returning a Promise 
+    /// that resolves with an HttpResponse representing the result.
     abstract send: request: Request -> JS.Promise<Response>
 
     ///Gets all cookies that apply to the specified URL.
@@ -597,7 +711,8 @@ Signature:
 type DefaultClient =
     inherit Client
 
-    /// Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+    /// Issues an HTTP request to the specified URL, returning a Promise 
+    /// that resolves with an HttpResponse representing the result.
     abstract send: request: Request -> JS.Promise<Response>
 ```
 
@@ -608,7 +723,8 @@ Configures the SignalR connection.
 Signature:
 ```fsharp
 type ConnectionBuilder =
-    /// Custom headers to be sent with every HTTP request. Note, setting headers in the browser will not work for WebSockets or the ServerSentEvents stream.
+    /// Custom headers to be sent with every HTTP request. Note, setting headers in 
+    /// the browser will not work for WebSockets or the ServerSentEvents stream.
     member header (headers: Map<string,string>) : ConnectionBuilder
 
     /// An HttpClient that will be used to make HTTP requests.
@@ -619,15 +735,11 @@ type ConnectionBuilder =
 
     /// Configures the logger used for logging.
     /// 
-    /// Provide an ILogger instance, and log messages will be logged via that instance. Alternatively, provide a value from
-    /// the LogLevel enumeration and a default logger which logs to the Console will be configured to log messages of the specified
+    /// Provide an ILogger instance, and log messages will be logged via that instance. 
+    /// Alternatively, provide a value from the LogLevel enumeration and a default 
+    /// logger which logs to the Console will be configured to log messages of the specified
     /// level (or higher).
     member logger (logger: ILogger) : ConnectionBuilder
-    /// Configures the logger used for logging.
-    /// 
-    /// Provide an ILogger instance, and log messages will be logged via that instance. Alternatively, provide a value from
-    /// the LogLevel enumeration and a default logger which logs to the Console will be configured to log messages of the specified
-    /// level (or higher).
     member logger (logLevel: LogLevel) : ConnectionBuilder
 
     /// A function that provides an access token required for HTTP Bearer authentication.
@@ -642,13 +754,15 @@ type ConnectionBuilder =
 
     /// A boolean indicating if negotiation should be skipped.
     /// 
-    /// Negotiation can only be skipped when the IHttpConnectionOptions.transport property is set to 'HttpTransportType.WebSockets'.
+    /// Negotiation can only be skipped when the IHttpConnectionOptions.transport property 
+    /// is set to 'HttpTransportType.WebSockets'.
     member skipNegotiation (value: bool) : ConnectionBuilder
 
     /// Default value is 'true'.
-    ///  controls whether credentials such as cookies are sent in cross-site requests.
+    /// This controls whether credentials such as cookies are sent in cross-site requests.
     /// 
-    /// Cookies are used by many load-balancers for sticky sessions which is required when your app is deployed with multiple servers.
+    /// Cookies are used by many load-balancers for sticky sessions which is required when 
+    /// your app is deployed with multiple servers.
     member withCredentials (value: bool) : ConnectionBuilder
 ```
 
@@ -845,14 +959,13 @@ type CancelInvocationMessage =
     abstract invocationId: string
 ```
 
-### CancelInvocationMessage
-
-A hub message sent to request that a streaming invocation be canceled.
+### HubMessage
 
 Signature:
 ```fsharp
 type HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
-    U7<InvocationMessage<'ServerApi>, 
+    U8<InvocationMessage<'ServerApi>,
+       InvocationMessage<{| connectionId: string; message: 'ServerApi |}>, 
        StreamItemMessage<'ServerStreamApi>, 
        CompletionMessage<'ServerApi>, 
        StreamInvocationMessage<'ClientStreamApi>, 

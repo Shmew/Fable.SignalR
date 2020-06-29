@@ -53,7 +53,7 @@ group Fable.SignalR.Server
     nuget Fable.Remoting.Json ~> 2
     nuget FSharp.Core ~> 4.7 lowest_matching:true
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
-    
+
 group Fable.SignalR.Tests
     source https://nuget.org/api/v2
 	source https://api.nuget.org/v3/index.json
@@ -69,6 +69,21 @@ group Fable.SignalR.Tests
     nuget Feliz ~> 1
     nuget Feliz.UseElmish ~> 1
     nuget FSharp.Core ~> 4.7 lowest_matching:true
+
+group Fable.SignalR.TestServer
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget FSharp.Control.AsyncSeq ~> 2
+	nuget FSharp.Core ~> 4.7
+    nuget Saturn ~> 0.14.1
+    nuget TaskBuilder.fs 2.2.0-alpha
+
+group Fable.SignalR.TestShared
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget FSharp.Core ~> 4.7
 
 group Client
     source https://nuget.org/api/v2

@@ -1,0 +1,5 @@
+﻿group Fable.SignalR.TestServer
+	FSharp.Core
+    FSharp.Control.AsyncSeq
+    Saturn
+    TaskBuilder.fs

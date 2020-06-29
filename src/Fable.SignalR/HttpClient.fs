@@ -79,7 +79,9 @@ module Http =
             state <- { state with abortSignal = Some signal }
             this
 
-        /// The time to wait for the request to complete before throwing a TimeoutError. Measured in milliseconds.
+        /// The time to wait for the request to complete before throwing a TimeoutError. 
+        ///
+        /// Measured in milliseconds.
         member this.timeout (value: int) = 
             state <- { state with timeout = Some value }
             this
@@ -109,17 +111,22 @@ module Http =
         /// that resolves with an HttpResponse representing the result.
         abstract get: url: string * options: Request -> JS.Promise<Response>
 
-        /// Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+        /// Issues an HTTP POST request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract post: url: string -> JS.Promise<Response>
-        /// Issues an HTTP POST request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+        /// Issues an HTTP POST request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract post: url: string * options: Request -> JS.Promise<Response>
 
-        /// Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+        /// Issues an HTTP DELETE request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract delete: url: string -> JS.Promise<Response>
-        /// Issues an HTTP DELETE request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+        /// Issues an HTTP DELETE request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract delete: url: string * options: Request -> JS.Promise<Response>
 
-        /// Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+        /// Issues an HTTP request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract send: request: Request -> JS.Promise<Response>
 
         ///Gets all cookies that apply to the specified URL.
@@ -128,7 +135,8 @@ module Http =
     type DefaultClient =
         inherit Client
 
-        /// Issues an HTTP request to the specified URL, returning a Promise that resolves with an HttpResponse representing the result.
+        /// Issues an HTTP request to the specified URL, returning a Promise 
+        /// that resolves with an HttpResponse representing the result.
         abstract send: request: Request -> JS.Promise<Response>
 
     type internal ConnectionOptions =
@@ -153,7 +161,8 @@ module Http =
               skipNegotiation = None
               withCredentials = None }
 
-        /// Custom headers to be sent with every HTTP request. Note, setting headers in the browser will not work for WebSockets or the ServerSentEvents stream.
+        /// Custom headers to be sent with every HTTP request. Note, setting headers in 
+        /// the browser will not work for WebSockets or the ServerSentEvents stream.
         member this.header (headers: Map<string,string>) =
             state <- { state with headers = Some headers }
             this
@@ -170,16 +179,18 @@ module Http =
 
         /// Configures the logger used for logging.
         /// 
-        /// Provide an ILogger instance, and log messages will be logged via that instance. Alternatively, provide a value from
-        /// the LogLevel enumeration and a default logger which logs to the Console will be configured to log messages of the specified
+        /// Provide an ILogger instance, and log messages will be logged via that instance. 
+        /// Alternatively, provide a value from the LogLevel enumeration and a default 
+        /// logger which logs to the Console will be configured to log messages of the specified
         /// level (or higher).
         member this.logger (logger: ILogger) =
             state <- { state with logger = Some (U2.Case1(logger)) }
             this
         /// Configures the logger used for logging.
         /// 
-        /// Provide an ILogger instance, and log messages will be logged via that instance. Alternatively, provide a value from
-        /// the LogLevel enumeration and a default logger which logs to the Console will be configured to log messages of the specified
+        /// Provide an ILogger instance, and log messages will be logged via that instance. 
+        /// Alternatively, provide a value from the LogLevel enumeration and a default logger 
+        /// which logs to the Console will be configured to log messages of the specified
         /// level (or higher).
         member this.logger (logLevel: LogLevel) =
             state <- { state with logger = Some (U2.Case2(logLevel)) }
@@ -207,7 +218,8 @@ module Http =
 
         /// A boolean indicating if negotiation should be skipped.
         /// 
-        /// Negotiation can only be skipped when the IHttpConnectionOptions.transport property is set to 'HttpTransportType.WebSockets'.
+        /// Negotiation can only be skipped when the IHttpConnectionOptions.transport property 
+        /// is set to 'HttpTransportType.WebSockets'.
         member this.skipNegotiation (value: bool) =
             state <- { state with skipNegotiation = Some value }
             this
@@ -215,7 +227,8 @@ module Http =
         /// Default value is 'true'.
         /// This controls whether credentials such as cookies are sent in cross-site requests.
         /// 
-        /// Cookies are used by many load-balancers for sticky sessions which is required when your app is deployed with multiple servers.
+        /// Cookies are used by many load-balancers for sticky sessions which is required when 
+        /// your app is deployed with multiple servers.
         member this.withCredentials (value: bool) =
             state <- { state with withCredentials = Some value }
             this

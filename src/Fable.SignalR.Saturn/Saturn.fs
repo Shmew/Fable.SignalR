@@ -40,10 +40,12 @@ module SignalRExtension =
             member _.Yield(_) =
                 State.Empty.Init
     
+            /// The endpoint used to communicate with the hub.
             [<CustomOperation("endpoint")>]
             member _.Endpoint (State.Empty.Init, value: string) = 
                 State.Endpoint.Value value
     
+            /// Handler for client message sends.
             [<CustomOperation("send")>]
             member _.Send (State.Endpoint.Value state, f: 'a -> FableHub<'a,'d> -> #Task) = 
 
@@ -52,18 +54,20 @@ module SignalRExtension =
                 let send : State.Send<_,_> = State.Send.Value(state, f)
 
                 send
-
+                
+            /// Handler for client invocations.
             [<CustomOperation("invoke")>]
             member _.Invoke (State.Send.Value (endpoint,send), f: 'a ->'b) = 
 
                 let settings : SignalR.Settings<'a,'b> =
                     { EndpointPattern = endpoint
-                      Update = send
+                      Send = send
                       Invoke = f
                       Config = None }
 
                 State.Settings.NoStream settings
-
+                
+            /// Handler for streaming to the client.
             [<CustomOperation("stream_from")>]
             member _.StreamFrom (state: State.Settings<_,_,_,_,_>, f) =
 
@@ -72,7 +76,8 @@ module SignalRExtension =
                 | State.HasStreamFrom(settings,_) -> State.Settings.HasStreamFrom(settings, f)
                 | State.HasStreamTo(settings,streamTo) -> State.Settings.HasStreamBoth(settings, f, streamTo)
                 | State.NoStream(settings) -> State.Settings.HasStreamFrom(settings, f)
-
+                
+            ///  Handler for streaming from the client.
             [<CustomOperation("stream_to")>]
             member _.StreamTo(state: State.Settings<_,_,_,_,_>, f: IAsyncEnumerable<_> -> FableHub<_,_> -> #Task) =
 
@@ -83,7 +88,8 @@ module SignalRExtension =
                 | State.HasStreamFrom(settings,streamFrom) -> State.Settings.HasStreamBoth(settings, streamFrom, f)
                 | State.HasStreamTo(settings,_) -> State.Settings.HasStreamTo(settings, f)
                 | State.NoStream(settings) -> State.Settings.HasStreamTo(settings, f)
-
+                
+            /// Customize hub endpoint conventions.
             [<CustomOperation("with_endpoint_config")>]
             member _.EndpointConfig (state: State.Settings<_,_,_,_,_>, f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =
                 state.mapSettings <| fun state ->
@@ -92,16 +98,8 @@ module SignalRExtension =
                             { SignalR.Settings.GetConfigOrDefault state with
                                 EndpointConfig = Some f }
                             |> Some }
-    
-            [<CustomOperation("with_log_level")>]
-            member _.LogLevel (state: State.Settings<_,_,_,_,_>, logLevel: Microsoft.Extensions.Logging.LogLevel) =
-                state.mapSettings <| fun state ->
-                    { state with
-                        Config =
-                            { SignalR.Settings.GetConfigOrDefault state with
-                                LogLevel = Some logLevel }
-                            |> Some }
 
+            /// Options used to configure hub instances.
             [<CustomOperation("with_hub_options")>]
             member _.HubOptions (state: State.Settings<_,_,_,_,_>, f: HubOptions -> unit) =
                 state.mapSettings <| fun state ->
@@ -111,6 +109,17 @@ module SignalRExtension =
                                 HubOptions = Some f }
                             |> Some }
     
+            /// Adds a logging filter with the given LogLevel.
+            [<CustomOperation("with_log_level")>]
+            member _.LogLevel (state: State.Settings<_,_,_,_,_>, logLevel: Microsoft.Extensions.Logging.LogLevel) =
+                state.mapSettings <| fun state ->
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                LogLevel = Some logLevel }
+                            |> Some }
+
+            /// Called when a new connection is established with the hub.
             [<CustomOperation("with_on_connected")>]
             member _.OnConnected (state: State.Settings<_,_,_,_,_>, f: FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
                 state.mapSettings <| fun state -> 
@@ -120,6 +129,7 @@ module SignalRExtension =
                                 OnConnected = Some f }
                             |> Some }
     
+            /// Called when a connection with the hub is terminated.
             [<CustomOperation("with_on_disconnected")>]
             member _.OnDisconnected (state: State.Settings<_,_,_,_,_>, f: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
                 state.mapSettings <| fun state ->  
@@ -138,10 +148,12 @@ module SignalRExtension =
     
     [<AutoOpen>]
     module Builder =
+        /// Creates a SignalR hub configuration.
         // fsharplint:disable-next-line
         let configure_signalr = SignalR.SettingsBuilder()
 
     type Saturn.Application.ApplicationBuilder with
+        /// Adds a SignalR hub into the application.
         [<CustomOperation("use_signalr")>]
         member this.UseSignalR
             (state, settings: SignalR.Settings<'ClientApi,'ServerApi> * 

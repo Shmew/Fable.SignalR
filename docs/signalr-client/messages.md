@@ -193,48 +193,64 @@ let update msg model =
 Sending messages is as simple as calling `invoke` from your hub:
 
 ```fsharp
-let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
-    React.fragment [
-        Html.div input.count
-        Html.div input.text
-    ])
+let display = React.functionComponent(fun (input: {| hub: Hub<Action,Response> |}) ->
+    let count,setCount = React.useState 0
+    let text,setText = React.useState ""
 
-let buttons = React.functionComponent(fun (input: {| count: int; hub: Hub<Action,Response> |}) ->
     React.fragment [
+        Html.div [
+            Html.div count
+            Html.div text
+        ]
         Html.button [
             prop.text "Increment"
-            prop.onClick <| fun _ -> input.hub.current.sendNow (Action.IncrementCount input.count)
+            prop.onClick <| fun _ -> 
+                async {
+                    let! rsp = input.hub.current.invoke (Action.IncrementCount count)
+                            
+                    match rsp with
+                    | Response.NewCount i -> setCount i
+                    | _ -> ()
+                }
+                |> Async.StartImmediate
         ]
         Html.button [
             prop.text "Decrement"
-            prop.onClick <| fun _ -> input.hub.current.sendNow (Action.DecrementCount input.count)
+            prop.onClick <| fun _ -> 
+                promise {
+                    let! rsp = input.hub.current.invokeAsPromise (Action.DecrementCount count)
+                            
+                    match rsp with
+                    | Response.NewCount i -> setCount i
+                    | _ -> ()
+                }
+                |> Promise.start
         ]
         Html.button [
             prop.text "Get Random Character"
-            prop.onClick <| fun _ -> input.hub.current.sendNow Action.RandomCharacter
+            prop.onClick <| fun _ -> 
+                async {
+                    let! rsp = input.hub.current.invoke Action.RandomCharacter
+                            
+                    match rsp with
+                    | Response.RandomCharacter str -> setText str
+                    | _ -> ()
+                }
+                |> Async.StartImmediate
         ]
     ])
 
 let render = React.functionComponent(fun () ->
-    let count,setCount = React.useState 0
-    let text,setText = React.useState ""
-
     let hub =
         React.useSignalR<Action,Response>(fun hub -> 
             hub.withUrl(Endpoints.Root)
                 .withAutomaticReconnect()
                 .configureLogging(LogLevel.Debug)
-                .onMessage <|
-                    function
-                    | Response.Howdy -> JS.console.log("Howdy!")
-                    | Response.NewCount i -> setCount i
-                    | Response.RandomCharacter str -> setText str
         )
             
     Html.div [
         prop.children [
-            textDisplay {| count = count; text = text |}
-            buttons {| count = count; hub = hub |}
+            display {| hub = hub |}
         ]
     ])
 ```
