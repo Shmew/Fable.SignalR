@@ -12,6 +12,7 @@ type IFableHubCallerClients<'ServerApi when 'ServerApi : not struct> =
     abstract Send: 'ServerApi -> Task
     abstract Invoke: {| connectionId: string; message: 'ServerApi |} -> Task
 
+// fsharplint:disable-next-line
 type FableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
     abstract Clients : IHubCallerClients<IFableHubCallerClients<'ServerApi>>
     abstract Context : HubCallerContext

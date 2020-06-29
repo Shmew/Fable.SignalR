@@ -6,17 +6,17 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyTitleAttribute("Fable.SignalR")>]
 [<assembly: AssemblyProductAttribute("Fable.SignalR")>]
 [<assembly: AssemblyDescriptionAttribute("Fable and server bindings for SignalR.")>]
-[<assembly: AssemblyVersionAttribute("0.0.1")>]
-[<assembly: AssemblyFileVersionAttribute("0.0.1")>]
+[<assembly: AssemblyVersionAttribute("0.1.0")>]
+[<assembly: AssemblyFileVersionAttribute("0.1.0")>]
 [<assembly: AssemblyConfigurationAttribute("Debug")>]
-[<assembly: InternalsVisibleToAttribute("Fable.SignalR.Tests")>]
+[<assembly: InternalsVisibleToAttribute("Fable.SignalR.Elmish")>]
 do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] AssemblyTitle = "Fable.SignalR"
     let [<Literal>] AssemblyProduct = "Fable.SignalR"
     let [<Literal>] AssemblyDescription = "Fable and server bindings for SignalR."
-    let [<Literal>] AssemblyVersion = "0.0.1"
-    let [<Literal>] AssemblyFileVersion = "0.0.1"
+    let [<Literal>] AssemblyVersion = "0.1.0"
+    let [<Literal>] AssemblyFileVersion = "0.1.0"
     let [<Literal>] AssemblyConfiguration = "Debug"
-    let [<Literal>] InternalsVisibleTo = "Fable.SignalR.Tests"
+    let [<Literal>] InternalsVisibleTo = "Fable.SignalR.Elmish"

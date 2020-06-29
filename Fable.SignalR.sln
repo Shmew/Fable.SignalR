@@ -56,6 +56,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{D05F59F8-1
 		docs\contributing.md = docs\contributing.md
 		docs\index.html = docs\index.html
 		docs\installation.md = docs\installation.md
+		docs\integration-testing.md = docs\integration-testing.md
 		docs\README.md = docs\README.md
 	EndProjectSection
 EndProject

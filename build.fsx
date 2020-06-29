@@ -120,36 +120,6 @@ Target.create "ConfigRelease" <| fun _ ->
     FakeVar.set "configuration" "Release"
 
 // --------------------------------------------------------------------------------------
-// Generate assembly info files with the right version & up-to-date information
-
-Target.create "AssemblyInfo" <| fun _ ->
-    let getAssemblyInfoAttributes projectName =
-        [ AssemblyInfo.Title (projectName)
-          AssemblyInfo.Product project
-          AssemblyInfo.Description summary
-          AssemblyInfo.Version release.AssemblyVersion
-          AssemblyInfo.FileVersion release.AssemblyVersion
-          AssemblyInfo.Configuration <| configuration()
-          AssemblyInfo.InternalsVisibleTo (sprintf "%s.Tests" projectName) ]
-
-    let getProjectDetails projectPath =
-        let projectName = Path.GetFileNameWithoutExtension(projectPath)
-        ( projectPath,
-          projectName,
-          Path.GetDirectoryName(projectPath),
-          (getAssemblyInfoAttributes projectName)
-        )
-
-    !! srcGlob
-    |> Seq.map getProjectDetails
-    |> Seq.iter (fun (projFileName, _, folderName, attributes) ->
-        match projFileName with
-        | Fsproj -> AssemblyInfoFile.createFSharp (folderName </> "AssemblyInfo.fs") attributes
-        | Csproj -> AssemblyInfoFile.createCSharp ((folderName </> "Properties") </> "AssemblyInfo.cs") attributes
-        | Vbproj -> AssemblyInfoFile.createVisualBasic ((folderName </> "My Project") </> "AssemblyInfo.vb") attributes
-        | Shproj -> () )
-
-// --------------------------------------------------------------------------------------
 // Copies binaries from default VS location to expected bin folder
 // But keeps a subdirectory structure for each project in the
 // src folder to support multiple project outputs
@@ -426,7 +396,6 @@ Target.create "Release" ignore
 Target.create "Publish" ignore
 
 "Clean"
-  ==> "AssemblyInfo"
   ==> "Restore"
   ==> "PackageJson"
   ==> "YarnInstall"

@@ -127,13 +127,28 @@ type SignalR =
         |> fun hubBuilder -> hubBuilder.build()
 
     /// Creates the default http client.
-    static member inline HttpClient (logger: ILogger) = Bindings.signalR.HttpClient(logger)
+    #if FABLE_COMPILER
+    static member inline HttpClient (logger: ILogger) = 
+    #else
+    static member HttpClient (logger: ILogger) = 
+    #endif
+        Bindings.signalR.HttpClient(logger)
 
     /// Gets an instance of the NullLogger.
-    static member inline NullLogger () = Bindings.signalR.NullLogger()
+    #if FABLE_COMPILER
+    static member inline NullLogger () = 
+    #else
+    static member NullLogger () = 
+    #endif
+        Bindings.signalR.NullLogger()
 
     /// Creates a new stream implementation to stream items to the server.
-    static member inline Subject<'T> () = Bindings.signalR.Subject<'T>()
+    #if FABLE_COMPILER
+    static member inline Subject<'T> () = 
+    #else
+    static member Subject<'T> () = 
+    #endif
+        Bindings.signalR.Subject<'T>()
 
 [<assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Fable.SignalR.Elmish")>]
 do ()

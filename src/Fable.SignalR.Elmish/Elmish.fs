@@ -230,7 +230,11 @@ module Elmish =
                 [<Erase>]
                 module Bidrectional =
                     /// Starts a connection to a SignalR hub with server and client streaming enabled.
+                    #if FABLE_COMPILER
                     let inline connect
+                    #else
+                    let connect
+                    #endif
                         (registerHub: Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> -> 'Msg) 
                         (config: Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi,'Msg> 
                             -> Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi,'Msg>) : Cmd<'Msg> =
@@ -249,7 +253,11 @@ module Elmish =
                 [<Erase>]
                 module ServerToClient =
                     /// Starts a connection to a SignalR hub with server streaming enabled.
+                    #if FABLE_COMPILER
                     let inline connect
+                    #else
+                    let connect
+                    #endif
                         (registerHub: Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> -> 'Msg)
                         (config: Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi,'Msg> 
                             -> Elmish.HubConnectionBuilder<'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi,'Msg>) : Cmd<'Msg> =
@@ -268,7 +276,11 @@ module Elmish =
                 [<Erase>]
                 module ClientToServer =
                     /// Starts a connection to a SignalR hub with client streaming enabled.
+                    #if FABLE_COMPILER
                     let inline connect
+                    #else
+                    let connect
+                    #endif
                         (registerHub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamApi,'ServerApi> -> 'Msg)
                         (config: Elmish.HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit,'Msg> 
                             -> Elmish.HubConnectionBuilder<'ClientApi,unit,'ClientStreamApi,'ServerApi,unit,'Msg>) : Cmd<'Msg> =
@@ -293,7 +305,11 @@ module Elmish =
                 [ fun dispatch -> hub |> Option.iter (fun hub -> hub.hub.connectionId |> msg |> dispatch) ]
             
             /// Starts a connection to a SignalR hub.
-            let inline connect 
+            #if FABLE_COMPILER
+            let inline connect
+            #else
+            let connect
+            #endif
                 (registerHub: Elmish.Hub<'ClientApi,'ServerApi> -> 'Msg)
                 (config: Elmish.HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit,'Msg> 
                     -> Elmish.HubConnectionBuilder<'ClientApi,unit,unit,'ServerApi,unit,'Msg>) : Cmd<'Msg> =
