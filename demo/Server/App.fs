@@ -27,9 +27,10 @@ module App =
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
                     use_cors "Any" (fun policy -> 
                         policy
-                            .WithOrigins("localhost", "http://localhost:8080")
+                            .WithOrigins("localhost", "http://localhost:8080", "http://localhost", "http://127.0.0.1:80")
                             .AllowAnyHeader()
                             .AllowAnyMethod()
+                            .AllowCredentials()
                         |> ignore
                     )
                     no_router

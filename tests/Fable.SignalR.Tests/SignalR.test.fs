@@ -1,10 +1,8 @@
 ﻿module SignalR
 
-open Fable.Core
 open Fable.FastCheck
 open Fable.FastCheck.Jest
 open Fable.Jester
-open Fable.ReactTestingLibrary
 open Fable.SignalR
 open SignalRApp
 open SignalRApp.SignalRHub

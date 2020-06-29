@@ -253,7 +253,7 @@ type Hub<'ClientApi,'ServerApi> =
 
     /// Invokes a hub method on the server. Does not wait for a response from the receiver. The server may still
     /// be processing the invocation.
-    abstract sendNow: msg: 'ClientApi * ?cancellationToken: System.Threading.CancellationToken -> unit
+    abstract sendNow: msg: 'ClientApi -> unit
     
     /// The server timeout in milliseconds.
     /// 
@@ -279,7 +279,7 @@ module StreamHub =
         abstract streamToAsPromise: subject: ISubject<'ClientStreamApi> -> JS.Promise<unit>
 
         /// Streams to the hub immediately.
-        abstract streamToNow: subject: ISubject<'ClientStreamApi> * ?cancellationToken: System.Threading.CancellationToken -> unit
+        abstract streamToNow: subject: ISubject<'ClientStreamApi> -> unit
     
     [<Erase>]   
     type ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> =
@@ -309,9 +309,6 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     member inline this.invoke (msg: 'ClientApi) : Async<unit> =
         this.invoke'("Invoke", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
     
-    member inline this.invokeAsPromise (msg: 'ClientApi) : JS.Promise<unit> = 
-        this.invoke'("Invoke", ResizeArray [| msg :> obj |])
-
     [<Emit("$0.keepAliveIntervalInMilliseconds")>]
     member _.keepAliveInterval : int = jsNative
     
@@ -341,17 +338,7 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
 
     member inline this.send (msg: 'ClientApi) = 
-        this.sendAsPromise(msg) |> Async.AwaitPromise
-
-    member inline this.sendAsPromise (msg: 'ClientApi) = 
-        this.send'("Send", ResizeArray [| msg :> obj |])
-
-    member inline this.sendNow (msg: 'ClientApi) = 
-        this.send'("Send", ResizeArray [| msg :> obj |]) |> Promise.start
-    member inline this.sendNow (msg: 'ClientApi, cancellationToken: System.Threading.CancellationToken) =
-        this.send'("Send", ResizeArray [| msg :> obj |]) 
-        |> Async.AwaitPromise 
-        |> fun p -> Async.StartImmediate(p, cancellationToken)
+        this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise     
 
     [<Emit("$0.serverTimeoutInMilliseconds")>]
     member _.serverTimeout : int = jsNative
@@ -360,12 +347,6 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
 
     [<Emit("$0.start()")>]
     member _.startAsPromise () : JS.Promise<unit> = jsNative
-
-    member inline this.startNow () = this.startAsPromise() |> Promise.start
-    member inline this.startNow (cancellationToken: System.Threading.CancellationToken) = 
-        this.startAsPromise() 
-        |> Async.AwaitPromise 
-        |> fun p -> Async.StartImmediate(p, cancellationToken)
 
     [<Emit("$0.state")>]
     member _.state : ConnectionState = jsNative
@@ -388,58 +369,120 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
 
     member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = 
         this.streamTo'("StreamTo", subject) |> Async.AwaitPromise
-
-    member inline this.streamToAsPromise (subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo'("StreamTo", subject)
-
-    member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo'("StreamTo", subject)  |> Promise.start
-    member inline this.streamToNow (subject: ISubject<'ClientStreamToApi>, cancellationToken: System.Threading.CancellationToken) =
-        this.streamTo(subject)
-        |> fun p -> Async.StartImmediate(p, cancellationToken)
     
+[<NoComparison;NoEquality>]
 [<RequireQualifiedAccess>]
-type internal InvocationMsg<'ClientApi,'ServerApi> =
-    | StartInvocation of 'ClientApi * AsyncReplyChannel<'ServerApi>
+type internal HubMailbox<'ClientApi,'ServerApi> =
+    | ProcessSends
+    | Send of (unit -> Async<unit>)
     | ServerRsp of connectionId:string * rsp:'ServerApi
+    | StartInvocation of 'ClientApi * AsyncReplyChannel<'ServerApi>
+
+[<NoComparison;NoEquality>]
+type internal Handlers =
+    { onClose: (exn option -> unit) option
+      onMessage: (obj -> unit) option
+      onReconnected: (string option -> unit) option
+      onReconnecting: (exn option -> unit) option }
+
+    member inline this.apply (hub: IHubConnection<_,_,_,_,_>) =
+        Option.iter hub.onClose this.onClose
+        Option.iter hub.onMessage (unbox this.onMessage)
+        Option.iter hub.onReconnected this.onReconnected
+        Option.iter hub.onReconnecting this.onReconnecting
+
+    static member empty =
+        { onClose = None
+          onMessage = None
+          onReconnecting = None
+          onReconnected = None }
 
 type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
-    internal (hub: IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =
+    internal (hub: IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>, handlers: Handlers) =
 
     let cts = new System.Threading.CancellationTokenSource()
     
+    let processSends (pendingActions: (unit -> Async<unit>) list) =
+        async {
+            pendingActions
+            |> List.iter (fun a -> Async.StartImmediate(a(), cts.Token))
+        }
+        
     let mailbox =
         MailboxProcessor.Start (fun inbox ->
-            let rec loop (waitingInvocations: AsyncReplyChannel<'ServerApi> list) =
+            let rec loop (waitingInvocations: AsyncReplyChannel<'ServerApi> list) (waitingConnections: (unit -> Async<unit>) list) =
                 async {
-                    let! msg = inbox.Receive()
-                    let hubId =  hub.connectionId
+                    let waitingConnections =
+                        if hub.state = ConnectionState.Connected then
+                            processSends waitingConnections
+                            |> fun a -> Async.StartImmediate(a, cts.Token)
+                            []
+                        else waitingConnections
 
+                    let! msg = inbox.Receive()
+                    
+                    let hubId =  hub.connectionId
+                    
                     return!
                         match msg with
-                        | InvocationMsg.StartInvocation(serverMsg, reply) ->
-                            hub.invokeAsPromise(serverMsg) |> Promise.start
+                        | HubMailbox.ProcessSends ->
+                            processSends waitingConnections
+                            |> fun a -> Async.StartImmediate(a, cts.Token)
 
-                            loop (reply::waitingInvocations)
-                        | InvocationMsg.ServerRsp(connectionId, msg) ->
+                            loop waitingInvocations []
+                        | HubMailbox.Send action ->
+                            let newConnections =
+                                if hub.state = ConnectionState.Connected then 
+                                    action() |> fun a -> Async.StartImmediate(a, cts.Token)
+                                    []
+                                else 
+                                    #if DEBUG
+                                    JS.console.warn("Attempted to send a message while hub is not connected, delaying processing...")
+                                    #endif
+                                    [ action ]
+
+                            loop waitingInvocations (newConnections @ waitingConnections)
+                        | HubMailbox.ServerRsp(connectionId, msg) ->
                             match hubId,connectionId, msg with
                             | Some hubId, connectionId, msg when hubId = connectionId ->
                                 waitingInvocations
                                 |> List.iter(fun reply -> reply.Reply(msg))
-                                loop []
-                            | _ -> loop waitingInvocations
+                                loop [] waitingConnections
+                            | _ -> loop waitingInvocations waitingConnections
+                        | HubMailbox.StartInvocation(serverMsg, reply) ->
+                            let newConnections =
+                                if hub.state = ConnectionState.Connected then
+                                    hub.invoke(serverMsg) |> fun a -> Async.StartImmediate(a, cts.Token)
+                                    []
+                                else 
+                                    #if DEBUG
+                                    JS.console.warn("Attempted to invoke a hub method while it is not connected, delaying processing...")
+                                    #endif
+                                    [ fun () -> hub.invoke(serverMsg) ]
+
+                            loop (reply::waitingInvocations) (newConnections @ waitingConnections)
                 }
 
-            loop []
+            loop [] []
         , cancellationToken = cts.Token)
 
-    let onRsp = InvocationMsg.ServerRsp >> mailbox.Post
+    let onRsp = HubMailbox.ServerRsp >> mailbox.Post
 
-    do hub.on<{| connectionId: string; message: 'ServerApi |}>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.message))
+    do 
+        { handlers with 
+            onReconnected =
+                handlers.onReconnected
+                |> Option.map(fun f -> 
+                    fun strOpt ->
+                        mailbox.Post(HubMailbox.ProcessSends)
+                        f strOpt)
+                |> Option.defaultValue (fun _ -> mailbox.Post(HubMailbox.ProcessSends))
+                |> Some }
+        |> fun handlers -> handlers.apply(hub)
+        hub.on<{| connectionId: string; message: 'ServerApi |}>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.message))
 
     interface System.IDisposable with
         member _.Dispose () =
-            JS.console.log("I got dispsoed!")
             hub.off'("Invoke", onRsp)
             cts.Cancel()
             cts.Dispose()
@@ -453,16 +496,14 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
         member this.keepAliveInterval = this.keepAliveInterval
         member this.send msg = this.send msg
         member this.sendAsPromise msg = this.sendAsPromise msg
-        member this.sendNow (msg: 'ClientApi, ?cancellationToken: System.Threading.CancellationToken) =
-            this.sendNow(msg, ?cancellationToken = cancellationToken)
+        member this.sendNow (msg: 'ClientApi) = this.sendNow(msg)
         member this.serverTimeout = this.serverTimeout
         member this.state = this.state
 
     interface StreamHub.ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi> with
         member this.streamTo subject = this.streamTo subject
         member this.streamToAsPromise subject = this.streamToAsPromise subject
-        member this.streamToNow (subject, ?cancellationToken) = 
-            this.streamToNow(subject, ?cancellationToken = cancellationToken)
+        member this.streamToNow (subject) = this.streamToNow(subject)
 
     interface StreamHub.ServerToClient<'ClientApi,'ClientStreamFromApi,'ServerApi,'ServerStreamApi> with
         member this.streamFrom msg = this.streamFrom msg
@@ -480,8 +521,8 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     /// The async returned by this method resolves when the server indicates it has finished invoking 
     /// the method. When it finishes, the server has finished invoking the method. If the server 
     /// method returns a result, it is produced as the result of resolving the async call.
-    member _.invoke (msg: 'ClientApi) = 
-        mailbox.PostAndAsyncReply(fun reply -> InvocationMsg.StartInvocation(msg, reply))
+    member _.invoke (msg: 'ClientApi) =
+        mailbox.PostAndAsyncReply(fun reply -> HubMailbox.StartInvocation(msg, reply))
         
     /// Invokes a hub method on the server.
     /// 
@@ -516,19 +557,17 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     /// 
     /// The async returned by this method resolves when the client has sent the invocation to the server. 
     /// The server may still be processing the invocation.
-    member _.send (msg: 'ClientApi) = hub.send(msg)
+    member _.send (msg: 'ClientApi) = 
+        async { return mailbox.Post(HubMailbox.Send(fun () -> hub.send(msg))) }
 
     /// Invokes a hub method on the server. Does not wait for a response from the receiver.
     /// 
     /// The promise returned by this method resolves when the client has sent the invocation to the server. 
     /// The server may still be processing the invocation.
-    member _.sendAsPromise (msg: 'ClientApi) = hub.sendAsPromise(msg)
+    member this.sendAsPromise (msg: 'ClientApi) = this.send(msg) |> Async.StartAsPromise
 
     /// Invokes a hub method on the server. Does not wait for a response from the receiver.
-    member _.sendNow (msg: 'ClientApi, ?cancellationToken: System.Threading.CancellationToken) =
-        match cancellationToken with
-        | Some token -> hub.sendNow(msg, token)
-        | None -> hub.sendNow(msg)
+    member this.sendNow (msg: 'ClientApi) = this.send(msg) |> fun a -> Async.StartImmediate(a, cts.Token)
 
     /// The server timeout in milliseconds.
     /// 
@@ -539,47 +578,51 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     member _.serverTimeout = hub.serverTimeout
     
     /// Starts the connection.
-    member _.start () = hub.start()
-
+    member _.start () = 
+        async {
+            if hub.state = ConnectionState.Disconnected then 
+                do! hub.start()
+                mailbox.Post(HubMailbox.ProcessSends)
+        }
+        
     /// Starts the connection.
-    member _.startAsPromise () = hub.startAsPromise()
+    member this.startAsPromise () = this.start() |> Async.StartAsPromise
 
     /// Starts the connection immediately.
-    member _.startNow (?cancellationToken: System.Threading.CancellationToken) = 
-        match cancellationToken with
-        | Some token -> hub.startNow(token)
-        | None -> hub.startNow()
+    member this.startNow () = 
+        this.start() |> fun a -> Async.StartImmediate(a, cts.Token)
 
     /// The state of the hub connection to the server.
     member _.state = hub.state
     
     /// Stops the connection.
-    member _.stop () = hub.stop()
-
+    member _.stop () = 
+        async {
+            if hub.state <> ConnectionState.Disconnected then
+                do! hub.stop()
+        }
+        
     /// Stops the connection.
-    member _.stopAsPromise () = hub.stopAsPromise()
+    member this.stopAsPromise () = 
+        this.stop() |> Async.StartAsPromise
 
     /// Stops the connection immediately.
-    member _.stopNow () = hub.stopNow()
+    member this.stopNow () = this.stop() |> fun a -> Async.StartImmediate(a, cts.Token)
     
     /// Streams from the hub.
-    member _.streamFrom (msg: 'ClientStreamFromApi) = 
-        hub.streamFrom(msg)
+    member _.streamFrom (msg: 'ClientStreamFromApi) = hub.streamFrom(msg)
 
     /// Returns an async that when invoked, starts streaming to the hub.
-    member _.streamTo (subject: ISubject<'ClientStreamToApi>) = 
-        hub.streamTo(subject)
-
+    member _.streamTo (subject: ISubject<'ClientStreamToApi>) =
+        async { return mailbox.Post(HubMailbox.Send(fun () -> hub.streamTo(subject))) }
+        
     /// Returns a promise that when invoked, starts streaming to the hub.
-    member _.streamToAsPromise (subject: ISubject<'ClientStreamToApi>) = 
-        hub.streamToAsPromise(subject)
+    member this.streamToAsPromise (subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo(subject) |> Async.StartAsPromise
 
     /// Streams to the hub immediately.
-    member _.streamToNow (subject: ISubject<'ClientStreamToApi>, ?cancellationToken: System.Threading.CancellationToken) = 
-        match cancellationToken with
-        | Some token ->
-            hub.streamToNow(subject, token)
-        | None -> hub.streamToNow(subject)
+    member this.streamToNow (subject: ISubject<'ClientStreamToApi>) = 
+        this.streamTo(subject) |> fun a -> Async.StartImmediate(a, cts.Token)
 
 type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
     abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ServerApi>

@@ -3,25 +3,6 @@
 open Fable.Core
 open System.ComponentModel
 
-type internal Handlers =
-    { onClose: (exn option -> unit) option
-      onMessage: (obj -> unit) option
-      onReconnected: (string option -> unit) option
-      onReconnecting: (exn option -> unit) option }
-
-    member inline this.apply (hub: IHubConnection<_,_,_,_,_>) =
-        Option.iter hub.onClose this.onClose
-        Option.iter hub.onMessage (unbox this.onMessage)
-        Option.iter hub.onReconnected this.onReconnected
-        Option.iter hub.onReconnecting this.onReconnecting
-        hub
-
-    static member empty =
-        { onClose = None
-          onMessage = None
-          onReconnecting = None
-          onReconnected = None }
-
 /// A builder for configuring HubConnection instances.
 type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
     internal (hub: IHubConnectionBuilder<'ClientApi,'ServerApi>) =
@@ -128,8 +109,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
            parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
         |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
         |> fun protocol -> hub.withHubProtocol(protocol).build()
-        |> handlers.apply
-        |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub)
+        |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub, handlers)
 
 [<Erase>]
 type SignalR =

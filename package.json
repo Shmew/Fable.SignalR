@@ -73,7 +73,6 @@
   "jest": {
     "roots": [
       "./dist/tests"
-    ],
-    "testEnvironment": "node"
+    ]
   }
 }

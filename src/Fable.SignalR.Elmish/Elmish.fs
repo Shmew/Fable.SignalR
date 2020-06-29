@@ -95,8 +95,7 @@ module Elmish =
                    parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
                 |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
                 |> fun protocol -> hub.withHubProtocol(protocol).build()
-                |> handlers.apply
-                |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub)
+                |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub, handlers)
 
         type Hub<'ClientApi,'ServerApi> [<EditorBrowsable(EditorBrowsableState.Never)>] (hub: HubConnection<'ClientApi,unit,unit,'ServerApi,unit>) =
             interface System.IDisposable with
@@ -402,8 +401,8 @@ module Elmish =
             /// Streams to the hub.
             static member inline streamTo (hub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi> option) =
                 fun (subject: #ISubject<'ClientStreamToApi>) ->
-                    [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.streamToNow(subject, hub.cts.Token)) ] : Cmd<_>
+                    [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.streamToNow(subject)) ] : Cmd<_>
             /// Streams to the hub.
             static member inline streamTo (hub: Elmish.StreamHub.Bidrectional<'ClientApi,_,'ClientStreamToApi,'ServerApi,_> option) =
                 fun (subject: #ISubject<'ClientStreamToApi>) ->
-                    [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.streamToNow(subject, hub.cts.Token)) ] : Cmd<_>
+                    [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.streamToNow(subject)) ] : Cmd<_>
