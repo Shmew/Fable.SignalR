@@ -55,9 +55,7 @@ On the server:
 
 ```fs
 module SignalRHub =
-    let update (msg: Action) (hubContext: FableHub<Action,Response>) =
-        printfn "New Msg: %A" msg
-            
+    let invoke (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
@@ -68,13 +66,17 @@ module SignalRHub =
             |> fun i -> characters.ToCharArray().[i]
             |> string
             |> Response.RandomCharacter
+
+    let send (msg: Action) (hubContext: FableHub<Action,Response>) =
+        invoke msg
         |> hubContext.Clients.Caller.Send
 
 application {
     use_signalr (
         configure_signalr {
             endpoint Endpoints.Root
-            update SignalRHub.update
+            send SignalRHub.send
+            invoke SignalRHub.invoke
         }
     )
     ...
