@@ -14,11 +14,9 @@ type Action =
     | IncrementCount of int
     | DecrementCount of int
     | RandomCharacter
-    | SayHello
 
 [<RequireQualifiedAccess>]
 type Response =
-    | Howdy
     | NewCount of int
     | RandomCharacter of string
 
@@ -49,7 +47,6 @@ type Msg =
     | IncrementCount
     | DecrementCount
     | RandomCharacter
-    | SayHello
     | RegisterHub of Elmish.Hub<Action,Response>
 
 let init =
@@ -80,7 +77,6 @@ let render = React.functionComponent(fun () ->
                 .configureLogging(LogLevel.Debug)
                 .onMessage <|
                     function
-                    | Response.Howdy -> JS.console.log("Howdy!")
                     | Response.NewCount i -> setCount i
                     | Response.RandomCharacter str -> setText str
         )
@@ -106,7 +102,6 @@ let hub =
             .configureLogging(LogLevel.Debug)
             .onMessage <|
                 function
-                | Response.Howdy -> JS.console.log("Howdy!")
                 | Response.NewCount i -> JS.console.log(i)
                 | Response.RandomCharacter str -> JS.console.log(str))
 ```
