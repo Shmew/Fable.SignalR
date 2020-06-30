@@ -155,8 +155,7 @@ let render = React.functionComponent(fun () ->
         React.useSignalR<Action,StreamTo.Action,Response>(fun hub -> 
             hub.withUrl(Endpoints.Root)
                 .withAutomaticReconnect()
-                .configureLogging(LogLevel.Debug)
-        )
+                .configureLogging(LogLevel.Debug))
 
     Html.div [
         prop.children [
