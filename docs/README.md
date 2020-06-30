@@ -39,7 +39,6 @@ let render = React.functionComponent(fun () ->
                 .configureLogging(LogLevel.Debug)
                 .onMessage <|
                     function
-                    | Response.Howdy -> JS.console.log("Howdy!")
                     | Response.NewCount i -> setCount i
                     | Response.RandomCharacter str -> setText str
         )
@@ -56,11 +55,8 @@ On the server:
 
 ```fs
 module SignalRHub =
-    let update (msg: Action) (hubContext: FableHub<Action,Response>) =
-        printfn "New Msg: %A" msg
-            
+    let invoke (msg: Action) =
         match msg with
-        | Action.SayHello -> Response.Howdy
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
         | Action.RandomCharacter ->
@@ -70,13 +66,17 @@ module SignalRHub =
             |> fun i -> characters.ToCharArray().[i]
             |> string
             |> Response.RandomCharacter
+
+    let send (msg: Action) (hubContext: FableHub<Action,Response>) =
+        invoke msg
         |> hubContext.Clients.Caller.Send
 
 application {
     use_signalr (
         configure_signalr {
             endpoint Endpoints.Root
-            update SignalRHub.update
+            send SignalRHub.send
+            invoke SignalRHub.invoke
         }
     )
     ...
@@ -91,15 +91,12 @@ type Action =
     | IncrementCount of int
     | DecrementCount of int
     | RandomCharacter
-    | SayHello
 
 [<RequireQualifiedAccess>]
 type Response =
-    | Howdy
     | NewCount of int
     | RandomCharacter of string
 
 module Endpoints =
     let [<Literal>] Root = "/SignalR"
-
 ```

@@ -128,14 +128,8 @@ method on the Hub.
 Putting it all together:
 ```fsharp
 type Hub = StreamHub.ClientToServer<Action,StreamTo.Action,Response>
-            
-let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
-    React.fragment [
-        Html.div input.count
-        Html.div input.text
-    ])
 
-let display = React.functionComponent(fun (input: {| count: int; hub: Hub |}) ->
+let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
     Html.button [
         prop.text "Stream To"
         prop.onClick <| fun _ -> 
@@ -162,17 +156,11 @@ let render = React.functionComponent(fun () ->
             hub.withUrl(Endpoints.Root)
                 .withAutomaticReconnect()
                 .configureLogging(LogLevel.Debug)
-                .onMessage <|
-                    function
-                    | Response.Howdy -> JS.console.log("Howdy!")
-                    | Response.NewCount i -> setCount i
-                    | Response.RandomCharacter str -> setText str
         )
 
     Html.div [
         prop.children [
-            textDisplay {| count = count; text = text |}
-            display {| count = count; hub = hub |}
+            display {| hub = hub |}
         ]
     ])
 ```
@@ -201,12 +189,7 @@ let hub =
     SignalR.connect<Action,unit,StreamTo.Action,Response,unit>(fun hub ->
         hub.withUrl(Endpoints.Root)
             .withAutomaticReconnect()
-            .configureLogging(LogLevel.Debug)
-            .onMessage <|
-                function
-                | Response.Howdy -> JS.console.log("Howdy!")
-                | Response.NewCount i -> JS.console.log(i)
-                | Response.RandomCharacter str -> JS.console.log(str))
+            .configureLogging(LogLevel.Debug))
 
 hub.startNow()
 
