@@ -39,7 +39,6 @@ type Msg =
     | IncrementCount
     | DecrementCount
     | RandomCharacter
-    | SayHello
     | RegisterHub of Elmish.Hub<Action,Response>
 
 let init =
@@ -57,7 +56,6 @@ let update msg model =
     | RegisterHub hub -> { model with Hub = Some hub }, Cmd.none
     | SignalRMsg rsp ->
         match rsp with
-        | Response.Howdy -> model, Cmd.none
         | Response.RandomCharacter str ->
             { model with Text = str }, Cmd.none
         | Response.NewCount i ->
@@ -68,8 +66,6 @@ let update msg model =
         model, Cmd.SignalR.send model.Hub (Action.DecrementCount model.Count)
     | RandomCharacter ->
         model, Cmd.SignalR.send model.Hub Action.RandomCharacter
-    | SayHello ->
-        model, Cmd.SignalR.send model.Hub Action.SayHello
 ```
 
 ### Feliz
@@ -110,7 +106,6 @@ let render = React.functionComponent(fun () ->
                 .configureLogging(LogLevel.Debug)
                 .onMessage <|
                     function
-                    | Response.Howdy -> JS.console.log("Howdy!")
                     | Response.NewCount i -> setCount i
                     | Response.RandomCharacter str -> setText str
         )
@@ -148,9 +143,6 @@ type Model =
       Text: string
       Hub: Elmish.Hub<Action,Response> option }
 
-    // This only works if you're using Feliz.UseElmish or Feliz.ElmishComponents!
-    //
-    // If you're using the traditional elmish model you will need to clean this up yourself.
     interface System.IDisposable with
         member this.Dispose () =
             this.Hub |> Option.iter (fun hub -> hub.Dispose())
@@ -158,34 +150,34 @@ type Model =
 type Msg =
     | SignalRMsg of Response
     | IncrementCount
-    | InvokeIncrementCount
-    | OnInvokeError of exn
+    | DecrementCount
+    | RandomCharacter
     | RegisterHub of Elmish.Hub<Action,Response>
 
 let init =
     { Count = 0
-        Text = ""
-        Hub = None }
+      Text = ""
+      Hub = None }
     , Cmd.SignalR.connect RegisterHub (fun hub -> 
         hub.withUrl(Endpoints.Root)
             .withAutomaticReconnect()
-            .configureLogging(LogLevel.Debug)
-            .onMessage SignalRMsg)
+            .configureLogging(LogLevel.Debug))
 
 let update msg model =
     match msg with
     | RegisterHub hub -> { model with Hub = Some hub }, Cmd.none
     | SignalRMsg rsp ->
         match rsp with
-        | Response.Howdy -> model, Cmd.none
         | Response.RandomCharacter str ->
             { model with Text = str }, Cmd.none
         | Response.NewCount i ->
             { model with Count = i }, Cmd.none
-    | OnInvokeError e -> model,Cmd.none
-    | InvokeIncrementCount ->
-        model, Cmd.SignalR.either model.Hub (Action.IncrementCount model.Count) 
-                SignalRMsg OnInvokeError
+    | IncrementCount ->
+        model, Cmd.SignalR.perform model.Hub (Action.IncrementCount model.Count) SignalRMsg 
+    | DecrementCount ->
+        model, Cmd.SignalR.perform model.Hub (Action.DecrementCount model.Count) SignalRMsg
+    | RandomCharacter ->
+        model, Cmd.SignalR.perform model.Hub Action.RandomCharacter SignalRMsg
 ```
 
 ### Feliz

@@ -165,7 +165,6 @@ let render = React.functionComponent(fun () ->
             hub.withUrl(Endpoints.Root)
                 .withAutomaticReconnect()
                 .configureLogging(LogLevel.Debug)
-                .onMessage <| function | _ -> ()
         )
 
     Html.div [
@@ -207,12 +206,7 @@ let hub =
     SignalR.connect<Action,StreamFrom.Action,unit,Response,StreamFrom.Response>(fun hub ->
         hub.withUrl(Endpoints.Root)
             .withAutomaticReconnect()
-            .configureLogging(LogLevel.Debug)
-            .onMessage <|
-                function
-                | Response.Howdy -> JS.console.log("Howdy!")
-                | Response.NewCount i -> JS.console.log(i)
-                | Response.RandomCharacter str -> JS.console.log(str))
+            .configureLogging(LogLevel.Debug))
 
 hub.startNow()
 
