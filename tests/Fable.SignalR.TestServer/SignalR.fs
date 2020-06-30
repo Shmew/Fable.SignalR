@@ -8,7 +8,6 @@ module SignalRHub =
 
     let invoke (msg: Action) =
         match msg with
-        | Action.SayHello -> Response.Howdy
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
         | Action.RandomCharacter ->
@@ -25,19 +24,16 @@ module SignalRHub =
 
     [<RequireQualifiedAccess>]
     module Stream =
-        let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) =
+        let sendToClient (msg: StreamFrom.Action) (_: FableHub<Action,Response>) =
             match msg with
             | StreamFrom.Action.GenInts ->
-                Response.Howdy
-                |> hubContext.Clients.Caller.Send
-                |> Async.AwaitTask |> Async.Start
                 asyncSeq {
                     for i in [ 1 .. 100 ] do
                         yield StreamFrom.Response.GetInts i
                 }
                 |> AsyncSeq.toAsyncEnum
 
-        let getFromClient (clientStream: IAsyncEnumerable<StreamTo.Action>) (hubContext: FableHub<Action,Response>) =
+        let getFromClient (clientStream: IAsyncEnumerable<StreamTo.Action>) (_: FableHub<Action,Response>) =
             AsyncSeq.ofAsyncEnum clientStream
-            |> AsyncSeq.iterAsync (fun _ -> async { return () })//(function | StreamTo.Action.GiveInt i -> hubContext.Clients.Caller.Send(Response.NewCount i) |> Async.AwaitTask)
+            |> AsyncSeq.iterAsync (fun _ -> async { return () })
             |> Async.StartAsTask

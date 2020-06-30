@@ -55,7 +55,6 @@ type HubModel () =
                         match msg with
                         | ServerMsg msg ->
                             match msg with
-                            | Response.Howdy -> state
                             | Response.NewCount i -> { state with Count = i }
                             | Response.RandomCharacter str -> { state with Text = str }
                             |> fun newState ->

@@ -8,7 +8,7 @@ module App =
     open System
 
     [<EntryPoint>]
-    let main args =
+    let main _ =
         try
             let app =
                 application {
@@ -34,7 +34,6 @@ module App =
                         |> ignore
                     )
                     no_router
-                    use_static (Env.clientPath args)
                     use_developer_exceptions
                 }
             printfn "Working directory - %s" (System.IO.Directory.GetCurrentDirectory())

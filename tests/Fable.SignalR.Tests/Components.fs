@@ -24,7 +24,6 @@ module Elmish =
         | IncrementCount
         | DecrementCount
         | RandomCharacter
-        | SayHello
         | RegisterHub of Elmish.Hub<Action,Response>
 
     let init =
@@ -44,7 +43,6 @@ module Elmish =
         | RegisterHub hub -> { model with Hub = Some hub }, Cmd.none
         | SignalRMsg rsp ->
             match rsp with
-            | Response.Howdy -> model, Cmd.none
             | Response.RandomCharacter str ->
                 { model with Text = str }, Cmd.none
             | Response.NewCount i ->
@@ -55,8 +53,6 @@ module Elmish =
             model, Cmd.SignalR.send model.Hub (Action.DecrementCount model.Count)
         | RandomCharacter ->
             model, Cmd.SignalR.send model.Hub Action.RandomCharacter
-        | SayHello ->
-            model, Cmd.SignalR.send model.Hub Action.SayHello
 
     let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
         React.fragment [
@@ -114,7 +110,6 @@ module InvokeElmish =
         | IncrementCount
         | DecrementCount
         | RandomCharacter
-        | SayHello
         | RegisterHub of Elmish.Hub<Action,Response>
 
     let init =
@@ -131,7 +126,6 @@ module InvokeElmish =
         | RegisterHub hub -> { model with Hub = Some hub }, Cmd.none
         | SignalRMsg rsp ->
             match rsp with
-            | Response.Howdy -> model, Cmd.none
             | Response.RandomCharacter str ->
                 { model with Text = str }, Cmd.none
             | Response.NewCount i ->
@@ -142,8 +136,6 @@ module InvokeElmish =
             model, Cmd.SignalR.perform model.Hub (Action.DecrementCount model.Count) SignalRMsg
         | RandomCharacter ->
             model, Cmd.SignalR.perform model.Hub Action.RandomCharacter SignalRMsg
-        | SayHello ->
-            model, Cmd.SignalR.perform model.Hub Action.SayHello SignalRMsg
 
     let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
         React.fragment [
@@ -351,7 +343,6 @@ module Hook =
                     .configureLogging(LogLevel.None)
                     .onMessage <|
                         function
-                        | Response.Howdy -> JS.console.log("Howdy!")
                         | Response.NewCount i -> setCount i
                         | Response.RandomCharacter str -> setText str
             )

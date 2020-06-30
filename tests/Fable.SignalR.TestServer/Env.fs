@@ -2,19 +2,6 @@
 
 module Env =
     open System
-    open System.IO
-
-    let clientPath args =
-        match Array.toList args with
-        | clientPath :: _ when Directory.Exists clientPath -> clientPath
-        | _ ->
-            match (Path.Combine("..", "public")), (Path.Combine("..", "Client", "public")),
-                    (Path.Combine("src", "Client", "public")) with
-            | path, _, _ when Directory.Exists path -> path
-            | _, path, _ when Directory.Exists path -> path
-            | _, _, path when Directory.Exists path -> path
-            | _ -> @"./public"
-        |> Path.GetFullPath
 
     let getEnvFromAllOrNone (s: string) =
         let envOpt (envVar: string) =

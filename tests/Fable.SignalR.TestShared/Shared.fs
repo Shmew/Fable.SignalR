@@ -6,11 +6,9 @@ module SignalRHub =
         | IncrementCount of int
         | DecrementCount of int
         | RandomCharacter
-        | SayHello
 
     [<RequireQualifiedAccess>]
     type Response =
-        | Howdy
         | NewCount of int
         | RandomCharacter of string
 
