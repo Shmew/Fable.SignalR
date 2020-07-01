@@ -7,6 +7,8 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Data\apple.csv" />
+    <Compile Include="Stocks.fs" />
     <Compile Include="SignalR.fs" />
     <Compile Include="Env.fs" />
     <Compile Include="App.fs" />

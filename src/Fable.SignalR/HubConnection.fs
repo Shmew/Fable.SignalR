@@ -475,11 +475,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                                 if hub.state = ConnectionState.Connected then 
                                     action() |> fun a -> Async.StartImmediate(a, cts.Token)
                                     []
-                                else 
-                                    #if DEBUG
-                                    JS.console.warn("Attempted to send a message while hub is not connected, delaying processing...")
-                                    #endif
-                                    [ action ]
+                                else [ action ]
 
                             loop waitingInvocations (newConnections @ waitingConnections)
                         | HubMailbox.ServerRsp(connectionId, msg) ->
@@ -494,11 +490,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                                 if hub.state = ConnectionState.Connected then
                                     hub.invoke(serverMsg) |> fun a -> Async.StartImmediate(a, cts.Token)
                                     []
-                                else 
-                                    #if DEBUG
-                                    JS.console.warn("Attempted to invoke a hub method while it is not connected, delaying processing...")
-                                    #endif
-                                    [ fun () -> hub.invoke(serverMsg) ]
+                                else [ fun () -> hub.invoke(serverMsg) ]
 
                             loop (reply::waitingInvocations) (newConnections @ waitingConnections)
                 }

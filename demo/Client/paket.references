@@ -4,5 +4,6 @@ group Client
 	Fable.Core
     Fable.Promise
     Feliz
+    Feliz.Plotly
     Feliz.UseElmish
     FSharp.Core

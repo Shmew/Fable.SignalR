@@ -28,3 +28,4 @@ module SignalRHub =
 
 module Endpoints =   
     let [<Literal>] Root = "/SignalR"
+    let [<Literal>] Root2 = "/SignalR2"

@@ -29,8 +29,10 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^3",
+    "plotly.js": "^1",
     "react": "^16",
-    "react-dom": "^16"
+    "react-dom": "^16",
+    "react-plotly.js": "^2"
   },
   "devDependencies": {
     "@babel/core": "^7",

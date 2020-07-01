@@ -2,7 +2,6 @@ namespace SignalRApp
 
 module App =
     open Fable.SignalR
-    open Giraffe.ResponseWriters
     open Microsoft.Extensions.Logging
     open Saturn
     open System
@@ -22,8 +21,17 @@ module App =
                             with_log_level Microsoft.Extensions.Logging.LogLevel.None
                         }
                     )
+                    use_signalr (
+                        configure_signalr {
+                            endpoint Endpoints.Root2
+                            send SignalRHub2.send
+                            invoke SignalRHub2.invoke
+                            stream_from SignalRHub2.Stream.sendToClient
+                            stream_to SignalRHub2.Stream.getFromClient
+                            with_log_level Microsoft.Extensions.Logging.LogLevel.None
+                        }
+                    )
                     logging (fun l -> l.AddFilter("Microsoft", LogLevel.Error) |> ignore)
-                    error_handler (fun e log -> text e.Message)
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
                     use_cors "Any" (fun policy -> 
                         policy

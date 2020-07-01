@@ -11,6 +11,9 @@ module.exports = {
         ],
         sourceMaps: "inline"
     },
+    fable: {
+        define: ["DEBUG"]
+    },
     onCompiled() {
         const fs = require('fs')
         const findSnapshotLoader = () => {

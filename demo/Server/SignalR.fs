@@ -6,19 +6,12 @@ module SignalRHub =
     open Microsoft.AspNetCore.SignalR
     open SignalRHub
     open System.Collections.Generic
-    open FSharp.Control.Tasks.V2
+    open FSharp.Control.Tasks.V2   
 
     let invoke (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
-        | Action.RandomCharacter ->
-            let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-            
-            System.Random().Next(0,characters.Length-1)
-            |> fun i -> characters.ToCharArray().[i]
-            |> string
-            |> Response.RandomCharacter
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         invoke msg
@@ -27,18 +20,13 @@ module SignalRHub =
     [<RequireQualifiedAccess>]
     module Stream =
         let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) =
+            printfn "sendToClient called with %A" msg
             match msg with
-            | StreamFrom.Action.GenInts ->
+            | StreamFrom.Action.AppleStocks ->
+                let stocks = Stocks.appleStocks()
                 asyncSeq {
-                    for i in [ 1 .. 100 ] do
-                        yield StreamFrom.Response.GetInts i
+                    for row in stocks do
+                        do! Async.Sleep 300
+                        yield StreamFrom.Response.AppleStock row
                 }
                 |> AsyncSeq.toAsyncEnum
-
-        let getFromClient (clientStream: IAsyncEnumerable<StreamTo.Action>) (hubContext: FableHub<Action,Response>) =
-            AsyncSeq.ofAsyncEnum clientStream
-            |> AsyncSeq.iterAsync (function 
-                | StreamTo.Action.GiveInt i -> 
-                    hubContext.Clients.Caller.Send(Response.NewCount i) 
-                    |> Async.AwaitTask)
-            |> Async.StartAsTask

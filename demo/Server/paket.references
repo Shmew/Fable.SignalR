@@ -1,5 +1,6 @@
 ﻿group Server
 	FSharp.Core
     FSharp.Control.AsyncSeq
+    FSharp.Data
     Saturn
     TaskBuilder.fs

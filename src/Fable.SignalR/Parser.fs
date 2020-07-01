@@ -136,10 +136,15 @@ module Parser =
         #else
         member this.parseMsgs<'ClientStreamApi,'ServerApi,'ServerStreamApi> (input: U3<string,JS.ArrayBuffer,System.Buffer>, ?logger: ILogger) =
         #endif
-            let logger =
+            let logError e =
+                #if DEBUG
                 match logger with
-                | None -> Bindings.signalR.NullLogger() :> ILogger
-                | Some logger -> logger
+                | None -> JS.console.error(e)
+                | Some logger -> logger.log LogLevel.Error e
+                #endif
+                match logger with
+                | None -> ()
+                | Some logger -> logger.log LogLevel.Error e
 
             match input with
             | U3.Case1 "" -> [||]
@@ -147,16 +152,17 @@ module Parser =
                 TextMessageFormat.parse(str)
                 |> Array.choose(fun m ->
                     let parsedRaw = SimpleJson.parse m
-
+                    
                     SimpleJson.readPath ["type"] parsedRaw
                     |> Option.map Json.convertFromJsonAs<MessageType>
                     |> Option.get
-                    |> fun msgType -> this.processMsg<'ClientStreamApi,'ServerApi,'ServerStreamApi>(parsedRaw, msgType)
+                    |> fun msgType ->
+                        this.processMsg<'ClientStreamApi,'ServerApi,'ServerStreamApi>(parsedRaw, msgType)
                     |> function
                     | Ok msg -> Some msg
                     | Error e -> 
                         sprintf "Unknown message type: %s" e
-                        |> logger.log LogLevel.Information
+                        |> logError
                         None)
             | _ -> failwith "Invalid input for JSON hub protocol. Expected a string."
             |> RArray

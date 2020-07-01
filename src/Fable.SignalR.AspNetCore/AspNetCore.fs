@@ -10,9 +10,26 @@ module SignalRExtension =
     open Microsoft.Extensions.DependencyInjection
     open Microsoft.Extensions.Hosting
     open Microsoft.Extensions.Logging
+    open Newtonsoft.Json
     open System.Collections.Generic
     open System.Threading.Tasks
     
+    [<RequireQualifiedAccess>]
+    module internal Impl =
+        let config<'T when 'T :> Hub> (builder: IServiceCollection) (hubOptions: (HubOptions -> unit) option) (transients: IServiceCollection -> IServiceCollection) =
+            builder
+                .AddSignalR()
+                .AddNewtonsoftJsonProtocol(fun o -> 
+                    o.PayloadSerializerSettings.DateParseHandling <- DateParseHandling.None
+                    o.PayloadSerializerSettings.ContractResolver <- new Serialization.DefaultContractResolver()
+                    o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
+            |> fun builder ->
+                match hubOptions with
+                | Some hubOptions ->
+                    builder.AddHubOptions<'T>(System.Action<HubOptions<'T>>(hubOptions)).Services
+                | None -> builder.Services
+            |> transients
+
     type IHostBuilder with
         /// Adds a logging filter for SignalR with the given log level threshold.
         member this.SignalRLogLevel (logLevel: Microsoft.Extensions.Logging.LogLevel) =
@@ -30,122 +47,59 @@ module SignalRExtension =
     type IServiceCollection with
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
-            let config = 
-                let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
 
-                match settings.Config with
-                | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.OnConnected.addTransient onConnect settings.Send settings.Invoke
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke
-                       HubOptions = hubOptions |}
-                | _ ->
-                    {| Transient = FableHub.addUpdateTransient settings.Send settings.Invoke
-                       HubOptions = hubOptions |}
-
-            match config.HubOptions with
-            | Some hubOptions ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .AddHubOptions<NormalFableHub<'ClientApi,'ServerApi>>(
-                        System.Action<HubOptions<NormalFableHub<'ClientApi,'ServerApi>>>(hubOptions))
-                    .Services |> config.Transient
-            | _ ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .Services |> config.Transient
+            match settings.Config with
+            | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
+                FableHub.OnConnected.addTransient onConnect settings.Send settings.Invoke
+            | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
+                FableHub.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke
+            | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
+                FableHub.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke
+            | _ -> FableHub.addUpdateTransient settings.Send settings.Invoke
+            |> Impl.config<NormalFableHub<'ClientApi,'ServerApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
             (settings: SignalR.Settings<'ClientApi,'ServerApi>, 
              streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) =
 
-            let config = 
-                let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
 
-                match settings.Config with
-                | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.Stream.From.OnConnected.addTransient onConnect settings.Send settings.Invoke streamFrom
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.From.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke streamFrom
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.From.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke streamFrom
-                       HubOptions = hubOptions |}
-                | _ ->
-                    {| Transient = 
-                        { Send = settings.Send
-                          Invoke = settings.Invoke
-                          StreamFrom = streamFrom }
-                        |> FableHub.Stream.From.addTransient
-                       HubOptions = hubOptions |}
-
-            match config.HubOptions with
-            | Some hubOptions ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .AddHubOptions<StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>(
-                        System.Action<HubOptions<StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>>>(hubOptions))
-                    .Services |> config.Transient
+            match settings.Config with
+            | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
+                FableHub.Stream.From.OnConnected.addTransient onConnect settings.Send settings.Invoke streamFrom
+            | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
+                FableHub.Stream.From.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke streamFrom
+            | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
+                FableHub.Stream.From.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke streamFrom
             | _ ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .Services |> config.Transient
+                    { Send = settings.Send
+                      Invoke = settings.Invoke
+                      StreamFrom = streamFrom }
+                    |> FableHub.Stream.From.addTransient 
+            |> Impl.config<StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
             (settings: SignalR.Settings<'ClientApi,'ServerApi>, 
              streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
 
-            let config = 
-                let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
 
-                match settings.Config with
-                | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.Stream.To.OnConnected.addTransient onConnect settings.Send settings.Invoke (Task.toGen streamTo)
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.To.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke (Task.toGen streamTo)
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.To.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke (Task.toGen streamTo)
-                       HubOptions = hubOptions |}
-                | _ ->
-                    {| Transient = 
-                        { Send = settings.Send
-                          Invoke = settings.Invoke
-                          StreamTo = (Task.toGen streamTo) }
-                        |> FableHub.Stream.To.addTransient
-                       HubOptions = hubOptions |}
-
-            match config.HubOptions with
-            | Some hubOptions ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .AddHubOptions<StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>>(
-                        System.Action<HubOptions<StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>>>(hubOptions))
-                    .Services |> config.Transient
+            match settings.Config with
+            | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
+                FableHub.Stream.To.OnConnected.addTransient onConnect settings.Send settings.Invoke (Task.toGen streamTo)
+            | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
+                FableHub.Stream.To.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke (Task.toGen streamTo)
+            | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
+                FableHub.Stream.To.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke (Task.toGen streamTo)
             | _ ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .Services |> config.Transient
+                    { Send = settings.Send
+                      Invoke = settings.Invoke
+                      StreamTo = (Task.toGen streamTo) }
+                    |> FableHub.Stream.To.addTransient
+            |> Impl.config<StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
@@ -153,43 +107,22 @@ module SignalRExtension =
              streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
 
-            let config = 
-                let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
 
-                match settings.Config with
-                | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                    {| Transient = FableHub.Stream.Both.OnConnected.addTransient onConnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.Both.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
-                       HubOptions = hubOptions |}
-
-                | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                    {| Transient = FableHub.Stream.Both.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
-                       HubOptions = hubOptions |}
-                | _ ->
-                    {| Transient = 
-                        { Send = settings.Send
-                          Invoke = settings.Invoke
-                          StreamFrom = streamFrom
-                          StreamTo = (Task.toGen streamTo) }
-                        |> FableHub.Stream.Both.addTransient
-                       HubOptions = hubOptions |}
-
-            match config.HubOptions with
-            | Some hubOptions ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .AddHubOptions<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>(
-                        System.Action<HubOptions<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>>(hubOptions))
-                    .Services |> config.Transient
+            match settings.Config with
+            | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
+                FableHub.Stream.Both.OnConnected.addTransient onConnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
+            | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
+                FableHub.Stream.Both.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
+            | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
+                FableHub.Stream.Both.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
             | _ ->
-                this
-                    .AddSignalR()
-                    .AddNewtonsoftJsonProtocol(fun o -> o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
-                    .Services |> config.Transient
+                    { Send = settings.Send
+                      Invoke = settings.Invoke
+                      StreamFrom = streamFrom
+                      StreamTo = (Task.toGen streamTo) }
+                    |> FableHub.Stream.Both.addTransient
+            |> Impl.config<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR(endpoint: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, invoke: 'ClientApi -> 'ServerApi) =

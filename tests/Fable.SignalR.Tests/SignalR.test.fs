@@ -30,13 +30,21 @@ type Msg =
     | SetState of (Model -> Model)
     | IsConnected of AsyncReplyChannel<bool>
 
-let hub : HubConnection<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response> =
+type Hub = HubConnection<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
+
+let hub : Hub =
     SignalR.connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
         hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root)
             .withAutomaticReconnect()
             .configureLogging(LogLevel.None))
 
-type HubModel () =
+let hub2 : Hub =
+    SignalR.connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
+        hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root2)
+            .withAutomaticReconnect()
+            .configureLogging(LogLevel.None))
+
+type HubModel (hub: Hub) =
     let replyIfNew newState (waiting: ((Model -> bool) * AsyncReplyChannel<Model>) list) =
         waiting
         |> List.choose (fun (pred,reply) -> 
@@ -242,7 +250,7 @@ module Commands =
                     
                     Jest.expect(newReal.Count).toBeGreaterThan(modelState.Count)
 
-                    do! model.SendDecrement() |> Async.Ignore
+                    do! model.InvokeIncrement() |> Async.Ignore
                 }
             member _.toString () = "Invoke Increment"
 
@@ -256,7 +264,7 @@ module Commands =
                     
                     Jest.expect(newReal.Count).toBeLessThan(modelState.Count)
 
-                    do! model.SendDecrement() |> Async.Ignore
+                    do! model.InvokeDecrement() |> Async.Ignore
                 }
             member _.toString () = "Invoke Decrement"
 
@@ -297,6 +305,13 @@ let commandArb = Arbitrary.asyncCommands [
     Arbitrary.constant (Commands.StreamTo() :> IAsyncCommand<HubModel,HubModel>)
 ]
 
-Jest.test.prop("Hub model tests", commandArb, fun cmds ->
-    FastCheck.asyncModelRun(HubModel(), HubModel(), cmds)
-, timeout = 60000)
+Jest.test.prop("Normal model tests run", commandArb, fun cmds ->
+    FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds)
+, timeout = 20000)
+    
+Jest.test.prop("Can run two hubs at once", commandArb, commandArb, fun cmds1 cmds2 ->
+    async {
+        do! FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds1)
+        do! FastCheck.asyncModelRun(HubModel(hub2), HubModel(hub2), cmds2)
+    }
+, timeout = 20000)

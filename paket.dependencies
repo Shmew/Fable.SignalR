@@ -94,6 +94,7 @@ group Client
 	nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Feliz ~> 1
+    nuget Feliz.Plotly ~> 1
     nuget Feliz.UseElmish ~> 1
     nuget FSharp.Core ~> 4.7
 
@@ -103,6 +104,7 @@ group Server
 
     nuget FSharp.Control.AsyncSeq ~> 2
 	nuget FSharp.Core ~> 4.7
+    nuget FSharp.Data ~> 3
     nuget Saturn ~> 0.14.1
     nuget TaskBuilder.fs 2.2.0-alpha
 
