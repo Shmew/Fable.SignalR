@@ -431,7 +431,7 @@ Target.create "Publish" ignore
 
 "All"
  ==> "NuGet"
- ==> "NuGetPublish"
+ ?=> "NuGetPublish"
 
 "PrepDocs" 
  ==> "PublishPages"

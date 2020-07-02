@@ -307,11 +307,11 @@ let commandArb = Arbitrary.asyncCommands [
 
 Jest.test.prop("Normal model tests run", commandArb, fun cmds ->
     FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds)
-, timeout = 20000)
+, timeout = 60000)
     
 Jest.test.prop("Can run two hubs at once", commandArb, commandArb, fun cmds1 cmds2 ->
     async {
         do! FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds1)
         do! FastCheck.asyncModelRun(HubModel(hub2), HubModel(hub2), cmds2)
     }
-, timeout = 20000)
+, timeout = 60000)

@@ -1,5 +1,5 @@
 ﻿type project
-licenseExpression https://github.com/Shmew/Fable.SignalR/blob/master/LICENSE
+licenseExpression MIT
 authors Cody Johnson
 description
     A type-safe functional wrapper for SignalR and ASP.NET Core and Giraffe
