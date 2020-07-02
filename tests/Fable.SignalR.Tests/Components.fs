@@ -417,7 +417,6 @@ module InvokeHook =
                 hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root)
                     .withAutomaticReconnect()
                     .configureLogging(LogLevel.None)
-                    .onMessage <| fun (msg: Response) -> JS.console.log("")
             )
         
         Html.div [

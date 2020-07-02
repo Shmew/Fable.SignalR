@@ -90,13 +90,12 @@ group Client
 	source https://api.nuget.org/v3/index.json
 
     nuget Fable.Browser.Dom ~> 1
-    nuget Fable.Browser.Url ~> 1
 	nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Feliz ~> 1
     nuget Feliz.Plotly ~> 1
-    nuget Feliz.UseElmish ~> 1
     nuget FSharp.Core ~> 4.7
+    nuget Zanaptak.TypedCssClasses ~> 0
 
 group Server
     source https://nuget.org/api/v2

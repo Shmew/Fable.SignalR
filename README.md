@@ -2,6 +2,8 @@
 
 Fable bindings for the SignalR client, and ASP.NET Core/Giraffe/Saturn wrappers for SignalR server hubs.
 
+The full documentation can be found [here](https://shmew.github.io/Fable.SignalR/)
+
 A quick look:
 
 On the client:

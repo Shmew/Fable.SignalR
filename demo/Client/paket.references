@@ -1,9 +1,8 @@
 group Client
 	Fable.Browser.Dom
-    Fable.Browser.Url
 	Fable.Core
     Fable.Promise
     Feliz
     Feliz.Plotly
-    Feliz.UseElmish
     FSharp.Core
+    Zanaptak.TypedCssClasses

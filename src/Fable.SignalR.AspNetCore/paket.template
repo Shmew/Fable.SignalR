@@ -7,6 +7,3 @@ language
     F#
 tags
     fsharp, fable, react, websocket, signalr, asp.net core, giraffe
-files
-    *.fsproj ==> fable
-    *.fs ==> fable

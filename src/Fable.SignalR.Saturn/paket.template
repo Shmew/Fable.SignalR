@@ -7,6 +7,3 @@ language
     F#
 tags
     fsharp, fable, react, websocket, signalr, saturn
-files
-    *.fsproj ==> fable
-    *.fs ==> fable
