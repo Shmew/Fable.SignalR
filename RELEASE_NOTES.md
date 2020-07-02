@@ -1,2 +1,2 @@
-### 0.1.0 - Monday, June 29th, 2020
+### 0.1.0 - Wednesday, July 1st, 2020
 * Initial release
