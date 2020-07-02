@@ -275,7 +275,7 @@ Target.create "Lint" <| fun _ ->
 // Run the unit tests
 
 Target.create "RunTests" <| fun _ ->
-    Yarn.exec "test" id
+    Yarn.exec "test-server" id
 
 // --------------------------------------------------------------------------------------
 // Generate Paket load scripts
@@ -404,8 +404,6 @@ Target.create "Publish" ignore
   ==> "PostBuildClean" 
   ==> "CopyBinaries"
 
-//"Build" ==> "RunTests"
-
 "Build"
   ==> "PostBuildClean"
   ==> "PublishDotNet"
@@ -416,7 +414,7 @@ Target.create "Publish" ignore
 
 "Lint" 
   ?=> "Build"
-  //?=> "RunTests"
+  ?=> "RunTests"
   ?=> "CleanDocs"
 
 "Restore" ==> "LoadScripts"
@@ -425,7 +423,7 @@ Target.create "Publish" ignore
   ==> "GitPush"
   ?=> "GitTag"
 
-"All" <== ["Lint"; (*"RunTests";*) "CopyBinaries" ]
+"All" <== ["Lint"; "RunTests"; "CopyBinaries" ]
 
 "CleanDocs"
   ==> "CopyDocFiles"
