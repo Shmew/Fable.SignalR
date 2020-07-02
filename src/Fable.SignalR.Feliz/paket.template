@@ -1,5 +1,4 @@
 ﻿type project
-licenseExpression MIT
 authors Cody Johnson
 description
     A type-safe functional wrapper for SignalR, Fable, and Feliz
