@@ -50,13 +50,15 @@ module SignalRHub =
     open Fable.SignalR
     open SignalRHub
 
-    let invoke (msg: Action) =
+    let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
+    let invoke (msg: Action) _ = update msg
+
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
-        invoke msg
+        update msg
         |> hubContext.Clients.Caller.Send
 ```
 
@@ -142,13 +144,15 @@ module SignalRHub =
     open SignalRHub
     open System.Collections.Generic
 
-    let invoke (msg: Action) =
+    let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
+    let invoke (msg: Action) _ = update msg
+
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
-        invoke msg
+        update msg
         |> hubContext.Clients.Caller.Send
 
     [<RequireQualifiedAccess>]
