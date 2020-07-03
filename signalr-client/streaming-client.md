@@ -12,7 +12,7 @@ type ISubject<'T> =
 
     abstract complete: unit -> unit
 
-    abstract subscribe: observer: #IStreamSubscriber<'T> -> ISubscription
+    abstract subscribe: observer: #IStreamSubscriber<'T> -> System.IDisposable
 ```
 
 Luckily you don't need to create your own implementation of a subject, as
@@ -61,12 +61,12 @@ type Model =
     interface System.IDisposable with
         member this.Dispose () =
             this.Hub |> Option.iter (fun hub -> hub.Dispose())
-            this.StreamSubscription |> Option.iter (fun ss -> ss.dispose())
+            this.StreamSubscription |> Option.iter (fun sub -> sub.Dispose())
 
 type Msg =
     ...
     | StartClientStream
-    | Subscription of ISubscription
+    | Subscription of System.IDisposable
     | StreamStatus of StreamStatus
 
 let init =
@@ -83,7 +83,7 @@ let update msg model =
     match msg with
     ...
     | StartClientStream ->
-        let subject = SignalR.Subject<StreamTo.Action>()
+        let subject = SignalR.subject<StreamTo.Action>()
 
         model, Cmd.batch [ 
             Cmd.SignalR.streamTo model.Hub subject
@@ -134,7 +134,7 @@ let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
         prop.text "Stream To"
         prop.onClick <| fun _ -> 
             async {
-                let subject = SignalR.Subject()
+                let subject = SignalR.subject()
                             
                 do! input.hub.current.streamTo(subject)
                                     
@@ -193,7 +193,7 @@ let hub =
 hub.startNow()
 
 async {
-    let subject = SignalR.Subject()
+    let subject = SignalR.subject()
 
     do! hub.streamTo(subject)
 
