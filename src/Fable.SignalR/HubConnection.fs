@@ -181,7 +181,7 @@ type ISubject<'T> =
 
     abstract complete: unit -> unit
 
-    abstract subscribe: observer: #IStreamSubscriber<'T> -> ISubscription
+    abstract subscribe: observer: #IStreamSubscriber<'T> -> System.IDisposable
 
 /// Stream implementation to stream items to the server.
 type Subject<'T> =
@@ -193,14 +193,23 @@ type Subject<'T> =
 
     [<Emit("$0.next($1)")>]
     member _.next (item: 'T) : unit = jsNative
+
     [<Emit("$0.error($1)")>]
     member _.error (err: exn) : unit = jsNative
+
     [<Emit("$0.complete()")>]
     member _.complete () : unit = jsNative
+
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
     [<Emit("$0.subscribe($1)")>]
-    member _.subscribe (observer: #IStreamSubscriber<'T>) : ISubscription = jsNative
-    [<Emit("$0.subscribe($1)")>]
-    member _.subscribe (observer: StreamSubscriber<'T>) : ISubscription = jsNative
+    member _.subscribe' (observer: #IStreamSubscriber<'T>) : ISubscription = jsNative
+    
+    member inline this.subscribe (observer: #IStreamSubscriber<'T>) =
+        this.subscribe'(observer)
+        |> fun sub -> { new System.IDisposable with member _.Dispose () = sub.dispose() }
+
+    member inline this.subscribe (observer: StreamSubscriber<'T>) =
+        this.subscribe(unbox<IStreamSubscriber<'T>> observer)
 
 /// The connection state to the hub.
 [<RequireQualifiedAccess;StringEnum(CaseRules.None)>]
@@ -305,7 +314,6 @@ type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
     abstract build: unit -> IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
 
 module internal Bindings =
-    open Fable.Core
     open Fable.Core.JsInterop
 
     [<Erase>]

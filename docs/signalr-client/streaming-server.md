@@ -136,7 +136,12 @@ type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom
 
 let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
     let count,setCount = React.useState(0)
-                
+    let subscription = React.useRef(None : System.IDisposable option)
+
+    React.useEffectOnce(fun () -> 
+        React.createDisposable <| fun () -> 
+            subscription.current |> Option.iter (fun sub -> sub.Dispose()))
+
     let subscriber = 
         { next = fun (msg: StreamFrom.Response) -> 
             match msg with
@@ -152,8 +157,7 @@ let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
             prop.onClick <| fun _ -> 
                 async {
                     let! stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                    stream.subscribe(subscriber)
-                    |> ignore
+                    subscription.current <- Some (stream.subscribe(subscriber))
                 }
                 |> Async.StartImmediate
         ]
@@ -211,6 +215,5 @@ hub.startNow()
 
 let stream = hub.streamFrom StreamFrom.Action.GenInts
     
-stream.subscribe(subscriber)
-|> ignore
+use sub = stream.subscribe(subscriber)
 ```

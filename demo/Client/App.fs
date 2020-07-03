@@ -12,46 +12,14 @@ module App =
 
     type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response>
         
-    let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
-        let dates,setDates = React.useState([] : System.DateTime list)
-        let lows,setLows = React.useState([]: float list)
-        let highs,setHighs = React.useState([] : float list)
-        let subscription = React.useRef(None : ISubscription option)
-        
-        let next =
-            React.useCallbackRef(fun (msg: StreamFrom.Response) -> 
-                match msg with
-                | StreamFrom.Response.AppleStock s ->
-                    setDates(dates @ [ s.Date ])
-                    setLows(lows @ [ s.Low ]) 
-                    setHighs(highs @ [ s.High ]) 
-            )
-
-        let subscriber = 
-            { next = next
-              complete = fun () -> JS.console.log("Complete!")
-              error = fun e -> JS.console.log(e) }
-        
-        React.useEffectOnce(fun () ->
-            async {
-                let! streamResult =
-                    StreamFrom.Action.AppleStocks
-                    |> input.hub.current.streamFrom
-
-                subscription.current <- Some (streamResult.subscribe(subscriber))
-            }
-            |> Async.StartImmediate
-            
-            React.createDisposable(fun () -> subscription.current |> Option.iter(fun s -> s.dispose()))
-        )
-                    
+    let private graph = React.functionComponent(fun (input: {| dates: System.DateTime list; lows: float list; highs: float list |}) ->
         Plotly.plot [
             plot.traces [
                 traces.scatter [
                     scatter.mode.lines
                     scatter.name "AAPL High"
-                    scatter.x dates
-                    scatter.y highs
+                    scatter.x input.dates
+                    scatter.y input.highs
                     scatter.line [
                         line.color "#17BECF"
                     ]
@@ -59,8 +27,8 @@ module App =
                 traces.scatter [
                     scatter.mode.lines
                     scatter.name "AAPL Low"
-                    scatter.x dates
-                    scatter.y lows
+                    scatter.x input.dates
+                    scatter.y input.lows
                     scatter.line [
                         line.color "#7F7F7F"
                     ]
@@ -88,6 +56,74 @@ module App =
             ]
             plot.config [
                 config.displayModeBar.false'
+            ]
+        ])
+
+    let display = React.functionComponent(fun (input: {| hub: Hub |}) ->
+        let dates,setDates = React.useState([] : System.DateTime list)
+        let lows,setLows = React.useState([]: float list)
+        let highs,setHighs = React.useState([] : float list)
+        let subscription = React.useRef(None : System.IDisposable option)
+        let isRunning,setIsRunning = React.useState(false)
+        
+        let next =
+            React.useCallbackRef(fun (msg: StreamFrom.Response) -> 
+                match msg with
+                | StreamFrom.Response.AppleStock s ->
+                    setDates(dates @ [ s.Date ])
+                    setLows(lows @ [ s.Low ]) 
+                    setHighs(highs @ [ s.High ]) 
+            )
+
+        let subscriber = 
+            { next = next
+              complete = fun () -> JS.console.log("Complete!")
+              error = fun e -> JS.console.log(e) }
+        
+        let startStream =
+            async {
+                setIsRunning true
+                let! streamResult =
+                    StreamFrom.Action.AppleStocks
+                    |> input.hub.current.streamFrom
+
+                subscription.current <- Some (streamResult.subscribe(subscriber))
+            }
+
+        React.useEffectOnce(fun () ->
+            Async.StartImmediate startStream
+            
+            React.createDisposable(fun () -> subscription.current |> Option.iter(fun sub -> sub.Dispose()))
+        )
+                    
+        React.fragment [
+            graph {| dates = dates; lows = lows; highs = highs |}
+            Html.button [
+                prop.classes [ 
+                    Bulma.Button
+                    Bulma.HasBackgroundPrimary
+                    Bulma.HasTextWhite 
+                ]
+                prop.disabled (not isRunning)
+                prop.text "Stop"
+                prop.onClick <| fun _ -> 
+                    setIsRunning false
+                    subscription.current |> Option.iter(fun sub -> sub.Dispose())
+            ]
+            Html.button [
+                prop.classes [ 
+                    Bulma.Button
+                    Bulma.HasBackgroundPrimary
+                    Bulma.HasTextWhite
+                ]
+                prop.disabled isRunning
+                prop.text "Restart"
+                prop.onClick <| fun _ ->
+                    setDates []
+                    setLows []
+                    setHighs []
+                    
+                    Async.StartImmediate startStream 
             ]
         ])
 

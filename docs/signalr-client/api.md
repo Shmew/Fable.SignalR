@@ -100,21 +100,6 @@ type RetryPolicy =
       nextRetryDelayInMilliseconds: RetryContext -> int option }
 ```
 
-## ISubscription
-
-An interface that allows an IStreamsubscriber to be disconnected from a stream.
-
-Signature:
-```fsharp
-type ISubscription =
-    abstract dispose: unit -> unit
-
-module ISubscription =
-    /// Converts a subscription into a System.IDisposable.
-    let toDisposable (sub: #ISubscription) =
-        { new System.IDisposable with member Dispose () = sub.dispose() }
-```
-
 ## IStreamSubscriber
 
 Interface to observe a stream.
@@ -146,9 +131,15 @@ type StreamSubscriber<'T> =
 
     /// Casts  StreamSubscriber to an IStreamSubscriber.
     member cast () : IStreamSubscriber<'T>
-    
-    /// Casts a StreamSubscriber to an IStreamSubscriber.
-    static member cast (subscriber: StreamSubscriber<'T>) : IStreamSubscriber<'T>
+```
+
+### StreamSubscriber.cast
+
+Casts a StreamSubscriber to an IStreamSubscriber.
+
+Signature:
+```fsharp
+StreamSubscriber<'T> -> IStreamSubscriber<'T>
 ```
 
 ## StreamResult
@@ -160,13 +151,19 @@ Signature:
 type StreamResult<'T> =
     /// Attaches an IStreamSubscriber, which will be invoked when new items are 
     /// available from the stream.
-    member subscribe (subscriber: IStreamSubscriber<'T>) : ISubscription
-    member subscribe (subscriber: StreamSubscriber<'T>) : ISubscription
+    member subscribe (subscriber: IStreamSubscriber<'T>) : System.IDisposable
+    member subscribe (subscriber: StreamSubscriber<'T>) : System.IDisposable
+```
 
-    /// Attaches a StreamSubscriber, which will be invoked when new items are 
-    /// available from the stream.
-    static member subscribe (subscriber: IStreamSubscriber<'T>) : ISubscription
-    static member subscribe (subscriber: StreamSubscriber<'T>) : ISubscription
+### StreamResult.subscribe
+
+Attaches a StreamSubscriber, which will be invoked when new items are 
+available from the stream.
+
+Signature:
+```fsharp
+IStreamSubscriber<'T> -> System.IDisposable
+StreamSubscriber<'T> -> System.IDisposable
 ```
 
 ## IHubProtocol
@@ -215,7 +212,7 @@ type ISubject<'T> =
 
     abstract complete: unit -> unit
 
-    abstract subscribe: observer: #IStreamSubscriber<'T> -> ISubscription
+    abstract subscribe: observer: #IStreamSubscriber<'T> -> System.IDisposable
 ```
 
 ## Subject
@@ -230,8 +227,8 @@ type Subject<'T> =
     member next (item: 'T) : unit
     member error (err: exn) : unit
     member complete () : unit
-    member subscribe (observer: #IStreamSubscriber<'T>) : ISubscription
-    member subscribe (observer: StreamSubscriber<'T>) : ISubscription
+    member subscribe (observer: #IStreamSubscriber<'T>) : System.IDisposable
+    member subscribe (observer: StreamSubscriber<'T>) : System.IDisposable
 ```
 
 ## ConnectionState
@@ -434,20 +431,48 @@ The full type restrictions for a [HubConnection](#hubconnection) and [HubConnect
 
 These are aliased as `<Types>` for readability:
 
+### SignalR.connect`<Types>`
+
+Starts a connection to a SignalR hub.
+
 Signature:
 ```fsharp
-/// Starts a connection to a SignalR hub.
-static member connect<Types> (config: HubConnectionBuilder<Types> -> HubConnectionBuilder<Types>) 
-    : HubConnection<Types> 
+(config: HubConnectionBuilder<Types> -> HubConnectionBuilder<Types>) -> HubConnection<Types> 
+```
 
-/// Creates the default http client.
-static member HttpClient (logger: ILogger) : Http.DefaultClient
+### SignalR.httpClient
 
-/// Gets an instance of the NullLogger.
-static member NullLogger () : NullLogger
+Creates the default http client.
 
-/// Creates a new stream implementation to stream items to the server.
-static member Subject<'T> () : Subject<'T>
+Signature:
+```fsharp
+ILogger -> Http.DefaultClient
+```
+
+### SignalR.logger
+
+Creates an ILogger from a logging function.
+
+Signature:
+```fsharp
+(handler: LogLevel -> string -> unit) -> ILogger
+```
+
+### SignalR.nullLogger
+
+Gets an instance of the NullLogger.
+
+Signature:
+```fsharp
+unit -> NullLogger
+```
+### SignalR.subject`<'T>`
+
+Creates a new stream implementation to stream items to the server.
+
+Signature:
+```fsharp
+unit -> Subject<'T>
 ```
 
 ## Elmish
@@ -558,13 +583,13 @@ Signature:
 (hub: Elmish.StreamHub.ServerToClient
     <'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> option)
 (msg: 'ClientStreamApi) 
-(subscription: ISubscription -> 'Msg) 
+(subscription: System.IDisposable -> 'Msg) 
 (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) : Cmd<'Msg>
 
 (hub: Elmish.StreamHub.Bidrectional
     <'ClientApi,'ClientStreamFromApi,_,'ServerApi,'ServerStreamApi> option)
 (msg: 'ClientStreamApi) 
-(subscription: ISubscription -> 'Msg) 
+(subscription: System.IDisposable -> 'Msg) 
 (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) : Cmd<'Msg>
 ```
 

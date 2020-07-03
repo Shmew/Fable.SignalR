@@ -398,20 +398,20 @@ module Elmish =
         type SignalR =
             /// Streams from the hub.
             static member inline streamFrom (hub: Elmish.StreamHub.ServerToClient<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi> option) =
-                fun (msg: 'ClientStreamApi) (subscription: ISubscription -> 'Msg) (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) ->
+                fun (msg: 'ClientStreamApi) (subscription: System.IDisposable -> 'Msg) (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) ->
                     [ fun dispatch -> 
                         hub |> Option.iter (fun hub -> 
                             async {
                                 let! streamResult = hub.hub.streamFrom msg 
                                 
-                                streamResult.subscribe(subscriber dispatch) 
+                                streamResult.subscribe(subscriber dispatch)
                                 |> subscription |> dispatch
                             }
                             |> fun a -> Async.StartImmediate(a, hub.cts.Token)) ] : Cmd<'Msg>
 
             /// Streams from the hub.
             static member inline streamFrom (hub: Elmish.StreamHub.Bidrectional<'ClientApi,'ClientStreamFromApi,_,'ServerApi,'ServerStreamApi> option) =
-                fun (msg: 'ClientStreamFromApi) (subscription: ISubscription -> 'Msg) (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) ->
+                fun (msg: 'ClientStreamFromApi) (subscription: System.IDisposable -> 'Msg) (subscriber: ('Msg -> unit) -> StreamSubscriber<'ServerStreamApi>) ->
                     [ fun dispatch -> 
                         hub |> Option.iter (fun hub -> 
                             async {

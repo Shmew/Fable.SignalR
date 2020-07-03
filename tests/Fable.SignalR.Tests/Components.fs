@@ -191,21 +191,21 @@ module StreamingElmish =
     type Model =
         { Hub: Hub option
           Count: int
-          StreamSubscription: ISubscription option
+          StreamSubscription: System.IDisposable option
           StreamStatus: StreamStatus
           ClientStreamStatus: StreamStatus }
 
         interface System.IDisposable with
             member this.Dispose () =
                 this.Hub |> Option.iter (fun hub -> hub.Dispose())
-                this.StreamSubscription |> Option.iter (fun ss -> ss.dispose())
+                this.StreamSubscription |> Option.iter (fun sub -> sub.Dispose())
 
     type Msg =
         | SignalRStreamMsg of StreamFrom.Response
         | StartClientStream
         | StartServerStream
         | RegisterHub of Hub
-        | Subscription of ISubscription
+        | Subscription of System.IDisposable
         | StreamStatus of StreamStatus
         | ClientStreamStatus of StreamStatus
 
@@ -226,7 +226,7 @@ module StreamingElmish =
         | SignalRStreamMsg (StreamFrom.Response.GetInts i) ->
             { model with Count = i }, Cmd.none
         | StartClientStream ->
-            let subject = SignalR.Subject<StreamTo.Action>()
+            let subject = SignalR.subject<StreamTo.Action>()
 
             model, Cmd.batch [ 
                 Cmd.SignalR.streamTo model.Hub subject
@@ -437,6 +437,11 @@ module StreamingHook =
     let display = React.functionComponent(fun (input: {| hub: Hub; callback: int -> unit |}) ->
         let clientIsComplete,setClientIsComplete = React.useState false
         let serverIsComplete,setServerIsComplete = React.useState false
+        let subscription = React.useRef(None : System.IDisposable option)
+
+        React.useEffectOnce(fun () -> 
+            React.createDisposable <| fun () -> 
+                subscription.current |> Option.iter (fun sub -> sub.Dispose()))
 
         let subscriber = 
             { next = fun (msg: StreamFrom.Response) -> 
@@ -459,7 +464,7 @@ module StreamingHook =
                 prop.text "Stream To"
                 prop.onClick <| fun _ -> 
                     async {
-                        let subject = SignalR.Subject()
+                        let subject = SignalR.subject()
                             
                         do! input.hub.current.streamTo(subject)
                             
@@ -475,8 +480,7 @@ module StreamingHook =
                 prop.onClick <| fun _ -> 
                     async {
                         let! stream = input.hub.current.streamFrom StreamFrom.Action.GenInts
-                        stream.subscribe(subscriber)
-                        |> ignore
+                        subscription.current <- Some (stream.subscribe(subscriber))
                     }
                     |> Async.StartImmediate
             ]

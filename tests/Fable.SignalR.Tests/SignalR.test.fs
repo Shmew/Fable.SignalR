@@ -187,7 +187,6 @@ type HubModel (hub: Hub) =
             use sub =
                 streamResult
                 |> StreamResult.subscribe subscriber
-                |> ISubscription.toDisposable
 
             return! this.GetState(fun m -> m.StreamState = StreamStatus.Finished)
         }
@@ -196,7 +195,7 @@ type HubModel (hub: Hub) =
         async {
             mailbox.Post (SetClientStreamState StreamStatus.Streaming)
 
-            let subject = SignalR.Subject()
+            let subject = SignalR.subject()
 
             try
                 do! hub.streamTo(subject)

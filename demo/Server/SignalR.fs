@@ -13,16 +13,17 @@ module SignalRHub =
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         invoke msg
         |> hubContext.Clients.Caller.Send
-
+    
     [<RequireQualifiedAccess>]
     module Stream =
         let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) =
             match msg with
             | StreamFrom.Action.AppleStocks ->
-                let stocks = Stocks.appleStocks()
-                asyncSeq {
-                    for row in stocks do
+                Stocks.appleStocks
+                |> AsyncSeq.mapAsync (fun stock ->
+                    async {
                         do! Async.Sleep 25
-                        yield StreamFrom.Response.AppleStock row
-                }
+                        return StreamFrom.Response.AppleStock stock
+                    }
+                )
                 |> AsyncSeq.toAsyncEnum

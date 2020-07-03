@@ -1,6 +1,7 @@
 ﻿namespace Fable.SignalR
 
 open Fable.Core
+open System.ComponentModel
 
 /// Represents a signal that can be monitored to 
 /// determine if a request has been aborted.
@@ -25,7 +26,6 @@ type LogLevel =
 /// An abstraction that provides a sink for diagnostic messages.
 type ILogger =
     /// Called by the framework to emit a diagnostic message.
-    [<Emit("$0.log($1, $2)")>]
     abstract log: logLevel: LogLevel -> message: string -> unit
 
 /// A logger that does nothing when log messages are sent to it.
@@ -65,15 +65,6 @@ type RetryPolicy =
       /// long to wait for the next retry.
       nextRetryDelayInMilliseconds: RetryContext -> int option }
 
-/// An interface that allows an IStreamsubscriber to be disconnected from a stream.
-type ISubscription =
-    abstract dispose: unit -> unit
-
-module ISubscription =
-    /// Converts a subscription into a System.IDisposable.
-    let toDisposable (sub: #ISubscription) =
-        { new System.IDisposable with member _.Dispose () = sub.dispose() }
-
 /// Interface to observe a stream.
 type IStreamSubscriber<'T> =
     /// Sends a new item to the server.
@@ -100,17 +91,27 @@ type StreamSubscriber<'T> =
     static member inline cast (subscriber: StreamSubscriber<'T>) =
         subscriber.cast()
 
+[<EditorBrowsable(EditorBrowsableState.Never)>]
+type ISubscription =
+    abstract dispose: unit -> unit
+
 /// Allows attaching a subscribr to a stream.
 [<Erase>]
 type StreamResult<'T> =
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
+    [<Emit("$0.subscribe($1)")>]
+    member _.subscribe' (subscriber: IStreamSubscriber<'T>) : ISubscription = jsNative
+    
     /// Attaches an IStreamSubscriber, which will be invoked when new items are 
     /// available from the stream.
-    [<Emit("$0.subscribe($1)")>]
-    member _.subscribe (subscriber: IStreamSubscriber<'T>) : ISubscription = jsNative
+    member inline this.subscribe (subscriber: IStreamSubscriber<'T>) =
+        this.subscribe'(subscriber)
+        |> fun sub -> { new System.IDisposable with member _.Dispose () = sub.dispose() }
+            
     /// Attaches a StreamSubscriber, which will be invoked when new items are 
     /// available from the stream.
-    [<Emit("$0.subscribe($1)")>]
-    member _.subscribe (subscriber: StreamSubscriber<'T>) : ISubscription = jsNative
+    member inline this.subscribe (subscriber: StreamSubscriber<'T>) =
+        this.subscribe(unbox<IStreamSubscriber<'T>> subscriber)
 
     /// Attaches a StreamSubscriber, which will be invoked when new items are 
     /// available from the stream.

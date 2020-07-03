@@ -55,7 +55,7 @@ let render = React.functionComponent(fun () ->
 
 On the server:
 
-```fs
+```fsharp
 module SignalRHub =
     let invoke (msg: Action) =
         match msg with
@@ -87,7 +87,7 @@ application {
 
 The shared file:
 
-```fs
+```fsharp
 [<RequireQualifiedAccess>]
 type Action =
     | IncrementCount of int

@@ -128,25 +128,30 @@ type SignalR =
 
     /// Creates the default http client.
     #if FABLE_COMPILER
-    static member inline HttpClient (logger: ILogger) = 
+    static member inline httpClient (logger: ILogger) = 
     #else
-    static member HttpClient (logger: ILogger) = 
+    static member httpClient (logger: ILogger) = 
     #endif
         Bindings.signalR.HttpClient(logger)
 
+    /// Creates an ILogger from a logging function.
+    static member inline logger (handler: LogLevel -> string -> unit) =
+        {| log = handler |}
+        |> unbox<ILogger>
+
     /// Gets an instance of the NullLogger.
     #if FABLE_COMPILER
-    static member inline NullLogger () = 
+    static member inline nullLogger () = 
     #else
-    static member NullLogger () = 
+    static member nullLogger () = 
     #endif
         Bindings.signalR.NullLogger()
 
     /// Creates a new stream implementation to stream items to the server.
     #if FABLE_COMPILER
-    static member inline Subject<'T> () = 
+    static member inline subject<'T> () = 
     #else
-    static member Subject<'T> () = 
+    static member subject<'T> () = 
     #endif
         Bindings.signalR.Subject<'T>()
 
