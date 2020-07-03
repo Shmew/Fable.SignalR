@@ -57,7 +57,7 @@ On the server:
 
 ```fsharp
 module SignalRHub =
-    let invoke (msg: Action) =
+    let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
@@ -69,8 +69,10 @@ module SignalRHub =
             |> string
             |> Response.RandomCharacter
 
+    let invoke (msg: Action) _ = update msg
+
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
-        invoke msg
+        update msg
         |> hubContext.Clients.Caller.Send
 
 application {
@@ -84,7 +86,6 @@ application {
     ...
 }
 ```
-
 The shared file:
 
 ```fsharp

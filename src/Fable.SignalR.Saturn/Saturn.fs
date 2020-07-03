@@ -5,6 +5,7 @@ module SignalRExtension =
     open Fable.SignalR
     open Microsoft.AspNetCore.Builder
     open Microsoft.AspNetCore.SignalR
+    open Microsoft.Extensions.DependencyInjection
     open Microsoft.Extensions.Logging
     open System.Collections.Generic
     open System.ComponentModel
@@ -57,7 +58,7 @@ module SignalRExtension =
                 
             /// Handler for client invocations.
             [<CustomOperation("invoke")>]
-            member _.Invoke (State.Send.Value (endpoint,send), f: 'a ->'b) = 
+            member _.Invoke (State.Send.Value (endpoint,send), f: 'a -> System.IServiceProvider ->'b) = 
 
                 let settings : SignalR.Settings<'a,'b> =
                     { EndpointPattern = endpoint

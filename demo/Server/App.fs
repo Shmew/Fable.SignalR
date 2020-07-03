@@ -2,7 +2,6 @@ namespace SignalRApp
 
 module App =
     open Fable.SignalR
-    open Giraffe.ResponseWriters
     open Microsoft.Extensions.Logging
     open Saturn
     open System

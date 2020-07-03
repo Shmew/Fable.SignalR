@@ -1,25 +1,32 @@
 ﻿namespace SignalRApp
 
+type RandomStringGen () = 
+    member _.Gen () =
+        let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        
+        System.Random().Next(0,characters.Length-1)
+        |> fun i -> characters.ToCharArray().[i]
+        |> string
+
 module SignalRHub =
     open Fable.SignalR
     open FSharp.Control
+    open Microsoft.Extensions.DependencyInjection
     open SignalRHub
     open System.Collections.Generic
-
-    let invoke (msg: Action) =
+    
+    let update (msg: Action) (stringGen: RandomStringGen) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
-        | Action.RandomCharacter ->
-            let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-            
-            System.Random().Next(0,characters.Length-1)
-            |> fun i -> characters.ToCharArray().[i]
-            |> string
-            |> Response.RandomCharacter
+        | Action.RandomCharacter -> stringGen.Gen() |> Response.RandomCharacter
 
+    let invoke (msg: Action) (services: System.IServiceProvider) =
+        services.GetService<RandomStringGen>()
+        |> update msg
+            
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
-        invoke msg
+        invoke msg hubContext.Services
         |> hubContext.Clients.Caller.Send
 
     [<RequireQualifiedAccess>]
@@ -44,7 +51,7 @@ module SignalRHub2 =
     open SignalRHub
     open System.Collections.Generic
 
-    let invoke (msg: Action) =
+    let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
@@ -56,8 +63,10 @@ module SignalRHub2 =
             |> string
             |> Response.RandomCharacter
 
+    let invoke (msg: Action) _ = update msg
+
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
-        invoke msg
+        update msg
         |> hubContext.Clients.Caller.Send
 
     [<RequireQualifiedAccess>]

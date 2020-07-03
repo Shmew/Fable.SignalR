@@ -3,6 +3,7 @@ namespace SignalRApp
 module App =
     open Fable.SignalR
     open Microsoft.Extensions.Logging
+    open Microsoft.Extensions.DependencyInjection
     open Saturn
     open System
 
@@ -31,6 +32,7 @@ module App =
                             with_log_level Microsoft.Extensions.Logging.LogLevel.None
                         }
                     )
+                    service_config (fun s -> s.AddSingleton<RandomStringGen>())
                     logging (fun l -> l.AddFilter("Microsoft", LogLevel.Error) |> ignore)
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
                     use_cors "Any" (fun policy -> 

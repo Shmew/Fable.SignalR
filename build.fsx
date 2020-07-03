@@ -196,7 +196,7 @@ Target.create "YarnInstall" <| fun _ ->
     Yarn.install setParams
 
 Target.create "RebuildSass" <| fun _ ->
-    Npm.exec "rebuild node-sass" id
+    TaskRunner.runWithRetries (fun () -> Npm.exec "rebuild node-sass" id) 5
 
 // --------------------------------------------------------------------------------------
 // Build tasks
