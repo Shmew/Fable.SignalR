@@ -134,7 +134,7 @@ Target.create "CopyBinaries" <| fun _ ->
 // Clean tasks
 
 Target.create "Clean" <| fun _ ->
-    let clean() =
+    let clean () =
         !! (__SOURCE_DIRECTORY__  @@ "tests/**/bin")
         ++ (__SOURCE_DIRECTORY__  @@ "tests/**/obj")
         ++ (__SOURCE_DIRECTORY__  @@ "tools/bin")
@@ -430,12 +430,12 @@ Target.create "Publish" ignore
   ==> "PrepDocs"
 
 "All"
- ==> "NuGet"
- ?=> "NuGetPublish"
+  ==> "NuGet"
+  ?=> "NuGetPublish"
 
 "PrepDocs" 
- ==> "PublishPages"
- ==> "PublishDocs"
+  ==> "PublishPages"
+  ==> "PublishDocs"
 
 "All" 
   ==> "PrepDocs"

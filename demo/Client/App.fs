@@ -165,6 +165,7 @@ module App =
                     .withAutomaticReconnect()
                     .configureLogging(LogLevel.Debug)
                     .onMessage(fun (Response.NewCount i) -> setCount i)
+                    .UseMessagePack()
         
         Html.div [
             prop.classes [ Bulma.Container; Bulma.IsFullheight ]

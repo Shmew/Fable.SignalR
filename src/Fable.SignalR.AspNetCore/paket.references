@@ -1,4 +1,6 @@
 ﻿group Fable.SignalR.AspNetCore
     Fable.Remoting.Json
+    Fable.Remoting.MsgPack
     FSharp.Core
     Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+    Microsoft.Toolkit.HighPerformance

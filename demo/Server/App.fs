@@ -2,6 +2,7 @@ namespace SignalRApp
 
 module App =
     open Fable.SignalR
+    open Giraffe.ResponseWriters
     open Microsoft.Extensions.Logging
     open Saturn
     open System
@@ -17,8 +18,13 @@ module App =
                             send SignalRHub.send
                             invoke SignalRHub.invoke
                             stream_from SignalRHub.Stream.sendToClient
+                            use_messagepack
+                            with_log_level LogLevel.Trace
                         }
                     )
+                    error_handler(fun e log -> 
+                        printfn "%A" e 
+                        text e.Message)
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
                     no_router
                     use_static (Env.clientPath args)

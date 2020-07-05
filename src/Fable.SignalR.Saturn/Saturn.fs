@@ -90,6 +90,16 @@ module SignalRExtension =
                 | State.HasStreamTo(settings,_) -> State.Settings.HasStreamTo(settings, f)
                 | State.NoStream(settings) -> State.Settings.HasStreamTo(settings, f)
                 
+            /// Enable MessagePack binary (de)serialization instead of JSON.
+            [<CustomOperation("use_messagepack")>]
+            member _.MessagePack (state: State.Settings<_,_,_,_,_>) =
+                state.MapSettings <| fun state ->  
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                UseMessagePack = true }
+                            |> Some }
+
             /// Customize hub endpoint conventions.
             [<CustomOperation("with_endpoint_config")>]
             member _.EndpointConfig (state: State.Settings<_,_,_,_,_>, f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =

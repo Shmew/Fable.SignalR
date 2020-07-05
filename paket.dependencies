@@ -16,8 +16,10 @@ group Fable.SignalR.AspNetCore
 	source https://api.nuget.org/v3/index.json
 
     nuget Fable.Remoting.Json ~> 2
+    nuget Fable.Remoting.MsgPack ~> 1
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+    nuget Microsoft.Toolkit.HighPerformance ~> 6
 
 group Fable.SignalR.Elmish
     source https://nuget.org/api/v2
@@ -45,14 +47,6 @@ group Fable.SignalR.Saturn
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
     nuget Saturn ~> 0
-
-group Fable.SignalR.Server
-    source https://nuget.org/api/v2
-	source https://api.nuget.org/v3/index.json
-
-    nuget Fable.Remoting.Json ~> 2
-    nuget FSharp.Core ~> 4.7 lowest_matching:true
-    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
 
 group Fable.SignalR.Tests
     source https://nuget.org/api/v2
@@ -122,9 +116,6 @@ group Tooling
     nuget FSharp.Json ~> 0
 	nuget FSharpLint.Core ~> 0
     nuget Yarnpkg.Yarn ~> 1
-
-	clitool dotnet-fable ~> 2
-	clitool dotnet-fake ~> 5
 
 group FakeBuild
 	source https://api.nuget.org/v3/index.json

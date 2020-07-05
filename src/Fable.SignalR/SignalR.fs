@@ -9,6 +9,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
 
     let mutable hub = hub
     let mutable handlers = Handlers.empty
+    let mutable useMsgPack = false
 
     /// Configures console logging for the HubConnection.
     member this.configureLogging (logLevel: LogLevel) = 
@@ -21,6 +22,32 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
     /// Configures custom logging for the HubConnection.
     member this.configureLogging (logLevel: string) = 
         hub <- hub.configureLogging(logLevel)
+        this
+
+    /// Callback when the connection is closed.
+    member this.onClose callback =
+        handlers <- { handlers with onClose = Some callback }
+        this
+
+    /// Callback when a new message is recieved.
+    member this.onMessage (callback: 'ServerApi -> unit) = 
+        handlers <- { handlers with onMessage = Some (unbox callback) }
+        this
+    
+    /// Callback when the connection successfully reconnects.
+    member this.onReconnected (callback: (string option -> unit)) =
+        handlers <- { handlers with onReconnected = Some callback }
+        this
+
+    /// Callback when the connection starts reconnecting.
+    member this.onReconnecting (callback: (exn option -> unit)) =
+        handlers <- { handlers with onReconnecting = Some callback }
+        this
+
+    /// Enable MessagePack binary (de)serialization instead of JSON.
+    member this.UseMessagePack () =
+        useMsgPack <- true
+        hub <- hub.withHubProtocol(Bindings.msgPack.MessagePackHubProtocol())
         this
 
     /// Configures the HubConnection to use HTTP-based transports to connect 
@@ -74,42 +101,25 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         hub <- hub.withAutomaticReconnect(reconnectPolicy)
         this
 
-    /// Callback when the connection is closed.
-    member this.onClose callback =
-        handlers <- { handlers with onClose = Some callback }
-        this
-
-    /// Callback when a new message is recieved.
-    member this.onMessage (callback: 'ServerApi -> unit) = 
-        handlers <- { handlers with onMessage = Some (unbox callback) }
-        this
-    
-    /// Callback when the connection successfully reconnects.
-    member this.onReconnected (callback: (string option -> unit)) =
-        handlers <- { handlers with onReconnected = Some callback }
-        this
-
-    /// Callback when the connection starts reconnecting.
-    member this.onReconnecting (callback: (exn option -> unit)) =
-        handlers <- { handlers with onReconnecting = Some callback }
-        this
-
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     #if FABLE_COMPILER
     member inline _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     #else
     member _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     #endif
-        let jsonParser = Parser.JsonProtocol()
+        if useMsgPack then
+            new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub.build(), handlers)
+        else
+            let jsonParser = Parser.JsonProtocol()
 
-        {| name = jsonParser.name
-           version = jsonParser.version
-           transferFormat = jsonParser.transferFormat
-           writeMessage = jsonParser.writeMessage
-           parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
-        |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
-        |> fun protocol -> hub.withHubProtocol(protocol).build()
-        |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub, handlers)
+            {| name = jsonParser.name
+               version = jsonParser.version
+               transferFormat = jsonParser.transferFormat
+               writeMessage = jsonParser.writeMessage
+               parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
+            |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
+            |> fun protocol -> hub.withHubProtocol(protocol).build()
+            |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub, handlers)
 
 [<Erase>]
 type SignalR =

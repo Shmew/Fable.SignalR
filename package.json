@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^3",
+    "@microsoft/signalr-protocol-msgpack": "5.0.0-preview.6.20312.15",
     "plotly.js": "^1",
     "react": "^16",
     "react-dom": "^16",

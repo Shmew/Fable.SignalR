@@ -508,7 +508,9 @@ module SignalR =
           /// Called when a new connection is established with the hub.
           OnConnected: (FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
           /// Called when a connection with the hub is terminated.
-          OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option }
+          OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
+          /// Enable MessagePack binary (de)serialization instead of JSON.
+          UseMessagePack: bool }
 
         /// Creates an empty record.
         static member Default () =
@@ -516,7 +518,8 @@ module SignalR =
               HubOptions = None
               LogLevel = None
               OnConnected = None
-              OnDisconnected = None }
+              OnDisconnected = None
+              UseMessagePack = false }
 
     [<RequireQualifiedAccess>]
     module internal Config =

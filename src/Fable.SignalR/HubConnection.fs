@@ -330,7 +330,13 @@ module internal Bindings =
         [<Emit("new $0.Subject()")>]
         member _.Subject<'T> () : Subject<'T> = jsNative
 
+    [<Erase>]
+    type MsgPack =
+        [<Emit("new $0.MessagePackHubProtocol()")>]
+        member _.MessagePackHubProtocol () : IHubProtocol<'ClientApi,'ServerApi,'ServerStreamApi> = jsNative
+
     let signalR : SignalR = importAll "@microsoft/signalr"
+    let msgPack : MsgPack = importAll "@microsoft/signalr-protocol-msgpack"
 
 [<Erase>]
 type Hub<'ClientApi,'ServerApi> =

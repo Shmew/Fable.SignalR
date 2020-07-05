@@ -5,7 +5,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="MsgPackFableConverter.fs" />
     <Compile Include="Server.fs" />
+    <Compile Include="MsgPack.fs" />
     <Compile Include="AspNetCore.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
