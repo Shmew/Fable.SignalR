@@ -317,6 +317,11 @@ module MsgPack =
                     packerCache.GetOrAdd (t, fun x -> object (Convert.ChangeType (x, typeof<int64>) :?> int64)) x s
                 else
                     failwithf "Cannot pack %s" t.Name
+        
+        // ____________________________________________________________ADDED____________________________________________________________
+
+        let inline arrayHeader size (s: Stream) =
+            s.WriteByte (Format.fixarr size)
 
     packerCache.TryAdd (typeof<byte>, fun x s -> Write.byte (x :?> byte) s) |> ignore
     packerCache.TryAdd (typeof<sbyte>, fun x s -> Write.int (x :?> sbyte |> int64) s) |> ignore

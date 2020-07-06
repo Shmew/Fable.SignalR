@@ -197,31 +197,50 @@ module internal MsgPackProtocol =
                 true
 
     [<RequireQualifiedAccess>]
-    module private Write =            
+    module private Write =
+        let inline writeArgument (argument: obj) (writer: byref<MemoryStream>) =
+            if isNull argument then
+                MsgPack.Write.nil writer
+            else MsgPack.Write.object argument writer
+
+        let inline writeStreamIds (streamIds: string []) (writer: byref<MemoryStream>) =
+            if not (isNull streamIds) then
+                MsgPack.Write.arrayHeader streamIds.Length writer
+                for id in streamIds do
+                    MsgPack.Write.str id writer
+            else MsgPack.Write.arrayHeader 0uy writer
+
         module private Message =
             let inline invocation (writer: byref<MemoryStream>) (message: InvocationMessage) =
+                MsgPack.Write.arrayHeader 6uy writer
                 MsgPack.Write.int (int64 HubProtocolConstants.InvocationMessageType) writer
                 MsgPack.Write.object message.Headers writer
                 if String.IsNullOrEmpty message.InvocationId then
                     MsgPack.Write.nil writer
                 else MsgPack.Write.str message.InvocationId writer
                 MsgPack.Write.str message.Target writer
-                MsgPack.Write.array writer message.Arguments
-                MsgPack.Write.array writer message.StreamIds
+                MsgPack.Write.arrayHeader (message.Arguments.Length) writer
+                for arg in message.Arguments do
+                    writeArgument arg &writer
+                writeStreamIds message.StreamIds &writer
 
             let inline streamInvocation (writer: byref<MemoryStream>) (message: StreamInvocationMessage) =
+                MsgPack.Write.arrayHeader 6uy writer
                 MsgPack.Write.int (int64 HubProtocolConstants.StreamInvocationMessageType) writer
                 MsgPack.Write.object message.Headers writer
                 MsgPack.Write.str message.InvocationId writer
                 MsgPack.Write.str message.Target writer
-                MsgPack.Write.array writer message.Arguments
-                MsgPack.Write.array writer message.StreamIds
+                MsgPack.Write.arrayHeader (message.Arguments.Length) writer
+                for arg in message.Arguments do
+                    writeArgument arg &writer
+                writeStreamIds message.StreamIds &writer
 
             let inline streamItem (writer: byref<MemoryStream>) (message: StreamItemMessage) =
+                MsgPack.Write.arrayHeader 4uy writer
                 MsgPack.Write.int (int64 HubProtocolConstants.StreamItemMessageType) writer
                 MsgPack.Write.object message.Headers writer
                 MsgPack.Write.str message.InvocationId writer
-                MsgPack.Write.object message.Item writer
+                writeArgument message.Item &writer
                 
             let inline completion (writer: byref<MemoryStream>) (message: CompletionMessage) =
                 let resultKind =
@@ -229,7 +248,8 @@ module internal MsgPackProtocol =
                         CompletionKind.ErrorResult
                     elif message.HasResult then CompletionKind.NonVoidResult
                     else CompletionKind.VoidResult
-
+                
+                MsgPack.Write.arrayHeader (4 + (if resultKind = CompletionKind.VoidResult then 0 else 1)) writer
                 MsgPack.Write.int (int64 HubProtocolConstants.CompletionMessageType) writer
                 MsgPack.Write.object message.Headers writer
                 MsgPack.Write.str message.InvocationId writer
@@ -239,24 +259,25 @@ module internal MsgPackProtocol =
                 | CompletionKind.ErrorResult ->
                     MsgPack.Write.str message.Error writer
                 | CompletionKind.NonVoidResult ->
-                    MsgPack.Write.object message.Result writer
+                    writeArgument message.Result &writer
                 | _ -> ()
 
             let inline cancel (writer: byref<MemoryStream>) (message: CancelInvocationMessage) =
+                MsgPack.Write.arrayHeader 3uy writer
                 MsgPack.Write.int (int64 HubProtocolConstants.CancelInvocationMessageType) writer
                 MsgPack.Write.object message.Headers writer
                 MsgPack.Write.str message.InvocationId writer
 
             let inline close (writer: byref<MemoryStream>) (message: CloseMessage) =
+                MsgPack.Write.arrayHeader 3uy writer
                 MsgPack.Write.int (int64 HubProtocolConstants.CloseMessageType) writer
-                
                 if String.IsNullOrEmpty message.Error then
                     MsgPack.Write.nil writer
                 else MsgPack.Write.str message.Error writer
-
                 MsgPack.Write.bool message.AllowReconnect writer
                 
             let inline ping (writer: byref<MemoryStream>) =
+                MsgPack.Write.arrayHeader 1uy writer
                 MsgPack.Write.int (int64 HubProtocolConstants.PingMessageType) writer
 
         let inline message (message: HubMessage) (writer: byref<MemoryStream>) =
