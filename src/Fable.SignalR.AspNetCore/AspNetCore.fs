@@ -25,7 +25,7 @@ module SignalRExtension =
             |> fun builder ->
                 if msgPack then
                     builder.Services
-                        .TryAddEnumerable(ServiceDescriptor.Singleton<IHubProtocol,MsgPackProtocol.FableHubProtocol>())
+                        .TryAddEnumerable(ServiceDescriptor.Singleton<IHubProtocol>(MsgPackProtocol.FableHubProtocol()))
                     builder
                 else
                     builder

@@ -8,7 +8,10 @@ open System.IO
 open System.Buffers
 
 [<RequireQualifiedAccess>]
-module MsgPackProtocol =
+module internal MsgPackProtocol =
+    let [<Literal>] private ProtocolName = "messagepack"
+    let [<Literal>] private ProtocolVersion = 1
+
     module BinaryMessageParser =
         let [<Literal>] MaxLengthPrefixSize = 5
 
@@ -53,39 +56,37 @@ module MsgPackProtocol =
         let [<Literal>] VoidResult = 2
         let [<Literal>] NonVoidResult = 3
 
-    type FableHubProtocol () =
-        let [<Literal>] ProtocolName = "messagepack"
-        let [<Literal>] ProtocolVersion = 1
-
-        member inline private _.ReadInvocationId (reader: byref<MsgPack.Reader>) = 
+    [<RequireQualifiedAccess>]
+    module private Read =
+        let inline private readInvocationId (reader: byref<MsgPack.Reader>) = 
             reader.ReadString(12)
 
-        member inline private _.ApplyHeaders (source: Map<string,string>) (destination: #HubInvocationMessage) =
+        let inline private applyHeaders (source: Map<string,string>) (destination: #HubInvocationMessage) =
             if source.Count > 0 then
                 destination.Headers <- source
             
             destination
 
-        member inline private _.MapReadString (reader: byref<MsgPack.Reader>) =
-            let result = reader.TryReadString()
-            fun i -> result
+        let inline private mapReadString (reader: byref<MsgPack.Reader>) =
+            let value = reader.TryReadString()
+            fun i -> value
 
-        member inline private _.MapReadTwoStrings (reader: byref<MsgPack.Reader>) =
+        let inline private mapReadTwoStrings (reader: byref<MsgPack.Reader>) =
             let one,two = reader.TryReadString().Value, reader.TryReadString().Value
             fun i -> one,two
 
-        member inline private this.ReadHeaders (reader: byref<MsgPack.Reader>) =
+        let inline private readHeaders (reader: byref<MsgPack.Reader>) =
             match reader.TryReadMapHeader().Value with
             | 0 -> None
             | count ->
                 [0 .. count]
-                |> List.map (this.MapReadTwoStrings(ref reader))
+                |> List.map (mapReadTwoStrings &reader)
                 |> Map.ofList
                 |> Some
             |> Option.get
 
-        member inline private this.ReadStreamIds (reader: byref<MsgPack.Reader>) =
-            let chooser = this.MapReadString(ref reader)
+        let inline private readStreamIds (reader: byref<MsgPack.Reader>) =
+            let chooser = mapReadString(&reader)
             
             reader.TryReadArrayHeader().Value
             |> fun streamIdCount ->
@@ -94,106 +95,191 @@ module MsgPackProtocol =
                     |> Array.choose chooser
                 else [||]
 
-        member inline private this.CreateInvocationMessage (reader: byref<MsgPack.Reader>, binder: IInvocationBinder, message: byref<HubMessage>, itemCount: int) =
-            let headers = this.ReadHeaders(&reader)
-            let invocationId = this.ReadInvocationId(&reader)
-            let target = reader.TryReadString().Value
+        module Message =
+            let inline invocation (reader: byref<MsgPack.Reader>) (binder: IInvocationBinder) (message: byref<HubMessage>) (itemCount: int) =
+                let headers = readHeaders &reader
+                let invocationId = readInvocationId &reader
+                let target = reader.TryReadString().Value
 
-            let arguments =
-                binder.GetParameterTypes(target)
-                |> Array.ofSeq
-                |> Array.map reader.Read
+                let arguments =
+                    binder.GetParameterTypes(target)
+                    |> Array.ofSeq
+                    |> Array.map reader.Read
 
-            let streamIds =
-                if itemCount > 0 then this.ReadStreamIds(&reader)
-                else [||]
+                let streamIds =
+                    if itemCount > 0 then readStreamIds(&reader)
+                    else [||]
 
-            message <-
-                InvocationMessage(invocationId, target, arguments, streamIds)
-                |> this.ApplyHeaders headers :> HubMessage
+                message <-
+                    InvocationMessage(invocationId, target, arguments, streamIds)
+                    |> applyHeaders headers :> HubMessage
 
-            true
+                true
 
-        member inline private this.CreateStreamInvocationMessage (reader: byref<MsgPack.Reader>, binder: IInvocationBinder, message: byref<HubMessage>, itemCount: int) =
-            let headers = this.ReadHeaders(&reader)
-            let invocationId = this.ReadInvocationId(&reader)
-            let target = reader.TryReadString().Value
+            let inline streamInvocation (reader: byref<MsgPack.Reader>) (binder: IInvocationBinder) (message: byref<HubMessage>) (itemCount: int) =
+                let headers = readHeaders &reader
+                let invocationId = readInvocationId &reader
+                let target = reader.TryReadString().Value
 
-            let arguments =
-                binder.GetParameterTypes(target)
-                |> Array.ofSeq
-                |> Array.map reader.Read
+                let arguments =
+                    binder.GetParameterTypes(target)
+                    |> Array.ofSeq
+                    |> Array.map reader.Read
 
-            let streamIds =
-                if itemCount > 0 then this.ReadStreamIds(&reader)
-                else [||]
+                let streamIds =
+                    if itemCount > 0 then readStreamIds(&reader)
+                    else [||]
 
-            message <-
-                StreamInvocationMessage(invocationId, target, arguments, streamIds)
-                |> this.ApplyHeaders headers :> HubMessage
+                message <-
+                    StreamInvocationMessage(invocationId, target, arguments, streamIds)
+                    |> applyHeaders headers :> HubMessage
 
-            true
+                true
 
-        member inline private this.CreateStreamItemMessage (reader: byref<MsgPack.Reader>, binder: IInvocationBinder, message: byref<HubMessage>) =
-            let headers = this.ReadHeaders(&reader)
-            let invocationId = this.ReadInvocationId(&reader)
-            
-            let value = binder.GetStreamItemType(invocationId) |> reader.Read
+            let inline streamItem (reader: byref<MsgPack.Reader>) (binder: IInvocationBinder) (message: byref<HubMessage>) =
+                let headers = readHeaders &reader
+                let invocationId = readInvocationId &reader
+                
+                let value = binder.GetStreamItemType(invocationId) |> reader.Read
 
-            message <-
-                StreamItemMessage(invocationId, value)
-                |> this.ApplyHeaders headers :> HubMessage
+                message <-
+                    StreamItemMessage(invocationId, value)
+                    |> applyHeaders headers :> HubMessage
 
-            true
+                true
 
-        member inline private this.CreateCompletionMessage (reader: byref<MsgPack.Reader>, binder: IInvocationBinder, message: byref<HubMessage>) =
-            let headers = this.ReadHeaders(&reader)
-            let invocationId = this.ReadInvocationId(&reader)
-            let resultKind = reader.ReadInt32()
+            let inline completion (reader: byref<MsgPack.Reader>) (binder: IInvocationBinder) (message: byref<HubMessage>) =
+                let headers = readHeaders &reader
+                let invocationId = readInvocationId &reader
+                let resultKind = reader.ReadInt32()
 
-            let error,result,hasResult =
+                let error,result,hasResult =
+                    match resultKind with
+                    | CompletionKind.ErrorResult -> (Option.defaultValue null (reader.TryReadString()), null, false)
+                    | CompletionKind.NonVoidResult ->
+                        binder.GetReturnType(invocationId)
+                        |> reader.Read
+                        |> fun res -> (null, res, true)
+                    | CompletionKind.VoidResult ->
+                        (null, null, false)
+                    | _ -> failwith "Invalid invocation result kind"
+
+                message <-
+                    CompletionMessage(invocationId, error, result, hasResult)
+                    |> applyHeaders headers :> HubMessage
+
+                true
+
+            let inline cancelInvocation (reader: byref<MsgPack.Reader>) (message: byref<HubMessage>) =
+                let headers = readHeaders &reader
+                let invocationId = readInvocationId &reader
+                
+                message <-
+                    CancelInvocationMessage(invocationId)
+                    |> applyHeaders headers :> HubMessage
+
+                true
+
+            let inline close (reader: byref<MsgPack.Reader>) (message: byref<HubMessage>) (itemCount: int) =
+                let error = reader.TryReadString()
+
+                let allowReconnect =
+                    if itemCount > 2 then reader.TryReadBool()
+                    else None
+                    |> Option.defaultValue false
+                
+                message <-
+                    match error with
+                    | None when not allowReconnect -> CloseMessage.Empty
+                    | Some error -> CloseMessage(error, allowReconnect)
+                    | _ -> CloseMessage(null, allowReconnect)
+
+                true
+
+    [<RequireQualifiedAccess>]
+    module private Write =            
+        module private Message =
+            let inline invocation (writer: byref<MemoryStream>) (message: InvocationMessage) =
+                MsgPack.Write.int (int64 HubProtocolConstants.InvocationMessageType) writer
+                MsgPack.Write.object message.Headers writer
+                if String.IsNullOrEmpty message.InvocationId then
+                    MsgPack.Write.nil writer
+                else MsgPack.Write.str message.InvocationId writer
+                MsgPack.Write.str message.Target writer
+                MsgPack.Write.array writer message.Arguments
+                MsgPack.Write.array writer message.StreamIds
+
+            let inline streamInvocation (writer: byref<MemoryStream>) (message: StreamInvocationMessage) =
+                MsgPack.Write.int (int64 HubProtocolConstants.StreamInvocationMessageType) writer
+                MsgPack.Write.object message.Headers writer
+                MsgPack.Write.str message.InvocationId writer
+                MsgPack.Write.str message.Target writer
+                MsgPack.Write.array writer message.Arguments
+                MsgPack.Write.array writer message.StreamIds
+
+            let inline streamItem (writer: byref<MemoryStream>) (message: StreamItemMessage) =
+                MsgPack.Write.int (int64 HubProtocolConstants.StreamItemMessageType) writer
+                MsgPack.Write.object message.Headers writer
+                MsgPack.Write.str message.InvocationId writer
+                MsgPack.Write.object message.Item writer
+                
+            let inline completion (writer: byref<MemoryStream>) (message: CompletionMessage) =
+                let resultKind =
+                    if not (isNull message.Error) then
+                        CompletionKind.ErrorResult
+                    elif message.HasResult then CompletionKind.NonVoidResult
+                    else CompletionKind.VoidResult
+
+                MsgPack.Write.int (int64 HubProtocolConstants.CompletionMessageType) writer
+                MsgPack.Write.object message.Headers writer
+                MsgPack.Write.str message.InvocationId writer
+                MsgPack.Write.int (int64 resultKind) writer
+
                 match resultKind with
-                | CompletionKind.ErrorResult -> (Option.defaultValue null (reader.TryReadString()), null, false)
+                | CompletionKind.ErrorResult ->
+                    MsgPack.Write.str message.Error writer
                 | CompletionKind.NonVoidResult ->
-                    binder.GetReturnType(invocationId)
-                    |> reader.Read
-                    |> fun res -> (null, res, true)
-                | CompletionKind.VoidResult ->
-                    (null, null, false)
-                | _ -> failwith "Invalid invocation result kind"
+                    MsgPack.Write.object message.Result writer
+                | _ -> ()
 
-            message <-
-                CompletionMessage(invocationId, error, result, hasResult)
-                |> this.ApplyHeaders headers :> HubMessage
+            let inline cancel (writer: byref<MemoryStream>) (message: CancelInvocationMessage) =
+                MsgPack.Write.int (int64 HubProtocolConstants.CancelInvocationMessageType) writer
+                MsgPack.Write.object message.Headers writer
+                MsgPack.Write.str message.InvocationId writer
 
-            true
+            let inline close (writer: byref<MemoryStream>) (message: CloseMessage) =
+                MsgPack.Write.int (int64 HubProtocolConstants.CloseMessageType) writer
+                
+                if String.IsNullOrEmpty message.Error then
+                    MsgPack.Write.nil writer
+                else MsgPack.Write.str message.Error writer
 
-        member inline private this.CreateCancelInvocationMessage (reader: byref<MsgPack.Reader>, message: byref<HubMessage>) =
-            let headers = this.ReadHeaders(&reader)
-            let invocationId = this.ReadInvocationId(&reader)
+                MsgPack.Write.bool message.AllowReconnect writer
+                
+            let inline ping (writer: byref<MemoryStream>) =
+                MsgPack.Write.int (int64 HubProtocolConstants.PingMessageType) writer
+
+        let inline message (message: HubMessage) (writer: byref<MemoryStream>) =
+            match message with
+            | :? InvocationMessage as msg ->
+                Message.invocation &writer msg
+            | :? StreamItemMessage as msg ->
+                Message.streamItem &writer msg
+            | :? CompletionMessage as msg ->
+                Message.completion &writer msg
+            | :? StreamInvocationMessage as msg ->
+                Message.streamInvocation &writer msg
+            | :? CancelInvocationMessage as msg ->
+                Message.cancel &writer msg
+            | :? PingMessage ->
+                Message.ping &writer
+            | :? CloseMessage as msg ->
+                Message.close &writer msg
+            | _ -> MsgPack.Write.object message writer
+
+            writer.Flush()
             
-            message <-
-                CancelInvocationMessage(invocationId)
-                |> this.ApplyHeaders headers :> HubMessage
-
-            true
-
-        member inline private this.CreateCloseMessage (reader: byref<MsgPack.Reader>, message: byref<HubMessage>, itemCount: int) =
-            let error = reader.TryReadString()
-
-            let allowReconnect =
-                if itemCount > 2 then reader.TryReadBool()
-                else None
-                |> Option.defaultValue false
-            
-            message <-
-                match error with
-                | None when not allowReconnect -> CloseMessage.Empty
-                | Some error -> CloseMessage(error, allowReconnect)
-                | _ -> CloseMessage(null, allowReconnect)
-
-            true
-
+    type FableHubProtocol () =
         interface IHubProtocol with
             member _.Name = ProtocolName
 
@@ -204,49 +290,48 @@ module MsgPackProtocol =
             member _.IsVersionSupported version = version = ProtocolVersion
 
             member _.WriteMessage (message: HubMessage, output: IBufferWriter<byte>) = 
-                use ms = new MemoryStream()
-                let readSpan = new ReadOnlySpan<byte>()
+                use mutable ms = new MemoryStream()
+                
+                Write.message message &ms
+                
+                output.Write(ReadOnlySpan<byte>(ms.ToArray()))
 
-                MsgPack.Write.object message ms
-                ms.Write(readSpan)
-                readSpan.CopyTo(output.GetSpan())
-
-            member this.TryParseMessage (input: byref<ReadOnlySequence<byte>>, binder: IInvocationBinder, message: byref<HubMessage>) = 
+            member _.TryParseMessage (input: byref<ReadOnlySequence<byte>>, binder: IInvocationBinder, message: byref<HubMessage>) = 
                 let mutable payload = ReadOnlySequence<byte>()
                 if not (BinaryMessageParser.tryParse &input &payload) then
                     message <- Unchecked.defaultof<HubMessage>
                     false
                 else
                     let mutable reader = MsgPack.Reader(input.ToArray())
-                    let itemCount = reader.TryReadArrayHeader().Value
+                    let itemCount = Option.defaultValue 0 (reader.TryReadArrayHeader())
                     
                     let messageType = reader.ReadInt32()
                         
                     match messageType with
                     | HubProtocolConstants.InvocationMessageType ->
-                        this.CreateInvocationMessage(&reader, binder, &message, itemCount)
+                        Read.Message.invocation &reader binder &message itemCount
                     | HubProtocolConstants.StreamItemMessageType ->
-                        this.CreateStreamItemMessage(&reader, binder, &message)
+                        Read.Message.streamItem &reader binder &message
                     | HubProtocolConstants.CompletionMessageType ->
-                        this.CreateCompletionMessage(&reader, binder, &message)
+                        Read.Message.completion &reader binder &message
                     | HubProtocolConstants.StreamInvocationMessageType ->
-                        this.CreateStreamInvocationMessage(&reader, binder, &message, itemCount)
+                        Read.Message.streamInvocation &reader binder &message itemCount
                     | HubProtocolConstants.CancelInvocationMessageType ->
-                        this.CreateCancelInvocationMessage(&reader, &message)
+                        Read.Message.cancelInvocation &reader &message
                     | HubProtocolConstants.PingMessageType ->
                         message <- PingMessage.Instance :> HubMessage
                         true
                     | HubProtocolConstants.CloseMessageType -> 
-                        this.CreateCloseMessage(&reader, &message, itemCount)
+                        Read.Message.close &reader &message itemCount
                     | _ -> 
                         message <- Unchecked.defaultof<HubMessage>
                         true
 
             member _.GetMessageBytes (message: HubMessage) =
-                use ms = new MemoryStream()
+                use mutable ms = new MemoryStream()
 
-                Fable.Remoting.MsgPack.Write.object message ms
-            
-                ReadOnlyMemory<byte>(ms.GetBuffer())
+                Write.message message &ms
+
+                ReadOnlyMemory<byte>(ms.ToArray())
 
             
