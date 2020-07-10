@@ -1,5 +1,7 @@
 ﻿namespace SignalRApp
 
+open FSharp.Control.Tasks.V2
+
 type RandomStringGen () = 
     member _.Gen () =
         let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -9,6 +11,7 @@ type RandomStringGen () =
         |> string
 
 module SignalRHub =
+    open System.Threading.Tasks
     open Fable.SignalR
     open FSharp.Control
     open Microsoft.Extensions.DependencyInjection
@@ -22,12 +25,17 @@ module SignalRHub =
         | Action.RandomCharacter -> stringGen.Gen() |> Response.RandomCharacter
 
     let invoke (msg: Action) (services: System.IServiceProvider) =
-        services.GetService<RandomStringGen>()
-        |> update msg
+        task {
+            return
+                services.GetService<RandomStringGen>()
+                |> update msg
+        }
             
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
-        invoke msg hubContext.Services
-        |> hubContext.Clients.Caller.Send
+        task {
+            let! response = invoke msg hubContext.Services
+            do! hubContext.Clients.Caller.Send response
+        } :> Task
 
     [<RequireQualifiedAccess>]
     module Stream =
@@ -63,7 +71,10 @@ module SignalRHub2 =
             |> string
             |> Response.RandomCharacter
 
-    let invoke (msg: Action) _ = update msg
+    let invoke (msg: Action) _ =
+        task {
+            return update msg
+        }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg

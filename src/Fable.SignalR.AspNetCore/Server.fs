@@ -1,11 +1,13 @@
 ﻿namespace Fable.SignalR
 
+open System
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.SignalR
 open Microsoft.Extensions.DependencyInjection
 open System.Collections.Generic
 open System.ComponentModel
 open System.Threading.Tasks
+open FSharp.Control.Tasks.V2
 
 [<EditorBrowsable(EditorBrowsableState.Never)>]
 type IFableHubCallerClients<'ServerApi when 'ServerApi : not struct> =
@@ -23,7 +25,7 @@ type FableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi 
 [<EditorBrowsable(EditorBrowsableState.Never)>]
 type NormalFableHubOptions<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
       Services: System.IServiceProvider }
 
 and [<EditorBrowsable(EditorBrowsableState.Never)>] NormalFableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
@@ -38,8 +40,11 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] NormalFableHub<'ClientApi,'S
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
         
-    member this.Invoke msg = 
-        this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message =  settings.Invoke msg settings.Services |})
+    member this.Invoke msg =
+        task {
+            let! message = settings.Invoke msg settings.Services
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+        } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
 
 [<EditorBrowsable(EditorBrowsableState.Never)>]
@@ -47,7 +52,7 @@ type StreamFromFableHubOptions<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStr
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
       StreamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
       Services: System.IServiceProvider }
 
@@ -64,7 +69,12 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientAp
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
     
-    member this.Invoke msg = this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = settings.Invoke msg settings.Services |})
+    member this.Invoke msg =
+        task {
+            let! message = settings.Invoke msg settings.Services
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+        } :> Task
+        
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
 
@@ -72,7 +82,7 @@ type [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHubOptions<'Cl
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
       StreamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
       Services: System.IServiceProvider }
 
@@ -89,7 +99,11 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
         
-    member this.Invoke msg = this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message =  settings.Invoke msg settings.Services |})
+    member this.Invoke msg =
+        task {
+            let! message = settings.Invoke msg settings.Services
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+        } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
@@ -97,7 +111,7 @@ type [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHubOptions<'
     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
       Services: System.IServiceProvider }
@@ -115,7 +129,11 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHub<'ClientAp
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
         
-    member this.Invoke msg = this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message =  settings.Invoke msg settings.Services |})
+    member this.Invoke msg =
+        task {
+            let! message = settings.Invoke msg settings.Services
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+        } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
@@ -132,7 +150,7 @@ module FableHub =
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-              Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+              Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
               OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
               Services: System.IServiceProvider }
 
@@ -161,7 +179,7 @@ module FableHub =
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-              Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+              Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
               OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
               Services: System.IServiceProvider }
 
@@ -190,7 +208,7 @@ module FableHub =
             when 'ClientApi : not struct and 'ServerApi : not struct> =
 
             { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-              Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+              Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
               OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
               OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
               Services: System.IServiceProvider }
@@ -226,7 +244,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
@@ -253,7 +271,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
@@ -280,7 +298,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       StreamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       StreamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
@@ -318,7 +336,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       Stream: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       Services: System.IServiceProvider }
@@ -343,7 +361,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       Stream: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       Services: System.IServiceProvider }
@@ -368,7 +386,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       Stream: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
@@ -404,7 +422,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       Stream: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       Services: System.IServiceProvider }
@@ -434,7 +452,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       Stream: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       Services: System.IServiceProvider }
@@ -459,7 +477,7 @@ module FableHub =
                     when 'ClientApi : not struct and 'ServerApi : not struct> =
 
                     { Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
-                      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+                      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
                       Stream: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> Task
                       OnConnected: FableHub<'ClientApi,'ServerApi> -> Task<unit>
                       OnDisconnected: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>
@@ -532,7 +550,7 @@ module SignalR =
           /// Handler for client message sends.
           Send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
           /// Handler for client invocations.
-          Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+          Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
           /// Optional hub configuration.
           Config: Config<'ClientApi,'ServerApi> option }
 
@@ -541,14 +559,14 @@ module SignalR =
             | None -> Config<'ClientApi,'ServerApi>.Default()
             | Some config -> config
 
-        static member internal Create (endpointPattern: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task, invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi) =    
+        static member internal Create (endpointPattern: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task, invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>) =    
             ConfigBuilder<'ClientApi,'ServerApi>(endpointPattern, update, invoke)
 
     and ConfigBuilder<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct>
         internal 
         (endpoint: string, 
          send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task,
-         invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi) =
+         invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>) =
 
         let mutable state =
             { EndpointPattern = endpoint

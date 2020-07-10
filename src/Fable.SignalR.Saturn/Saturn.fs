@@ -58,7 +58,7 @@ module SignalRExtension =
                 
             /// Handler for client invocations.
             [<CustomOperation("invoke")>]
-            member _.Invoke (State.Send.Value (endpoint,send), f: 'a -> System.IServiceProvider ->'b) = 
+            member _.Invoke (State.Send.Value (endpoint,send), f: 'a -> System.IServiceProvider -> Task<'b>) = 
 
                 let settings : SignalR.Settings<'a,'b> =
                     { EndpointPattern = endpoint

@@ -2,3 +2,4 @@
     Fable.Remoting.Json
     FSharp.Core
     Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+    TaskBuilder.fs

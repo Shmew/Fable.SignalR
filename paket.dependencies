@@ -18,6 +18,7 @@ group Fable.SignalR.AspNetCore
     nuget Fable.Remoting.Json ~> 2
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+    nuget TaskBuilder.fs
 
 group Fable.SignalR.Elmish
     source https://nuget.org/api/v2
