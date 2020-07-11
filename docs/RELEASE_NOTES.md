@@ -1,3 +1,6 @@
+### 0.4.0 - Friday, July 10th, 2020
+* Make invoke server api asynchronous - thanks @Prunkles
+
 ### 0.3.0 - Friday, July 3rd, 2020
 * Add support for dependency injection in hub functions
 

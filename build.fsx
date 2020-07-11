@@ -419,6 +419,8 @@ Target.create "Publish" ignore
 
 "Restore" ==> "LoadScripts"
 
+"Build" ==> "RunTests"
+
 "All"
   ==> "GitPush"
   ?=> "GitTag"

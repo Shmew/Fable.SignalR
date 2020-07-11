@@ -55,6 +55,8 @@ On the server:
 
 ```fsharp
 module SignalRHub =
+    open FSharp.Control.Tasks.V2
+
     let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
@@ -67,7 +69,8 @@ module SignalRHub =
             |> string
             |> Response.RandomCharacter
 
-    let invoke (msg: Action) _ = update msg
+    let invoke (msg: Action) _ =
+        task { return update msg }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg

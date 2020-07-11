@@ -1,13 +1,13 @@
 ﻿namespace Fable.SignalR
 
-open System
+open FSharp.Control.Tasks.V2
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.SignalR
 open Microsoft.Extensions.DependencyInjection
+open System
 open System.Collections.Generic
 open System.ComponentModel
 open System.Threading.Tasks
-open FSharp.Control.Tasks.V2
 
 [<EditorBrowsable(EditorBrowsableState.Never)>]
 type IFableHubCallerClients<'ServerApi when 'ServerApi : not struct> =

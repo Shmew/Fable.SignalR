@@ -3,8 +3,8 @@
 module SignalRHub =
     open Fable.SignalR
     open FSharp.Control
-    open SignalRHub
     open FSharp.Control.Tasks.V2
+    open SignalRHub
     
     let update (msg: Action) =
         match msg with
@@ -12,9 +12,7 @@ module SignalRHub =
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
     let invoke (msg: Action) (services: System.IServiceProvider) =
-        task {
-            return update msg
-        }
+        task { return update msg }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg

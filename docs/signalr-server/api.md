@@ -57,7 +57,7 @@ type Settings<'ClientApi,'ServerApi when 'ClientApi> =
       Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
 
       /// Handler for client invocations.
-      Invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
 
       /// Optional hub configuration.
       Config: Config<'ClientApi,'ServerApi> option }
@@ -104,7 +104,7 @@ configure_signalr {
     send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task
 
     /// Handler for client invocations.
-    invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi
+    invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
     
     /// Handler for streaming to the client.
     stream_from: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> 
@@ -167,24 +167,24 @@ Signature:
 
 (endpoint: string, 
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, 
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi) 
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>) 
     -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>) -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) 
     -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>,
  streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) 
@@ -192,13 +192,13 @@ Signature:
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> 
     -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>,
  config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> 
@@ -206,14 +206,14 @@ Signature:
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
  config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> 
     -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+ invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
  streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>,
  streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,

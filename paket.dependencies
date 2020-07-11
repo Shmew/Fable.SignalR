@@ -1,6 +1,7 @@
 version 5.247.4
 
 framework: auto-detect
+generate_load_scripts: true
 
 group Fable.SignalR
     source https://nuget.org/api/v2
@@ -18,7 +19,7 @@ group Fable.SignalR.AspNetCore
     nuget Fable.Remoting.Json ~> 2
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
-    nuget TaskBuilder.fs
+    nuget TaskBuilder.fs ~> 2
 
 group Fable.SignalR.Elmish
     source https://nuget.org/api/v2
@@ -123,9 +124,6 @@ group Tooling
     nuget FSharp.Json ~> 0
 	nuget FSharpLint.Core ~> 0
     nuget Yarnpkg.Yarn ~> 1
-
-	clitool dotnet-fable ~> 2
-	clitool dotnet-fake ~> 5
 
 group FakeBuild
 	source https://api.nuget.org/v3/index.json
