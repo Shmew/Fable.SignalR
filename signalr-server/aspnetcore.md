@@ -49,6 +49,7 @@ Following our example these would look like this:
 ```fsharp
 module SignalRHub =
     open Fable.SignalR
+    open FSharp.Control.Tasks.V2
     open SignalRHub
 
     let update (msg: Action) =
@@ -56,7 +57,8 @@ module SignalRHub =
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
-    let invoke (msg: Action) _ = update msg
+    let invoke (msg: Action) (services: System.IServiceProvider) =
+        task { return update msg }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg
@@ -156,6 +158,7 @@ Following our example the module would now look like this:
 module SignalRHub =
     open Fable.SignalR
     open FSharp.Control
+    open FSharp.Control.Tasks.V2
     open SignalRHub
     open System.Collections.Generic
 
@@ -164,7 +167,8 @@ module SignalRHub =
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
-    let invoke (msg: Action) _ = update msg
+    let invoke (msg: Action) (services: System.IServiceProvider) =
+        task { return update msg }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg
