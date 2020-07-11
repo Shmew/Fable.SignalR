@@ -112,14 +112,14 @@ module SignalRExtension =
             |> Impl.config<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
-        member this.AddSignalR(endpoint: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi) =
+        member this.AddSignalR(endpoint: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>) =
             SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build()
             |> this.AddSignalR
 
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) =
             
             this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build(), streamFrom)
@@ -128,7 +128,7 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
             
             this.AddSignalR(SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke).Build(), Task.toGen streamTo)
@@ -137,7 +137,7 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
             
@@ -147,7 +147,7 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
             SignalR.ConfigBuilder(endpoint, Task.toGen update, invoke) 
@@ -159,7 +159,7 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
@@ -171,7 +171,7 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =
 
@@ -183,7 +183,7 @@ module SignalRExtension =
         member this.AddSignalR
             (endpoint: string,
              update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
-             invoke: 'ClientApi -> System.IServiceProvider -> 'ServerApi,
+             invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
              streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>,
              streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
              config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) =

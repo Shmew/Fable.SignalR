@@ -4,13 +4,17 @@ module SignalRHub =
     open Fable.SignalR
     open FSharp.Control
     open SignalRHub
-
+    open FSharp.Control.Tasks.V2
+    
     let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
-    let invoke (msg: Action) (services: System.IServiceProvider) = update msg
+    let invoke (msg: Action) (services: System.IServiceProvider) =
+        task {
+            return update msg
+        }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg
