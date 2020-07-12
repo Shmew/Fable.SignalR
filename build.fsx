@@ -189,11 +189,13 @@ Target.create "Restore" <| fun _ ->
     TaskRunner.runWithRetries restoreSolution 5
 
 Target.create "YarnInstall" <| fun _ ->
-    let setParams (defaults:Yarn.YarnParams) =
-        { defaults with
-            Yarn.YarnParams.YarnFilePath = (__SOURCE_DIRECTORY__ @@ "packages/tooling/Yarnpkg.Yarn/content/bin/yarn.cmd")
-        }
-    Yarn.install setParams
+    if Environment.isWindows then
+        let setParams (defaults:Yarn.YarnParams) =
+            { defaults with
+                Yarn.YarnParams.YarnFilePath = (__SOURCE_DIRECTORY__ @@ "packages/tooling/Yarnpkg.Yarn/content/bin/yarn.cmd")
+            }
+        Yarn.install setParams
+    else Yarn.install id
 
 Target.create "RebuildSass" <| fun _ ->
     TaskRunner.runWithRetries (fun () -> Npm.exec "rebuild node-sass" id) 5
@@ -276,37 +278,6 @@ Target.create "Lint" <| fun _ ->
 
 Target.create "RunTests" <| fun _ ->
     Yarn.exec "test-server" id
-
-// --------------------------------------------------------------------------------------
-// Generate Paket load scripts
-Target.create "LoadScripts" <| fun _ ->
-    let frameworks =
-        __SOURCE_DIRECTORY__ @@ "bin"
-        |> Directory.EnumerateDirectories
-        |> Seq.map (fun d ->
-            Directory.EnumerateDirectories d
-            |> Seq.map (fun f -> DirectoryInfo(f).Name)
-            |> List.ofSeq)
-        |> List.ofSeq
-        |> List.reduce List.append
-        |> List.distinct
-        |> List.reduce (fun acc elem -> sprintf "%s --framework %s" elem acc)
-        |> function
-        | e when e.Length > 0 ->
-            Some (sprintf "--framework %s" e)
-        | _ -> None
-
-    let arguments =
-        [Some("generate-load-scripts"); frameworks]
-        |> List.choose id
-        |> List.reduce (fun acc elem -> sprintf "%s %s" acc elem)
-
-    arguments
-    |> CreateProcess.fromRawCommandLine ((__SOURCE_DIRECTORY__ @@ ".paket") @@ "paket.exe")
-    |> CreateProcess.withTimeout (TimeSpan.MaxValue)
-    |> CreateProcess.ensureExitCodeWithMessage "Failed to generate paket load scripts."
-    |> Proc.run
-    |> ignore
 
 // --------------------------------------------------------------------------------------
 // Update package.json version & name    
@@ -416,8 +387,6 @@ Target.create "Publish" ignore
   ?=> "Build"
   ?=> "RunTests"
   ?=> "CleanDocs"
-
-"Restore" ==> "LoadScripts"
 
 "Build" ==> "RunTests"
 
