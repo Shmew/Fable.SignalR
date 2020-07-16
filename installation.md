@@ -44,10 +44,6 @@ using the package manager that the project
 is using (detected by Femto) and then the 
 required npm packages will be resolved
 
-Do note that this will *not* install the 
-optional dependencies listed above (the 
-babel plugin and prettier).
-
 [Femto]: https://github.com/Zaid-Ajaj/Femto
 
 ## On the Server
