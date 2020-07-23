@@ -1,3 +1,6 @@
+### 0.4.1 - Thursday, July 23rd, 2020
+* Fix an issue with invocation caller resolution
+
 ### 0.4.0 - Friday, July 10th, 2020
 * Make invoke server api asynchronous - thanks @Prunkles
 
