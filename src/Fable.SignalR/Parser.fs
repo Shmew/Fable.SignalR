@@ -110,8 +110,9 @@ module Parser =
                 |> function
                 | Ok res -> Ok (HubRecords.InvocationMessage.Validate res |> unbox<InvocationMessage<'ServerApi>> |> U8.Case1)
                 | Error _ ->
-                    Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<{| connectionId: string; message: 'ServerApi |}>> parsedRaw
-                    |> Result.map (HubRecords.InvocationMessage.Validate >> unbox<InvocationMessage<{| connectionId: string; message: 'ServerApi |}>> >> U8.Case2)
+                    Json.tryConvertFromJsonAs<HubRecords.InvocationMessage<{| connectionId: string; invocationId: System.Guid; message: 'ServerApi |}>> parsedRaw
+                    |> Result.map (HubRecords.InvocationMessage.Validate 
+                                   >> unbox<InvocationMessage<{| connectionId: string; invocationId: System.Guid; message: 'ServerApi |}>> >> U8.Case2)
             | MessageType.StreamItem -> 
                 Json.tryConvertFromJsonAs<HubRecords.StreamItemMessage<'ServerStreamApi>> parsedRaw
                 |> Result.map (HubRecords.StreamItemMessage.Validate >> unbox<StreamItemMessage<'ServerStreamApi>> >> U8.Case3)

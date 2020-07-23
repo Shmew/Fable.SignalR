@@ -68,6 +68,7 @@ module FSharpLinter =
         let config =
             if webFile then ConfigurationParam.FromFile (__SOURCE_DIRECTORY__ @@ "fsharplint.json")
             else ConfigurationParam.Default
+
         { CancellationToken = None
           ReceivedWarning = Some writeLintWarning
           Configuration = config

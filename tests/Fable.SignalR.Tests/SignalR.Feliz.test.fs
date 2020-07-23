@@ -42,6 +42,19 @@ Jest.describe("SignalR works with Feliz", fun () ->
         do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("count")).toHaveTextContent("1"))
     })
 
+    Jest.test("Invocation order does not matter", async {
+        let render = RTL.render(Components.InvokeHook.render())
+
+        Jest.expect(render.getByTestId("count")).toHaveTextContent("0")
+        Jest.expect(render.getByTestId("text")).toHaveTextContent("")
+
+        render.getByTestId("increment").click()
+        render.getByTestId("random").click()
+        
+        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("text")).not.toHaveTextContent(""))
+        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("count")).toHaveTextContent("1"))
+    })
+
     Jest.test("Can stream from the server hub", async {
         let render = RTL.render(Components.StreamingHook.render())
 

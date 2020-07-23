@@ -232,8 +232,8 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     [<Emit("$0.invoke($1...)")>]
     member _.invoke' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
 
-    member inline this.invoke (msg: 'ClientApi) : Async<unit> =
-        this.invoke'("Invoke", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise
+    member inline this.invoke (msg: 'ClientApi, invocationId: System.Guid) : Async<unit> =
+        this.invoke'("Invoke", ResizeArray [| msg :> obj; invocationId :> obj |]) |> Async.AwaitPromise
     
     [<Emit("$0.keepAliveIntervalInMilliseconds")>]
     member _.keepAliveInterval : int = jsNative
@@ -423,7 +423,7 @@ module StreamHub =
 type internal HubMailbox<'ClientApi,'ServerApi> =
     | ProcessSends
     | Send of callback:(unit -> Async<unit>)
-    | ServerRsp of connectionId:string * rsp:'ServerApi
+    | ServerRsp of connectionId:string * invocationId: System.Guid * rsp:'ServerApi
     | StartInvocation of msg:'ClientApi * replyChannel:AsyncReplyChannel<'ServerApi>
 
 [<NoComparison;NoEquality>]
@@ -458,7 +458,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
         
     let mailbox =
         MailboxProcessor.Start (fun inbox ->
-            let rec loop (waitingInvocations: AsyncReplyChannel<'ServerApi> list) (waitingConnections: (unit -> Async<unit>) list) =
+            let rec loop (waitingInvocations: Map<System.Guid,AsyncReplyChannel<'ServerApi>>) (waitingConnections: (unit -> Async<unit>) list) =
                 async {
                     let waitingConnections =
                         if hub.state = ConnectionState.Connected then
@@ -486,24 +486,26 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                                 else [ action ]
 
                             loop waitingInvocations (newConnections @ waitingConnections)
-                        | HubMailbox.ServerRsp(connectionId, msg) ->
+                        | HubMailbox.ServerRsp(connectionId, invocationId, msg) ->
                             match hubId,connectionId, msg with
                             | Some hubId, connectionId, msg when hubId = connectionId ->
-                                waitingInvocations
-                                |> List.iter(fun reply -> reply.Reply(msg))
-                                loop [] waitingConnections
+                                waitingInvocations.TryFind(invocationId)
+                                |> Option.iter(fun reply -> reply.Reply(msg))
+
+                                loop (waitingInvocations.Remove(invocationId)) waitingConnections
                             | _ -> loop waitingInvocations waitingConnections
                         | HubMailbox.StartInvocation(serverMsg, reply) ->
+                            let newGuid = System.Guid.NewGuid()
+
                             let newConnections =
                                 if hub.state = ConnectionState.Connected then
-                                    hub.invoke(serverMsg) |> fun a -> Async.StartImmediate(a, cts.Token)
+                                    hub.invoke(serverMsg, newGuid) |> fun a -> Async.StartImmediate(a, cts.Token)
                                     []
-                                else [ fun () -> hub.invoke(serverMsg) ]
-
-                            loop (reply::waitingInvocations) (newConnections @ waitingConnections)
+                                else [ fun () -> hub.invoke(serverMsg, newGuid) ]
+                            loop (waitingInvocations.Add(newGuid, reply)) (newConnections @ waitingConnections)
                 }
 
-            loop [] []
+            loop Map.empty []
         , cancellationToken = cts.Token)
 
     let onRsp = HubMailbox.ServerRsp >> mailbox.Post
@@ -519,7 +521,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                 |> Option.defaultValue (fun _ -> mailbox.Post(HubMailbox.ProcessSends))
                 |> Some }
         |> fun handlers -> handlers.apply(hub)
-        hub.on<{| connectionId: string; message: 'ServerApi |}>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.message))
+        hub.on<{| connectionId: string; invocationId: System.Guid; message: 'ServerApi |}>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.invocationId,rsp.message))
 
     interface System.IDisposable with
         member _.Dispose () =

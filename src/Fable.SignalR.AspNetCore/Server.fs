@@ -12,7 +12,7 @@ open System.Threading.Tasks
 [<EditorBrowsable(EditorBrowsableState.Never)>]
 type IFableHubCallerClients<'ServerApi when 'ServerApi : not struct> =
     abstract Send: 'ServerApi -> Task
-    abstract Invoke: {| connectionId: string; message: 'ServerApi |} -> Task
+    abstract Invoke: {| connectionId: string; invocationId: System.Guid; message: 'ServerApi |} -> Task
 
 // fsharplint:disable-next-line
 type FableHub<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
@@ -40,10 +40,10 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] NormalFableHub<'ClientApi,'S
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
         
-    member this.Invoke msg =
+    member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg settings.Services
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
         } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
 
@@ -69,10 +69,10 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientAp
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
     
-    member this.Invoke msg =
+    member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg settings.Services
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
         } :> Task
         
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
@@ -99,10 +99,10 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
         
-    member this.Invoke msg =
+    member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg settings.Services
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
         } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
@@ -129,10 +129,10 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHub<'ClientAp
         member this.Dispose () = this.Dispose()
         member _.Services = settings.Services
         
-    member this.Invoke msg =
+    member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg settings.Services
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; message = message |})
+            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
         } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)

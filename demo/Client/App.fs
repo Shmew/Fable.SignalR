@@ -149,6 +149,42 @@ module App =
             ]
         ])
 
+    let countInvokeButtons = React.functionComponent(fun (input: {| hub: Hub; count: int; callback: int -> unit |}) ->
+        React.fragment [
+            Html.button [
+                prop.classes [ 
+                    Bulma.Button
+                    Bulma.HasBackgroundPrimary
+                    Bulma.HasTextWhite 
+                ]
+                prop.text "Increment"
+                prop.onClick <| fun _ ->
+                    async {
+                        let! res = input.hub.current.invoke (Action.IncrementCount input.count)
+
+                        match res with
+                        | Response.NewCount i -> input.callback i
+                    }
+                    |> Async.StartImmediate
+            ]
+            Html.button [
+                prop.classes [ 
+                    Bulma.Button
+                    Bulma.HasBackgroundPrimary
+                    Bulma.HasTextWhite 
+                ]
+                prop.text "Decrement"
+                prop.onClick <| fun _ ->
+                    async {
+                        let! res = input.hub.current.invoke (Action.DecrementCount input.count)
+
+                        match res with
+                        | Response.NewCount i -> input.callback i
+                    }
+                    |> Async.StartImmediate
+            ]
+        ]) 
+
     let inline bulmaCol (children: ReactElement list) =
         Html.div [
             prop.classes [ Bulma.Column ]
@@ -158,6 +194,9 @@ module App =
 
     let render = React.functionComponent(fun () ->
         let count,setCount = React.useState 0
+        let invokeCount,setInvokeCount = React.useState 0
+
+        let setInvokeCount = React.useCallback(setInvokeCount, [||])
 
         let hub =
             React.useSignalR<Action,StreamFrom.Action,Response,StreamFrom.Response> <| fun hub -> 
@@ -188,6 +227,20 @@ module App =
                                         ]
                                     ]
                                     countButtons {| hub = hub; count = count |}
+                                ]   
+                            ]
+                            Html.div [
+                                prop.classes [ Bulma.HasTextCentered ]
+                                prop.style [ style.paddingTop (length.em 5) ]
+                                prop.children [
+                                    Html.div [
+                                        prop.classes [ Bulma.Container; Bulma.Box ]
+                                        prop.style [ style.maxWidth (length.em 12) ]
+                                        prop.children [
+                                            Html.textf "Invoked Count: %i" invokeCount
+                                        ]
+                                    ]
+                                    countInvokeButtons {| hub = hub; count = invokeCount; callback = setInvokeCount |}
                                 ]   
                             ]
                         ]
