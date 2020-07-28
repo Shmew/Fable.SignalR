@@ -7,6 +7,33 @@ so only those designated as being Saturn-only are available with both libraries.
 
 The `FableHub` is your interface for interacting with the SignalR hub.
 
+There are two types of `FableHub`:
+ * `FableHub` 
+   - A generic hub context that is unable to dispatch messages.
+   - Provided for hub *invocations*.
+ * `FableHub<'ClientApi,'ServerApi>` 
+   - The full hub context that can dispatch messages to users.
+
+### Generic FableHub
+
+A generic hub context that is unable to dispatch messages for hub *invocations*.
+
+This does not let you dispatch messages because an invocation is a traditional RPC
+abstraction over the SignalR hub.
+
+Signature:
+```fsharp
+type FableHub =
+    abstract Context : HubCallerContext
+    abstract Groups : IGroupManager
+    abstract Dispose : unit -> unit
+    abstract Services : System.IServiceProvider
+```
+
+### FableHub
+
+The full hub context that can dispatch messages to users.
+
 Signature:
 ```fsharp
 type FableHub<'ClientApi,'ServerApi> =
@@ -57,7 +84,7 @@ type Settings<'ClientApi,'ServerApi when 'ClientApi> =
       Update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task
 
       /// Handler for client invocations.
-      Invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
+      Invoke: 'ClientApi -> FableHub -> Task<'ServerApi>
 
       /// Optional hub configuration.
       Config: Config<'ClientApi,'ServerApi> option }
@@ -104,7 +131,7 @@ configure_signalr {
     send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task
 
     /// Handler for client invocations.
-    invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>
+    invoke: 'ClientApi -> FableHub -> Task<'ServerApi>
     
     /// Handler for streaming to the client.
     stream_from: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> 
@@ -167,24 +194,24 @@ Signature:
 
 (endpoint: string, 
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, 
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>) 
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>) 
     -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>) -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) 
     -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>,
  streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) 
@@ -192,13 +219,13 @@ Signature:
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> 
     -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>,
  config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> 
@@ -206,14 +233,14 @@ Signature:
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
  config: SignalR.ConfigBuilder<'ClientApi,'ServerApi> 
     -> SignalR.ConfigBuilder<'ClientApi,'ServerApi>) -> IServiceCollection
 
 (endpoint: string,
  update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task,
- invoke: 'ClientApi -> System.IServiceProvider -> Task<'ServerApi>,
+ invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
  streamFrom: 'ClientStreamFromApi -> FableHub<'ClientApi,'ServerApi> 
     -> IAsyncEnumerable<'ServerStreamApi>,
  streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task,
