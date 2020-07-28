@@ -11,7 +11,7 @@ module SignalRHub =
         | Action.IncrementCount i -> Response.NewCount(i + 1)
         | Action.DecrementCount i -> Response.NewCount(i - 1)
 
-    let invoke (msg: Action) (services: System.IServiceProvider) =
+    let invoke (msg: Action) (hubContext: FableHub) =
         task { return update msg }
 
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =

@@ -1,3 +1,6 @@
+### 0.5.0 - Tuesday, July 28th, 2020
+* Expose more of the hub context for invocations
+
 ### 0.4.1 - Thursday, July 23rd, 2020
 * Fix an issue with invocation caller resolution
 

@@ -24,16 +24,16 @@ module SignalRHub =
         | Action.DecrementCount i -> Response.NewCount(i - 1)
         | Action.RandomCharacter -> stringGen.Gen() |> Response.RandomCharacter
 
-    let invoke (msg: Action) (services: System.IServiceProvider) =
+    let invoke (msg: Action) (hubContext: FableHub) =
         task {
             return
-                services.GetService<RandomStringGen>()
+                hubContext.Services.GetService<RandomStringGen>()
                 |> update msg
         }
             
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         task {
-            let! response = invoke msg hubContext.Services
+            let! response = invoke msg hubContext
             do! hubContext.Clients.Caller.Send response
         } :> Task
 

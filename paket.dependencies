@@ -10,7 +10,7 @@ group Fable.SignalR
     nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Fable.SimpleJson ~> 3
-    nuget FSharp.Core ~> 4.7 lowest_matching:true
+    nuget FSharp.Core ~> 4.7
 
 group Fable.SignalR.AspNetCore
     source https://nuget.org/api/v2
@@ -28,7 +28,7 @@ group Fable.SignalR.Elmish
     nuget Fable.Core ~> 3
     nuget Fable.Elmish ~> 3
     nuget Fable.Promise ~> 2
-    nuget FSharp.Core ~> 4.7 lowest_matching:true
+    nuget FSharp.Core ~> 4.7
 
 group Fable.SignalR.Feliz
     source https://nuget.org/api/v2
@@ -37,7 +37,7 @@ group Fable.SignalR.Feliz
     nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Feliz ~> 1
-    nuget FSharp.Core ~> 4.7 lowest_matching:true
+    nuget FSharp.Core ~> 4.7
     
 group Fable.SignalR.Saturn
     source https://nuget.org/api/v2
@@ -53,7 +53,7 @@ group Fable.SignalR.Server
 	source https://api.nuget.org/v3/index.json
 
     nuget Fable.Remoting.Json ~> 2
-    nuget FSharp.Core ~> 4.7 lowest_matching:true
+    nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
 
 group Fable.SignalR.Tests
@@ -70,7 +70,7 @@ group Fable.SignalR.Tests
     nuget Fable.Promise ~> 2
     nuget Feliz ~> 1
     nuget Feliz.UseElmish ~> 1
-    nuget FSharp.Core ~> 4.7 lowest_matching:true
+    nuget FSharp.Core ~> 4.7
 
 group Fable.SignalR.TestServer
     source https://nuget.org/api/v2
