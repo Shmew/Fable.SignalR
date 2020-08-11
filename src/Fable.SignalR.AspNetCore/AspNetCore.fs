@@ -15,6 +15,13 @@ module SignalRExtension =
     open System.Threading.Tasks
     
     [<RequireQualifiedAccess>]
+    module internal Option =
+        let mapThrough (config: SignalR.Config<_,_> option) (configToFun: SignalR.Config<_,_> -> ('T -> 'T) option) (item: 'T) =
+            match config |> Option.bind configToFun with
+            | Some f -> f item
+            | None -> item
+
+    [<RequireQualifiedAccess>]
     module internal Impl =
         let config<'T when 'T :> Hub> (builder: IServiceCollection) (hubOptions: (HubOptions -> unit) option) (transients: IServiceCollection -> IServiceCollection) =
             builder
@@ -193,6 +200,23 @@ module SignalRExtension =
             |> fun res -> this.AddSignalR(res.Build(), streamFrom, Task.toGen streamTo)
 
     type IApplicationBuilder with
+        member private this.ApplyConfig (config: SignalR.Config<_,_> option, configToFun: SignalR.Config<_,_> -> (IApplicationBuilder -> IApplicationBuilder) option) =
+            Option.mapThrough config configToFun this
+
+        member private this.ApplyConfigs (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
+            this
+                .ApplyConfig(settings.Config, fun c -> c.BeforeUseRouting)
+                .ApplyConfig(settings.Config, fun c -> 
+                    if c.NoRouting then None 
+                    else Some (fun app -> app.UseRouting())
+                )
+                .ApplyConfig(settings.Config, fun c -> 
+                    if c.EnableBearerAuth then 
+                        Some (fun app -> app.UseMiddleware<WebSocketsMiddleware>(settings.EndpointPattern)) 
+                    else None
+                )
+                .ApplyConfig(settings.Config, fun c -> c.AfterUseRouting)
+
         /// Configures routing and endpoints for the SignalR hub.
         member this.UseSignalR (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
         
@@ -216,7 +240,7 @@ module SignalRExtension =
                         |> SignalR.Config.bindEnpointConfig settings.Config
 
             this
-                .UseRouting()
+                .ApplyConfigs(settings)
                 // fsharplint:disable-next-line
                 .UseEndpoints(fun endpoints -> endpoints |> config |> ignore)
         
@@ -246,7 +270,7 @@ module SignalRExtension =
                         |> SignalR.Config.bindEnpointConfig settings.Config
 
             this
-                .UseRouting()
+                .ApplyConfigs(settings)
                 // fsharplint:disable-next-line
                 .UseEndpoints(fun endpoints -> endpoints |> config |> ignore)
         
@@ -275,7 +299,7 @@ module SignalRExtension =
                         |> SignalR.Config.bindEnpointConfig settings.Config
 
             this
-                .UseRouting()
+                .ApplyConfigs(settings)
                 // fsharplint:disable-next-line
                 .UseEndpoints(fun endpoints -> endpoints |> config |> ignore)
         
@@ -306,6 +330,6 @@ module SignalRExtension =
                         |> SignalR.Config.bindEnpointConfig settings.Config
 
             this
-                .UseRouting()
+                .ApplyConfigs(settings)
                 // fsharplint:disable-next-line
                 .UseEndpoints(fun endpoints -> endpoints |> config |> ignore)

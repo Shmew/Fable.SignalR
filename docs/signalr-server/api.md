@@ -51,7 +51,18 @@ Configuration options for customizing behavior of a SignalR hub.
 Signature:
 ```fsharp
 type Config<'ClientApi,'ServerApi> =
-    { /// Customize hub endpoint conventions.
+    { /// App configuration after app.UseRouting() is called.
+      AfterUseRouting: (IApplicationBuilder -> IApplicationBuilder) option
+      
+      /// App configuration before app.UseRouting() is called.
+      BeforeUseRouting: (IApplicationBuilder -> IApplicationBuilder) option
+      
+      /// Inject a Websocket middleware to support bearer tokens.
+      ///
+      /// Default: false
+      EnableBearerAuth: bool 
+    
+      /// Customize hub endpoint conventions.
       EndpointConfig: (HubEndpointConventionBuilder -> HubEndpointConventionBuilder) option
 
       /// Options used to configure hub instances.
@@ -59,6 +70,13 @@ type Config<'ClientApi,'ServerApi> =
 
       /// Adds a logging filter with the given LogLevel.
       LogLevel: Microsoft.Extensions.Logging.LogLevel option
+
+      /// Disable app.UseRouting() configuration from this library.
+      ///
+      /// *You must configure this yourself if you do this!*
+      ///
+      /// Default: false
+      NoRouting: bool
 
       /// Called when a new connection is established with the hub.
       OnConnected: (FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
@@ -96,16 +114,39 @@ A fluent builder for the [config](#signalrconfig).
 
 Signature:
 ```fsharp
-type ConfigBuilder<'ClientApi,'ServerApi> =
-    /// Customize hub endpoint conventions.
-    member EndpointConfig (f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) 
+type ConfigBuilder<'ClientApi,'ServerApi>
+    (endpoint: string, 
+     send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task,
+     invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
+     ?config: Config<'ClientApi,'ServerApi>)
+
+type ConfigBuilder<'ClientApi,'ServerApi> (settings: Settings<'ClientApi,'ServerApi>)
+
+    /// App configuration after app.UseRouting() is called.
+    member AfterUseRouting (appConfig: IApplicationBuilder -> IApplicationBuilder)
         : ConfigBuilder
+    
+    /// App configuration after app.UseRouting() is called.
+    member AfterUseRouting (appConfig: IApplicationBuilder -> IApplicationBuilder)
+        : ConfigBuilder
+
+    /// App configuration before app.UseRouting() is called.
+    member BeforeUseRouting (f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) 
+        : ConfigBuilder
+
+    /// Inject a Websocket middleware to support bearer tokens.
+    member EnableBearerAuth () : ConfigBuilder
 
     /// Options used to configure hub instances.
     member HubOptions (f: HubOptions -> unit) : ConfigBuilder
 
     /// Adds a logging filter with the given LogLevel.
     member LogLevel (logLevel: Microsoft.Extensions.Logging.LogLevel) : ConfigBuilder
+
+    /// Disable app.UseRouting() configuration.
+    ///
+    /// *You must configure this yourself if you do this!*
+    member this.NoRouting () : ConfigBuilder
 
     /// Called when a new connection is established with the hub.
     member OnConnected (f: FableHub<'ClientApi,'ServerApi> -> Task<unit>) : ConfigBuilder
@@ -140,6 +181,20 @@ configure_signalr {
     ///  Handler for streaming from the client.
     stream_to: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task
     
+    /// Disable app.UseRouting() configuration.
+    ///
+    /// *You must configure this yourself if you do this!*
+    no_routing
+
+    /// Inject a Websocket middleware to support bearer tokens.
+    use_bearer_auth
+
+    /// App configuration after app.UseRouting() is called.
+    with_after_routing: IApplicationBuilder -> IApplicationBuilder
+
+    /// App configuration before app.UseRouting() is called.
+    with_before_routing: IApplicationBuilder -> IApplicationBuilder
+
     /// Customize hub endpoint conventions.
     with_endpoint_config: HubEndpointConventionBuilder -> HubEndpointConventionBuilder
     

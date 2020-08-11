@@ -89,6 +89,48 @@ module SignalRExtension =
                 | State.HasStreamTo(settings,_) -> State.Settings.HasStreamTo(settings, f)
                 | State.NoStream(settings) -> State.Settings.HasStreamTo(settings, f)
                 
+            /// Disable app.UseRouting() configuration.
+            ///
+            /// *You must configure this yourself if you do this!*
+            [<CustomOperation("no_routing")>]
+            member _.NoRouting (state: State.Settings<_,_,_,_,_>) =
+                state.MapSettings <| fun state ->
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                NoRouting = true }
+                            |> Some }
+
+            /// Inject a Websocket middleware to support bearer tokens.
+            [<CustomOperation("use_bearer_auth")>]
+            member _.BearerAuth (state: State.Settings<_,_,_,_,_>) =
+                state.MapSettings <| fun state ->
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                EnableBearerAuth = true }
+                            |> Some }
+
+            /// App configuration after app.UseRouting() is called.
+            [<CustomOperation("with_after_routing")>]
+            member _.AfterRouting (state: State.Settings<_,_,_,_,_>, f: IApplicationBuilder -> IApplicationBuilder) =
+                state.MapSettings <| fun state ->
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                AfterUseRouting = Some f }
+                            |> Some }
+
+            /// App configuration before app.UseRouting() is called.
+            [<CustomOperation("with_before_routing")>]
+            member _.BeforeRouting (state: State.Settings<_,_,_,_,_>, f: IApplicationBuilder -> IApplicationBuilder) =
+                state.MapSettings <| fun state ->
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                BeforeUseRouting = Some f }
+                            |> Some }
+
             /// Customize hub endpoint conventions.
             [<CustomOperation("with_endpoint_config")>]
             member _.EndpointConfig (state: State.Settings<_,_,_,_,_>, f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =

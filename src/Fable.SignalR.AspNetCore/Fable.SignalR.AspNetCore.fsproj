@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Server.fs" />
+    <Compile Include="WebSocketsMiddleware.fs" />
     <Compile Include="AspNetCore.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />

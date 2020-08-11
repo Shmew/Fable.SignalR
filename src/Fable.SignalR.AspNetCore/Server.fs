@@ -522,12 +522,26 @@ module SignalR =
     /// Configuration options for customizing behavior of a SignalR hub.
     [<RequireQualifiedAccess>]
     type Config<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> =
-        { /// Customize hub endpoint conventions.
+        { /// App configuration after app.UseRouting() is called.
+          AfterUseRouting: (IApplicationBuilder -> IApplicationBuilder) option
+          /// App configuration before app.UseRouting() is called.
+          BeforeUseRouting: (IApplicationBuilder -> IApplicationBuilder) option
+          /// Inject a Websocket middleware to support bearer tokens.
+          ///
+          /// Default: false
+          EnableBearerAuth: bool 
+          /// Customize hub endpoint conventions.
           EndpointConfig: (HubEndpointConventionBuilder -> HubEndpointConventionBuilder) option
           /// Options used to configure hub instances.
           HubOptions: (HubOptions -> unit) option
           /// Adds a logging filter with the given LogLevel.
           LogLevel: Microsoft.Extensions.Logging.LogLevel option
+          /// Disable app.UseRouting() configuration from this library.
+          ///
+          /// *You must configure this yourself if you do this!*
+          ///
+          /// Default: false
+          NoRouting: bool
           /// Called when a new connection is established with the hub.
           OnConnected: (FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
           /// Called when a connection with the hub is terminated.
@@ -535,9 +549,13 @@ module SignalR =
 
         /// Creates an empty record.
         static member Default () =
-            { EndpointConfig = None 
+            { AfterUseRouting = None
+              BeforeUseRouting = None
+              EnableBearerAuth = false
+              EndpointConfig = None 
               HubOptions = None
               LogLevel = None
+              NoRouting = false
               OnConnected = None
               OnDisconnected = None }
 
@@ -567,17 +585,49 @@ module SignalR =
         static member internal Create (endpointPattern: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task, invoke: 'ClientApi -> FableHub -> Task<'ServerApi>) =    
             ConfigBuilder<'ClientApi,'ServerApi>(endpointPattern, update, invoke)
 
-    and ConfigBuilder<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct>
-        internal 
+    and ConfigBuilder<'ClientApi,'ServerApi when 'ClientApi : not struct and 'ServerApi : not struct> 
         (endpoint: string, 
          send: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> Task,
-         invoke: 'ClientApi -> FableHub -> Task<'ServerApi>) =
+         invoke: 'ClientApi -> FableHub -> Task<'ServerApi>,
+         ?config: Config<'ClientApi,'ServerApi>) =
 
         let mutable state =
             { EndpointPattern = endpoint
               Send = send
               Invoke = invoke
-              Config = None }
+              Config = config }
+
+        new (settings: Settings<'ClientApi,'ServerApi>) = ConfigBuilder(settings.EndpointPattern, settings.Send, settings.Invoke, ?config = settings.Config)
+
+        /// App configuration after app.UseRouting() is called.
+        member this.AfterUseRouting (appConfig: IApplicationBuilder -> IApplicationBuilder) =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            AfterUseRouting = Some appConfig }
+                        |> Some }
+            this
+
+        /// App configuration before app.UseRouting() is called.
+        member this.BeforeUseRouting (appConfig: IApplicationBuilder -> IApplicationBuilder) =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            BeforeUseRouting = Some appConfig }
+                        |> Some }
+            this
+
+        /// Inject a Websocket middleware to support bearer tokens.
+        member this.EnableBearerAuth () =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            EnableBearerAuth = true }
+                        |> Some }
+            this
 
         /// Customize hub endpoint conventions.
         member this.EndpointConfig (f: HubEndpointConventionBuilder -> HubEndpointConventionBuilder) =
@@ -609,6 +659,18 @@ module SignalR =
                         |> Some }
             this
             
+        /// Disable app.UseRouting() configuration.
+        ///
+        /// *You must configure this yourself if you do this!*
+        member this.NoRouting () =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            NoRouting = true }
+                        |> Some }
+            this
+
         /// Called when a new connection is established with the hub.
         member this.OnConnected (f: FableHub<'ClientApi,'ServerApi> -> Task<unit>) =
             state <-

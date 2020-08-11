@@ -1,3 +1,7 @@
+### 0.6.0 - Tuesday, August 11th, 2020
+* Add support for authorizatation
+* Add websocket middleware to support bearer authentication
+
 ### 0.5.0 - Tuesday, July 28th, 2020
 * Expose more of the hub context for invocations
 

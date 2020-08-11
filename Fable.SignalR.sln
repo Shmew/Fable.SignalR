@@ -53,6 +53,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{27F9F1A6
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{D05F59F8-14B6-44AB-8FE6-493EE0CA4A75}"
 	ProjectSection(SolutionItems) = preProject
+		docs\authorization.md = docs\authorization.md
 		docs\contributing.md = docs\contributing.md
 		docs\index.html = docs\index.html
 		docs\installation.md = docs\installation.md
