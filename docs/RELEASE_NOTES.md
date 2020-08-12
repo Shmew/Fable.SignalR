@@ -1,3 +1,6 @@
+### 0.6.1 - Wednesday, August 12th, 2020
+* Fix routing middleware not being applied if a config is not given
+
 ### 0.6.0 - Tuesday, August 11th, 2020
 * Add support for authorizatation
 * Add websocket middleware to support bearer authentication

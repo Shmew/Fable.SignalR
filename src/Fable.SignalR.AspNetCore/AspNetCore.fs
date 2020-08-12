@@ -204,18 +204,20 @@ module SignalRExtension =
             Option.mapThrough config configToFun this
 
         member private this.ApplyConfigs (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
-            this
-                .ApplyConfig(settings.Config, fun c -> c.BeforeUseRouting)
-                .ApplyConfig(settings.Config, fun c -> 
-                    if c.NoRouting then None 
-                    else Some (fun app -> app.UseRouting())
-                )
-                .ApplyConfig(settings.Config, fun c -> 
-                    if c.EnableBearerAuth then 
-                        Some (fun app -> app.UseMiddleware<WebSocketsMiddleware>(settings.EndpointPattern)) 
-                    else None
-                )
-                .ApplyConfig(settings.Config, fun c -> c.AfterUseRouting)
+            if settings.Config.IsSome then
+                this
+                    .ApplyConfig(settings.Config, fun c -> c.BeforeUseRouting)
+                    .ApplyConfig(settings.Config, fun c -> 
+                        if c.NoRouting then None 
+                        else Some (fun app -> app.UseRouting())
+                    )
+                    .ApplyConfig(settings.Config, fun c -> 
+                        if c.EnableBearerAuth then 
+                            Some (fun app -> app.UseMiddleware<WebSocketsMiddleware>(settings.EndpointPattern)) 
+                        else None
+                    )
+                    .ApplyConfig(settings.Config, fun c -> c.AfterUseRouting)
+            else this.UseRouting()
 
         /// Configures routing and endpoints for the SignalR hub.
         member this.UseSignalR (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
