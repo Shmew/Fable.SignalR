@@ -60,7 +60,6 @@ group Fable.SignalR.Tests
     source https://nuget.org/api/v2
 	source https://api.nuget.org/v3/index.json
 
-    nuget Fable.Browser.Dom ~> 1
     nuget Fable.Browser.Url ~> 1
     nuget Fable.Core ~> 3
     nuget Fable.FastCheck ~> 0
@@ -91,7 +90,6 @@ group Client
     source https://nuget.org/api/v2
 	source https://api.nuget.org/v3/index.json
 
-    nuget Fable.Browser.Dom ~> 1
 	nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Feliz ~> 1
@@ -106,7 +104,7 @@ group Server
     nuget FSharp.Control.AsyncSeq ~> 2
 	nuget FSharp.Core ~> 4.7
     nuget FSharp.Data ~> 3
-    nuget Saturn ~> 0.14.1
+    nuget Saturn ~> 0
     nuget TaskBuilder.fs 2.2.0-alpha
 
 group Shared
@@ -140,3 +138,4 @@ group FakeBuild
 	nuget Fake.Tools.Git ~> 5
     nuget FSharp.Json ~> 0
 	nuget FSharpLint.Core ~> 0
+    nuget NuGet.Packaging 5.6

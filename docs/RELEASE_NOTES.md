@@ -1,3 +1,6 @@
+### 0.6.2 - Thursday, September 2nd, 2020
+* Update dependencies
+
 ### 0.6.1 - Wednesday, August 12th, 2020
 * Fix routing middleware not being applied if a config is not given
 
