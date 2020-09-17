@@ -71,6 +71,9 @@ that's left is to insert it into the Saturn pipeline.
 
 <Note type="tip">For more information on the CE options see [here](api#configure_signalr)</Note>
 
+<Note type="warning">If your functions have the same name as the custom operations make sure they
+are fully qualified, otherwise the CE scope will shadow them and you will get a compiler error.</Note>
+
 ```fsharp
 application {
     use_signalr (
