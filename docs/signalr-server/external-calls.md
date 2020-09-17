@@ -51,3 +51,11 @@ type Ticker private (hub: FableHubCaller<SignalRHub.Action,SignalRHub.Response>)
 All you need to do is add this to your `IServiceCollection` and
 when the application starts and a user connects they will
 automatically be dispatched messages on a five second interval.
+
+If you want to use a less safe method of creating your services,
+then you can simply make the `Ticker` constructor public and then 
+when adding it to the service collection it will simply be: 
+
+```fsharp
+services.AddHostedService<Ticker>()
+```
