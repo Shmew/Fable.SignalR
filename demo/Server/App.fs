@@ -19,6 +19,7 @@ module App =
                             stream_from SignalRHub.Stream.sendToClient
                         }
                     )
+                    service_config Ticker.Create
                     url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
                     no_router
                     use_static (Env.clientPath args)

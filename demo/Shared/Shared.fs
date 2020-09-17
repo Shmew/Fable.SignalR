@@ -16,6 +16,7 @@ module SignalRHub =
     [<RequireQualifiedAccess>]
     type Response =
         | NewCount of int
+        | TickerCount of int
 
     module StreamFrom =
         [<RequireQualifiedAccess>]

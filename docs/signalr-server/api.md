@@ -7,12 +7,28 @@ so only those designated as being Saturn-only are available with both libraries.
 
 The `FableHub` is your interface for interacting with the SignalR hub.
 
-There are two types of `FableHub`:
+There are three types of `FableHub`:
  * `FableHub` 
    - A generic hub context that is unable to dispatch messages.
    - Provided for hub *invocations*.
  * `FableHub<'ClientApi,'ServerApi>` 
    - The full hub context that can dispatch messages to users.
+ * `FableHubCaller`
+   - The external hub context.
+   - Used to call hub members externally.
+
+### IFableHubCallerClients
+
+The interface that defines the actions a hub context can make.
+
+For the most part you don't need to know that this exists, as the framework handles this for you.
+
+Signature:
+```fsharp
+type IFableHubCallerClients<'ServerApi> =
+    abstract Send: 'ServerApi -> Task
+    abstract Invoke: {| connectionId: string; invocationId: System.Guid; message: 'ServerApi |} -> Task
+```
 
 ### Generic FableHub
 
@@ -30,7 +46,7 @@ type FableHub =
     abstract Services : System.IServiceProvider
 ```
 
-### FableHub
+### FableHub<'ClientApi,'ServerApi>
 
 The full hub context that can dispatch messages to users.
 
@@ -42,6 +58,18 @@ type FableHub<'ClientApi,'ServerApi> =
     abstract Groups : IGroupManager
     abstract Dispose : unit -> unit
     abstract Services : System.IServiceProvider
+```
+
+### FableHubCaller
+
+The external hub context that can be required via DI to call your hub
+from an external source.
+
+Signature:
+```fsharp
+type FableHubCaller<'ClientApi,'ServerApi> =
+    abstract Clients : IHubClients<IFableHubCallerClients<'ServerApi>>
+    abstract Groups : IGroupManager
 ```
 
 ## SignalR.Config

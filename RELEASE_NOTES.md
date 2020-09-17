@@ -1,3 +1,6 @@
+### 0.7.0 - Thursday, September 17th, 2020
+* Added support for getting hub context via DI
+
 ### 0.6.2 - Thursday, September 2nd, 2020
 * Update dependencies
 

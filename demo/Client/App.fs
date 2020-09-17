@@ -164,6 +164,7 @@ module App =
 
                         match res with
                         | Response.NewCount i -> input.callback i
+                        | _ -> ()
                     }
                     |> Async.StartImmediate
             ]
@@ -180,6 +181,7 @@ module App =
 
                         match res with
                         | Response.NewCount i -> input.callback i
+                        | _ -> ()
                     }
                     |> Async.StartImmediate
             ]
@@ -192,8 +194,27 @@ module App =
             prop.children children
         ]
 
+    let inline bulmaTextContainer (label: string) (children: ReactElement list) =
+        Html.div [
+            prop.classes [ Bulma.HasTextCentered ]
+            prop.style [ style.paddingTop (length.em 5) ]
+            prop.children [
+                Html.div [
+                    prop.classes [ Bulma.Container; Bulma.Box ]
+                    prop.style [ style.maxWidth (length.em 12) ]
+                    prop.children [
+                        Html.text label
+                    ]
+                ]
+                yield! children
+            ]
+        ]
+        
+
     let render = React.functionComponent(fun () ->
         let count,setCount = React.useState 0
+        let tickerCount,setTickerCount = React.useState 0
+        
         let invokeCount,setInvokeCount = React.useState 0
 
         let setInvokeCount = React.useCallback(setInvokeCount, [||])
@@ -203,7 +224,11 @@ module App =
                 hub.withUrl(Endpoints.Root)
                     .withAutomaticReconnect()
                     .configureLogging(LogLevel.Debug)
-                    .onMessage(fun (Response.NewCount i) -> setCount i)
+                    .onMessage(fun msg ->
+                        match msg with
+                        | Response.NewCount i -> setCount i
+                        | Response.TickerCount i -> setTickerCount i
+                    )
         
         Html.div [
             prop.classes [ Bulma.Container; Bulma.IsFullheight ]
@@ -215,34 +240,13 @@ module App =
                             display {| hub = hub |}
                         ]
                         bulmaCol [
-                            Html.div [
-                                prop.classes [ Bulma.HasTextCentered ]
-                                prop.style [ style.paddingTop (length.em 5) ]
-                                prop.children [
-                                    Html.div [
-                                        prop.classes [ Bulma.Container; Bulma.Box ]
-                                        prop.style [ style.maxWidth (length.em 12) ]
-                                        prop.children [
-                                            Html.textf "Count: %i" count
-                                        ]
-                                    ]
-                                    countButtons {| hub = hub; count = count |}
-                                ]   
+                            bulmaTextContainer (sprintf "Count: %i" count) [
+                                countButtons {| hub = hub; count = count |}
                             ]
-                            Html.div [
-                                prop.classes [ Bulma.HasTextCentered ]
-                                prop.style [ style.paddingTop (length.em 5) ]
-                                prop.children [
-                                    Html.div [
-                                        prop.classes [ Bulma.Container; Bulma.Box ]
-                                        prop.style [ style.maxWidth (length.em 12) ]
-                                        prop.children [
-                                            Html.textf "Invoked Count: %i" invokeCount
-                                        ]
-                                    ]
-                                    countInvokeButtons {| hub = hub; count = invokeCount; callback = setInvokeCount |}
-                                ]   
+                            bulmaTextContainer (sprintf "Invoked Count: %i" invokeCount) [
+                                countInvokeButtons {| hub = hub; count = invokeCount; callback = setInvokeCount |}
                             ]
+                            bulmaTextContainer (sprintf "Ticker Count: %i" tickerCount) []
                         ]
                     ]
                 ]

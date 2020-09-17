@@ -58,13 +58,13 @@ module SignalRExtension =
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                FableHub.OnConnected.addTransient onConnect settings.Send settings.Invoke
+                fun s -> FableHub.OnConnected.AddServices(onConnect, settings.Send, settings.Invoke, s)
             | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                FableHub.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke
+                fun s -> FableHub.OnDisconnected.AddServices(onDisconnect, settings.Send, settings.Invoke, s)
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                FableHub.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke
-            | _ -> FableHub.addUpdateTransient settings.Send settings.Invoke
-            |> Impl.config<NormalFableHub<'ClientApi,'ServerApi>> this hubOptions
+                fun s -> FableHub.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, s)
+            | _ -> fun s -> BaseFableHub.AddServices(settings.Send, settings.Invoke, s)
+            |> Impl.config<BaseFableHub<'ClientApi,'ServerApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
@@ -75,12 +75,12 @@ module SignalRExtension =
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                FableHub.Stream.From.OnConnected.addTransient onConnect settings.Send settings.Invoke streamFrom
+                fun s -> FableHub.Stream.From.OnConnected.AddServices(onConnect, settings.Send, settings.Invoke, streamFrom, s)
             | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                FableHub.Stream.From.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke streamFrom
+                fun s -> FableHub.Stream.From.OnDisconnected.AddServices(onDisconnect, settings.Send, settings.Invoke, streamFrom, s)
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                FableHub.Stream.From.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke streamFrom
-            | _ -> FableHub.Stream.From.addTransient settings.Send settings.Invoke streamFrom
+                fun s -> FableHub.Stream.From.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, streamFrom, s)
+            | _ -> fun s -> StreamFromFableHub.AddServices(settings.Send, settings.Invoke, streamFrom, s)
             |> Impl.config<StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
@@ -92,12 +92,12 @@ module SignalRExtension =
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                FableHub.Stream.To.OnConnected.addTransient onConnect settings.Send settings.Invoke (Task.toGen streamTo)
+                fun s -> FableHub.Stream.To.OnConnected.AddServices(onConnect, settings.Send, settings.Invoke, Task.toGen streamTo, s)
             | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                FableHub.Stream.To.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke (Task.toGen streamTo)
+                fun s -> FableHub.Stream.To.OnDisconnected.AddServices(onDisconnect, settings.Send, settings.Invoke, Task.toGen streamTo, s)
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                FableHub.Stream.To.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke (Task.toGen streamTo)
-            | _ -> FableHub.Stream.To.addTransient settings.Send settings.Invoke (Task.toGen streamTo)
+                fun s -> FableHub.Stream.To.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, Task.toGen streamTo, s)
+            | _ -> fun s -> StreamToFableHub.AddServices(settings.Send, settings.Invoke, Task.toGen streamTo, s)
             |> Impl.config<StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
@@ -110,12 +110,12 @@ module SignalRExtension =
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
-                FableHub.Stream.Both.OnConnected.addTransient onConnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
+                fun s -> FableHub.Stream.Both.OnConnected.AddServices(onConnect, settings.Send, settings.Invoke, streamFrom, Task.toGen streamTo, s)
             | Some { OnConnected = None; OnDisconnected = Some onDisconnect } ->
-                FableHub.Stream.Both.OnDisconnected.addTransient onDisconnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
+                fun s -> FableHub.Stream.Both.OnDisconnected.AddServices(onDisconnect, settings.Send, settings.Invoke, streamFrom, Task.toGen streamTo, s)
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
-                FableHub.Stream.Both.Both.addTransient onConnect onDisconnect settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
-            | _ -> FableHub.Stream.Both.addTransient settings.Send settings.Invoke streamFrom (Task.toGen streamTo)
+                fun s -> FableHub.Stream.Both.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, streamFrom, Task.toGen streamTo, s)
+            | _ -> fun s -> StreamBothFableHub.AddServices(settings.Send, settings.Invoke, streamFrom, Task.toGen streamTo, s)
             |> Impl.config<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> this hubOptions
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
@@ -238,7 +238,7 @@ module SignalRExtension =
                         |> SignalR.Config.bindEnpointConfig settings.Config
                 | _ ->
                     fun (endpoints: IEndpointRouteBuilder) ->
-                        endpoints.MapHub<NormalFableHub<'ClientApi,'ServerApi>>(settings.EndpointPattern)
+                        endpoints.MapHub<BaseFableHub<'ClientApi,'ServerApi>>(settings.EndpointPattern)
                         |> SignalR.Config.bindEnpointConfig settings.Config
 
             this
