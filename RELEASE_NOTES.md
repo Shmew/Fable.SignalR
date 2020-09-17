@@ -1,3 +1,6 @@
+### 0.7.1 - Thursday, September 17th, 2020
+* Fix femto configuration
+
 ### 0.7.0 - Thursday, September 17th, 2020
 * Added support for getting hub context via DI
 
