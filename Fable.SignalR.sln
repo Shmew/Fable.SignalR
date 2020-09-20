@@ -113,8 +113,6 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.TestShared", 
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Bench", "tests\Bench\Bench.fsproj", "{DCCCDD76-0140-4882-BB1E-96EB427720ED}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.Shared", "src\Fable.SignalR.Shared\Fable.SignalR.Shared.fsproj", "{D0A89691-FFF0-4601-8207-E83918B896C4}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -173,10 +171,6 @@ Global
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D0A89691-FFF0-4601-8207-E83918B896C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D0A89691-FFF0-4601-8207-E83918B896C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D0A89691-FFF0-4601-8207-E83918B896C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D0A89691-FFF0-4601-8207-E83918B896C4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

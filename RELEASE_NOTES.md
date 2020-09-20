@@ -1,3 +1,6 @@
+### 0.8.1 - Sunday, September 20th, 2020
+* Fix Fable compilation
+
 ### 0.8.0 - Sunday, September 20th, 2020
 * Add message pack support
 

@@ -5,6 +5,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Shared.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="HttpClient.fs" />
     <Compile Include="HubConnection.fs" />
@@ -13,18 +14,6 @@
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
-  <Choose>
-    <When Condition="$(DefineConstants.Contains('FABLE_COMPILER'))">
-      <ItemGroup>
-        <ProjectReference Include="Shared\Fable.SignalR.Shared.fsproj" />
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <ItemGroup>
-        <ProjectReference Include="..\Fable.SignalR.Shared\Fable.SignalR.Shared.fsproj" />
-      </ItemGroup>
-    </Otherwise>
-  </Choose>
   <PropertyGroup>
     <NpmDependencies>
       <NpmPackage Name="@microsoft/signalr" Version="gte 3.1.5 lt 4" ResolutionStrategy="max" />
