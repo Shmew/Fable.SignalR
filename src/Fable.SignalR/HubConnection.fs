@@ -1,6 +1,7 @@
 ﻿namespace Fable.SignalR
 
 open Fable.Core
+open Fable.SignalR.Shared
 open System
 open System.ComponentModel
 
@@ -25,6 +26,9 @@ module Messages =
     type HubInvocationMessage =
         inherit HubMessageBase
 
+        /// A MessageType value indicating the type of this message.
+        abstract ``type``: MessageType
+
         /// A MessageHeaders dictionary containing headers attached to the message.
         abstract headers: Map<string,string> option
 
@@ -36,16 +40,23 @@ module Messages =
 
     /// A hub message representing a non-streaming invocation.
     type InvocationMessage<'T> =
-        inherit HubInvocationMessage
-
         /// A MessageType value indicating the type of this message.
         abstract ``type``: MessageType
+        
+        /// A MessageHeaders dictionary containing headers attached to the message.
+        abstract headers: Map<string,string> option
+
+        /// The ID of the invocation relating to this message.
+        /// 
+        /// This is expected to be present for StreamInvocationMessage and CompletionMessage. It may
+        /// be 'undefined' for an InvocationMessage if the sender does not expect a response.
+        abstract invocationId: string option
 
         /// The target method name.
         abstract target: string
 
         /// The target method arguments.
-        abstract arguments: ResizeArray<'T option>
+        abstract arguments: ResizeArray<'T>
 
         /// The target methods stream IDs.
         abstract streamIds: ResizeArray<string> option
@@ -56,6 +67,9 @@ module Messages =
 
         /// A MessageType value indicating the type of this message.
         abstract ``type``: MessageType
+        
+        /// A MessageHeaders dictionary containing headers attached to the message.
+        abstract headers: Map<string,string> option
 
         /// The invocation ID.
         abstract invocationId: string
@@ -64,7 +78,7 @@ module Messages =
         abstract target: string
 
         /// The target method arguments.
-        abstract arguments: ResizeArray<'T option>
+        abstract arguments: ResizeArray<'T>
 
         /// The target methods stream IDs.
         abstract streamIds: ResizeArray<string> option
@@ -75,12 +89,15 @@ module Messages =
 
         /// A MessageType value indicating the type of this message.
         abstract ``type``: MessageType
+        
+        /// A MessageHeaders dictionary containing headers attached to the message.
+        abstract headers: Map<string,string> option
 
-        /// The invocation ID.
+        /// The ID of the invocation relating to this message.
         abstract invocationId: string
 
         /// The item produced by the server.
-        abstract item: 'T option
+        abstract item: 'T
 
     /// A hub message representing the result of an invocation.
     type CompletionMessage<'T> =
@@ -88,6 +105,9 @@ module Messages =
 
         /// A MessageType value indicating the type of this message.
         abstract ``type``: MessageType
+        
+        /// A MessageHeaders dictionary containing headers attached to the message.
+        abstract headers: Map<string,string> option
 
         /// The invocation ID.
         abstract invocationId: string
@@ -133,28 +153,34 @@ module Messages =
 
         /// A MessageType value indicating the type of this message.
         abstract ``type``: MessageType
+        
+        /// A MessageHeaders dictionary containing headers attached to the message.
+        abstract headers: Map<string,string> option
 
-        /// The invocation ID.
-        abstract invocationId: string
+        /// The ID of the invocation relating to this message.
+        /// 
+        /// This is expected to be present for StreamInvocationMessage and CompletionMessage. It may
+        /// be 'undefined' for an InvocationMessage if the sender does not expect a response.
+        abstract invocationId: string option
 
-    type HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
-        U8<InvocationMessage<'ServerApi>, 
-           InvocationMessage<{| connectionId: string; message: 'ServerApi |}>, 
-           StreamItemMessage<'ServerStreamApi>, 
-           CompletionMessage<'ServerApi>, 
-           StreamInvocationMessage<'ClientStreamApi>, 
+    type HubMessage<'StreamInvocation,'Args,'Completion,'StreamItem> =
+        U8<InvocationMessage<'Args>, 
+           InvocationMessage<InvokeArg<'Args>>, 
+           StreamItemMessage<'StreamItem>, 
+           CompletionMessage<'Completion>, 
+           StreamInvocationMessage<'StreamInvocation>, 
            CancelInvocationMessage, 
            PingMessage, 
            CloseMessage>
 
 /// A protocol abstraction for communicating with SignalR Hubs.
-type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
+type IHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     /// The name of the protocol. This is used by SignalR to resolve the protocol between the client 
     /// and server.
     abstract name: string
 
     /// The version of the protocol.
-    abstract version: float
+    abstract version: int
 
     /// The TransferFormat of the protocol.
     abstract transferFormat: TransferFormat
@@ -163,14 +189,14 @@ type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
     /// 
     /// If IHubProtocol.transferFormat is 'Text', the `input` parameter must be a string, otherwise 
     /// it must be an ArrayBuffer.
-    abstract parseMessages : input: U3<string,JS.ArrayBuffer,Buffer> * ?logger: ILogger 
-        -> ResizeArray<Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi>>
+    abstract parseMessages : input: U2<string,JS.ArrayBuffer> * logger: ILogger 
+        -> ResizeArray<Messages.HubMessage<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
 
     /// Writes the specified HubMessage to a string or ArrayBuffer and returns it.
     /// 
     /// If IHubProtocol.transferFormat is 'Text', the result of this method will be a string, 
     /// otherwise it will be an ArrayBuffer.
-    abstract writeMessage: message: Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> 
+    abstract writeMessage: message: Messages.HubMessage<'ClientStreamFromApi,'ClientApi,'ClientApi,'ClientStreamToApi> 
         -> U2<string, JS.ArrayBuffer>
 
 /// A stream interface to stream items to the server.
@@ -305,7 +331,7 @@ type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
     abstract withUrl: url: string * transportType: TransportType -> IHubConnectionBuilder<'ClientApi,'ServerApi>
     abstract withUrl: url: string * options: Http.ConnectionOptions -> IHubConnectionBuilder<'ClientApi,'ServerApi>
 
-    abstract withHubProtocol : protocol: IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
+    abstract withHubProtocol : protocol: IHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
 
     abstract withAutomaticReconnect: unit -> IHubConnectionBuilder<'ClientApi,'ServerApi>
     abstract withAutomaticReconnect: retryDelays: seq<int> -> IHubConnectionBuilder<'ClientApi,'ServerApi>
@@ -521,7 +547,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                 |> Option.defaultValue (fun _ -> mailbox.Post(HubMailbox.ProcessSends))
                 |> Some }
         |> fun handlers -> handlers.apply(hub)
-        hub.on<{| connectionId: string; invocationId: System.Guid; message: 'ServerApi |}>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.invocationId,rsp.message))
+        hub.on<InvokeArg<'ServerApi>>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.invocationId,rsp.message))
 
     interface System.IDisposable with
         member _.Dispose () =

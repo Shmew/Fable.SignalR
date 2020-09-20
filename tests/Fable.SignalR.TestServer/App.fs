@@ -32,6 +32,7 @@ module App =
                             stream_to SignalRHub2.Stream.getFromClient
                             with_log_level Microsoft.Extensions.Logging.LogLevel.None
                             with_hub_options (fun ho -> ho.EnableDetailedErrors <- Nullable<bool>(true))
+                            use_messagepack
                         }
                     )
                     service_config (fun s -> s.AddSingleton<RandomStringGen>())

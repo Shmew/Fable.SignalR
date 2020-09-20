@@ -112,6 +112,9 @@ type Config<'ClientApi,'ServerApi> =
       /// Called when a connection with the hub is terminated.
       OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option }
 
+      /// Enable MessagePack binary (de)serialization instead of JSON.
+      UseMessagePack: bool
+
     /// Creates an empty record.
     static member Default () : Config<'ClientApi,'ServerApi>
 ```
@@ -181,6 +184,9 @@ type ConfigBuilder<'ClientApi,'ServerApi> (settings: Settings<'ClientApi,'Server
 
     /// Called when a connection with the hub is terminated.
     member OnDisconnected (f: exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) : ConfigBuilder
+
+    /// Enable MessagePack binary (de)serialization instead of JSON.
+    member UseMessagePack () : ConfigBuilder
 ```
 
 ## configure_signalr
@@ -216,6 +222,9 @@ configure_signalr {
 
     /// Inject a Websocket middleware to support bearer tokens.
     use_bearer_auth
+
+    /// Enable MessagePack binary (de)serialization instead of JSON.
+    use_messagepack
 
     /// App configuration after app.UseRouting() is called.
     with_after_routing: IApplicationBuilder -> IApplicationBuilder

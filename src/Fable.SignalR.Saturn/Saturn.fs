@@ -111,6 +111,16 @@ module SignalRExtension =
                                 EnableBearerAuth = true }
                             |> Some }
 
+            /// Enable MessagePack binary (de)serialization instead of JSON.
+            [<CustomOperation("use_messagepack")>]
+            member _.MessagePack (state: State.Settings<_,_,_,_,_>) =
+                state.MapSettings <| fun state ->  
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                UseMessagePack = true }
+                            |> Some }
+
             /// App configuration after app.UseRouting() is called.
             [<CustomOperation("with_after_routing")>]
             member _.AfterRouting (state: State.Settings<_,_,_,_,_>, f: IApplicationBuilder -> IApplicationBuilder) =

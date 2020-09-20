@@ -209,7 +209,6 @@ module App =
                 yield! children
             ]
         ]
-        
 
     let render = React.functionComponent(fun () ->
         let count,setCount = React.useState 0
@@ -224,6 +223,7 @@ module App =
                 hub.withUrl(Endpoints.Root)
                     .withAutomaticReconnect()
                     .configureLogging(LogLevel.Debug)
+                    .useMessagePack()
                     .onMessage(fun msg ->
                         match msg with
                         | Response.NewCount i -> setCount i

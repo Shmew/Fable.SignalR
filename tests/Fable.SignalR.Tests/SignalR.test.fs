@@ -38,7 +38,7 @@ let hub : Hub =
             .withAutomaticReconnect()
             .configureLogging(LogLevel.None))
 
-let hub2 : Hub =
+let msgPackHub : Hub =
     SignalR.connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
         hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root2)
             .withAutomaticReconnect()
@@ -308,9 +308,13 @@ Jest.test.prop("Normal model tests run", commandArb, fun cmds ->
     FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds)
 , timeout = 60000)
     
+Jest.test.prop("MessagePack works", commandArb, fun cmds ->
+    FastCheck.asyncModelRun(HubModel(msgPackHub), HubModel(msgPackHub), cmds)
+, timeout = 60000)
+
 Jest.test.prop("Can run two hubs at once", commandArb, commandArb, fun cmds1 cmds2 ->
     async {
         do! FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds1)
-        do! FastCheck.asyncModelRun(HubModel(hub2), HubModel(hub2), cmds2)
+        do! FastCheck.asyncModelRun(HubModel(msgPackHub), HubModel(msgPackHub), cmds2)
     }
 , timeout = 60000)

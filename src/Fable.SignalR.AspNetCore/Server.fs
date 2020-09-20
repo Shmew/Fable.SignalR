@@ -1,5 +1,6 @@
 ﻿namespace Fable.SignalR
 
+open Fable.SignalR.Shared
 open FSharp.Control.Tasks.V2
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.SignalR
@@ -11,7 +12,7 @@ open System.Threading.Tasks
 
 type IFableHubCallerClients<'ServerApi when 'ServerApi : not struct> =
     abstract Send: 'ServerApi -> Task
-    abstract Invoke: {| connectionId: string; invocationId: System.Guid; message: 'ServerApi |} -> Task
+    abstract Invoke: InvokeArg<'ServerApi> -> Task
 
 // fsharplint:disable-next-line
 type FableHub =
@@ -64,7 +65,7 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] BaseFableHub<'ClientApi,'Ser
     member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg (this :> FableHub)
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
+            do! this.Clients.Caller.Invoke({ connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message })
         } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
 
@@ -100,7 +101,7 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamFromFableHub<'ClientAp
     member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg (this :> FableHub)
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
+            do! this.Clients.Caller.Invoke({ connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message })
         } :> Task
         
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
@@ -136,7 +137,7 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,
     member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg (this :> FableHub)
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
+            do! this.Clients.Caller.Invoke({ connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message })
         } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
@@ -172,7 +173,7 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamBothFableHub<'ClientAp
     member this.Invoke (msg: 'ClientApi, invocationId: System.Guid) =
         task {
             let! message = settings.Invoke msg (this :> FableHub)
-            do! this.Clients.Caller.Invoke({| connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message |})
+            do! this.Clients.Caller.Invoke({ connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message })
         } :> Task
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamFrom msg = settings.StreamFrom msg (this :> FableHub<'ClientApi,'ServerApi>)
@@ -578,7 +579,9 @@ module SignalR =
           /// Called when a new connection is established with the hub.
           OnConnected: (FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
           /// Called when a connection with the hub is terminated.
-          OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option }
+          OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
+          /// Enable MessagePack binary (de)serialization instead of JSON.
+          UseMessagePack: bool }
 
         /// Creates an empty record.
         static member Default () =
@@ -590,7 +593,8 @@ module SignalR =
               LogLevel = None
               NoRouting = false
               OnConnected = None
-              OnDisconnected = None }
+              OnDisconnected = None
+              UseMessagePack = false }
 
     [<RequireQualifiedAccess>]
     module internal Config =
@@ -721,6 +725,16 @@ module SignalR =
                     Config =
                         { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
                             OnDisconnected = Some f }
+                        |> Some }
+            this
+
+        /// Enable MessagePack binary (de)serialization instead of JSON.
+        member this.UseMessagePack () =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            UseMessagePack = true }
                         |> Some }
             this
 

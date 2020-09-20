@@ -9,6 +9,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
 
     let mutable hub = hub
     let mutable handlers = Handlers.empty
+    let mutable useMsgPack = false
 
     /// Configures console logging for the HubConnection.
     member this.configureLogging (logLevel: LogLevel) = 
@@ -21,6 +22,31 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
     /// Configures custom logging for the HubConnection.
     member this.configureLogging (logLevel: string) = 
         hub <- hub.configureLogging(logLevel)
+        this
+
+    /// Callback when the connection is closed.
+    member this.onClose callback =
+        handlers <- { handlers with onClose = Some callback }
+        this
+
+    /// Callback when a new message is recieved.
+    member this.onMessage (callback: 'ServerApi -> unit) = 
+        handlers <- { handlers with onMessage = Some (unbox callback) }
+        this
+    
+    /// Callback when the connection successfully reconnects.
+    member this.onReconnected (callback: (string option -> unit)) =
+        handlers <- { handlers with onReconnected = Some callback }
+        this
+
+    /// Callback when the connection starts reconnecting.
+    member this.onReconnecting (callback: (exn option -> unit)) =
+        handlers <- { handlers with onReconnecting = Some callback }
+        this
+
+    /// Enable MessagePack binary (de)serialization instead of JSON.
+    member this.useMessagePack () =
+        useMsgPack <- true
         this
 
     /// Configures the HubConnection to use HTTP-based transports to connect 
@@ -45,7 +71,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         this
 
     /// Configures the HubConnection to use the specified Hub Protocol.
-    member this.withHubProtocol (protocol: IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>) = 
+    member this.withHubProtocol (protocol: IHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) = 
         hub <- hub.withHubProtocol(protocol)
         this
 
@@ -74,40 +100,14 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         hub <- hub.withAutomaticReconnect(reconnectPolicy)
         this
 
-    /// Callback when the connection is closed.
-    member this.onClose callback =
-        handlers <- { handlers with onClose = Some callback }
-        this
-
-    /// Callback when a new message is recieved.
-    member this.onMessage (callback: 'ServerApi -> unit) = 
-        handlers <- { handlers with onMessage = Some (unbox callback) }
-        this
-    
-    /// Callback when the connection successfully reconnects.
-    member this.onReconnected (callback: (string option -> unit)) =
-        handlers <- { handlers with onReconnected = Some callback }
-        this
-
-    /// Callback when the connection starts reconnecting.
-    member this.onReconnecting (callback: (exn option -> unit)) =
-        handlers <- { handlers with onReconnecting = Some callback }
-        this
-
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     #if FABLE_COMPILER
     member inline _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     #else
     member _.build () : HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     #endif
-        let jsonParser = Parser.JsonProtocol()
-
-        {| name = jsonParser.name
-           version = jsonParser.version
-           transferFormat = jsonParser.transferFormat
-           writeMessage = jsonParser.writeMessage
-           parseMessages = jsonParser.parseMessages<'ClientStreamFromApi,'ServerApi,'ServerStreamApi> |}
-        |> unbox<IHubProtocol<'ClientStreamFromApi,'ServerApi,'ServerStreamApi>>
+        if useMsgPack then Protocol.MsgPack.create<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>()
+        else Protocol.Json.create()
         |> fun protocol -> hub.withHubProtocol(protocol).build()
         |> fun hub -> new HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>(hub, handlers)
 
@@ -117,7 +117,7 @@ type SignalR =
     #if FABLE_COMPILER
     static member inline connect<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
     #else
-    static member connect<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
+    static member connect<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>
     #endif
         (config: HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> 
             -> HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>) =

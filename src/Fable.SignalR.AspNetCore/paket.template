@@ -6,3 +6,4 @@ language
     F#
 tags
     fsharp, fable, react, websocket, signalr, asp.net core, giraffe
+include-referenced-projects true

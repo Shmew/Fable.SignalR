@@ -1,3 +1,6 @@
+### 0.8.0 - Sunday, September 20th, 2020
+* Add message pack support
+
 ### 0.7.1 - Thursday, September 17th, 2020
 * Fix femto configuration
 

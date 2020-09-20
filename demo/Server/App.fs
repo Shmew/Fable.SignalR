@@ -17,6 +17,7 @@ module App =
                             send SignalRHub.send
                             invoke SignalRHub.invoke
                             stream_from SignalRHub.Stream.sendToClient
+                            use_messagepack
                         }
                     )
                     service_config Ticker.Create

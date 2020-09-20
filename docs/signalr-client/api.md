@@ -172,7 +172,7 @@ A protocol abstraction for communicating with SignalR Hubs.
 
 Signature:
 ```fsharp
-type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
+type IHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> =
     /// The name of the protocol.  is used by SignalR to resolve the protocol between the client 
     /// and server.
     abstract name: string
@@ -187,15 +187,15 @@ type IHubProtocol<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
     /// 
     /// If IHubProtocol.transferFormat is 'Text', the `input` parameter must be a string, otherwise 
     /// it must be an ArrayBuffer.
-    abstract parseMessages : input: U3<string,JS.ArrayBuffer,Buffer> * ?logger: ILogger 
-        -> ResizeArray<Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi>>
+    abstract parseMessages : input: U2<string,JS.ArrayBuffer> * logger: ILogger 
+        -> ResizeArray<Messages.HubMessage<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
 
     /// Writes the specified HubMessage to a string or ArrayBuffer and returns it.
     /// 
     /// If IHubProtocol.transferFormat is 'Text', the result of  method will be a string, 
     /// otherwise it will be an ArrayBuffer.
     abstract writeMessage: 
-        message: Messages.HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> 
+        message: Messages.HubMessage<'ClientStreamFromApi,'ClientApi,'ClientApi,'ClientStreamToApi> 
             -> U2<string, JS.ArrayBuffer>
 ```
 
@@ -365,6 +365,21 @@ type HubConnectionBuilder
     member configureLogging (logger: ILogger) : HubConnectionBuilder
     member configureLogging (logLevel: string) : HubConnectionBuilder
         
+    /// Callback when the connection is closed.
+    member onClose callback : HubConnectionBuilder
+        
+    /// Callback when a new message is recieved.
+    member onMessage (callback: 'ServerApi -> unit) : HubConnectionBuilder
+        
+    /// Callback when the connection successfully reconnects.
+    member onReconnected (callback: (string option -> unit)) : HubConnectionBuilder
+        
+    /// Callback when the connection starts reconnecting.
+    member onReconnecting (callback: (exn option -> unit)) : HubConnectionBuilder
+
+    /// Enable MessagePack binary (de)serialization instead of JSON.
+    member useMessagePack () : HubConnectionBuilder
+
     /// Configures the HubConnection to use HTTP-based transports to connect 
     /// to the specified URL.
     /// 
@@ -404,18 +419,6 @@ type HubConnectionBuilder
     /// Configures the HubConnection to automatically attempt to reconnect if the 
     /// connection is lost.
     member withAutomaticReconnect (reconnectPolicy: RetryPolicy) : HubConnectionBuilder
-
-    /// Callback when the connection is closed.
-    member onClose callback : HubConnectionBuilder
-        
-    /// Callback when a new message is recieved.
-    member onMessage (callback: 'ServerApi -> unit) : HubConnectionBuilder
-        
-    /// Callback when the connection successfully reconnects.
-    member onReconnected (callback: (string option -> unit)) : HubConnectionBuilder
-        
-    /// Callback when the connection starts reconnecting.
-    member onReconnecting (callback: (exn option -> unit)) : HubConnectionBuilder
 ```
 
 ## SignalR
@@ -826,15 +829,19 @@ Defines properties common to all Hub messages relating to a specific invocation.
 
 Signature:
 ```fsharp
+/// Defines properties common to all Hub messages relating to a specific invocation.
 type HubInvocationMessage =
     inherit HubMessageBase
+
+    /// A MessageType value indicating the type of this message.
+    abstract ``type``: MessageType
 
     /// A MessageHeaders dictionary containing headers attached to the message.
     abstract headers: Map<string,string> option
 
-    /// The ID of the invocation relating to  message.
+    /// The ID of the invocation relating to this message.
     /// 
-    ///  is expected to be present for StreamInvocationMessage and CompletionMessage. It may
+    /// This is expected to be present for StreamInvocationMessage and CompletionMessage. It may
     /// be 'undefined' for an InvocationMessage if the sender does not expect a response.
     abstract invocationId: string option
 ```
@@ -846,16 +853,23 @@ A hub message representing a non-streaming invocation.
 Signature:
 ```fsharp
 type InvocationMessage<'T> =
-    inherit HubInvocationMessage
-
-    /// A MessageType value indicating the type of  message.
+    /// A MessageType value indicating the type of this message.
     abstract ``type``: MessageType
+        
+    /// A MessageHeaders dictionary containing headers attached to the message.
+    abstract headers: Map<string,string> option
+
+    /// The ID of the invocation relating to this message.
+    /// 
+    /// This is expected to be present for StreamInvocationMessage and CompletionMessage. It may
+    /// be 'undefined' for an InvocationMessage if the sender does not expect a response.
+    abstract invocationId: string option
 
     /// The target method name.
     abstract target: string
 
     /// The target method arguments.
-    abstract arguments: ResizeArray<'T option>
+    abstract arguments: ResizeArray<'T>
 
     /// The target methods stream IDs.
     abstract streamIds: ResizeArray<string> option
@@ -870,8 +884,11 @@ Signature:
 type StreamInvocationMessage<'T> =
     inherit HubInvocationMessage
 
-    /// A MessageType value indicating the type of  message.
+    /// A MessageType value indicating the type of this message.
     abstract ``type``: MessageType
+        
+    /// A MessageHeaders dictionary containing headers attached to the message.
+    abstract headers: Map<string,string> option
 
     /// The invocation ID.
     abstract invocationId: string
@@ -880,7 +897,7 @@ type StreamInvocationMessage<'T> =
     abstract target: string
 
     /// The target method arguments.
-    abstract arguments: ResizeArray<'T option>
+    abstract arguments: ResizeArray<'T>
 
     /// The target methods stream IDs.
     abstract streamIds: ResizeArray<string> option
@@ -895,14 +912,17 @@ Signature:
 type StreamItemMessage<'T> =
     inherit HubInvocationMessage
 
-    /// A MessageType value indicating the type of  message.
+    /// A MessageType value indicating the type of this message.
     abstract ``type``: MessageType
+        
+    /// A MessageHeaders dictionary containing headers attached to the message.
+    abstract headers: Map<string,string> option
 
-    /// The invocation ID.
+    /// The ID of the invocation relating to this message.
     abstract invocationId: string
 
     /// The item produced by the server.
-    abstract item: 'T option
+    abstract item: 'T
 ```
 
 ### CompletionMessage
@@ -914,8 +934,11 @@ Signature:
 type CompletionMessage<'T> =
     inherit HubInvocationMessage
 
-    /// A MessageType value indicating the type of  message.
+    /// A MessageType value indicating the type of this message.
     abstract ``type``: MessageType
+        
+    /// A MessageHeaders dictionary containing headers attached to the message.
+    abstract headers: Map<string,string> option
 
     /// The invocation ID.
     abstract invocationId: string
@@ -955,12 +978,12 @@ Signature:
 type CloseMessage =
     inherit HubMessageBase
 
-    /// A MessageType value indicating the type of  message.
+    /// A MessageType value indicating the type of this message.
     abstract ``type``: MessageType
 
     /// The error that triggered the close, if any.
     /// 
-    /// If  property is undefined, the connection was closed normally and without error.
+    /// If this property is undefined, the connection was closed normally and without error.
     abstract error: string option
 
     /// If true, clients with automatic reconnects enabled should attempt to reconnect after 
@@ -975,26 +998,32 @@ A hub message sent to request that a streaming invocation be canceled.
 Signature:
 ```fsharp
 type CancelInvocationMessage =
-    inherit HubInvocationMessage
+        inherit HubInvocationMessage
 
-    /// A MessageType value indicating the type of  message.
+    /// A MessageType value indicating the type of this message.
     abstract ``type``: MessageType
+        
+    /// A MessageHeaders dictionary containing headers attached to the message.
+    abstract headers: Map<string,string> option
 
-    /// The invocation ID.
-    abstract invocationId: string
+    /// The ID of the invocation relating to this message.
+    /// 
+    /// This is expected to be present for StreamInvocationMessage and CompletionMessage. It may
+    /// be 'undefined' for an InvocationMessage if the sender does not expect a response.
+    abstract invocationId: string option
 ```
 
 ### HubMessage
 
 Signature:
 ```fsharp
-type HubMessage<'ClientStreamApi,'ServerApi,'ServerStreamApi> =
-    U8<InvocationMessage<'ServerApi>,
-       InvocationMessage<{| connectionId: string; message: 'ServerApi |}>, 
-       StreamItemMessage<'ServerStreamApi>, 
-       CompletionMessage<'ServerApi>, 
-       StreamInvocationMessage<'ClientStreamApi>, 
-       CancelInvocationMessage, 
-       PingMessage, 
-       CloseMessage>
+type HubMessage<'StreamInvocation,'Args,'Completion,'StreamItem> =
+    U8<InvocationMessage<'Args>, 
+        InvocationMessage<InvokeArg<'Args>>, 
+        StreamItemMessage<'StreamItem>, 
+        CompletionMessage<'Completion>, 
+        StreamInvocationMessage<'StreamInvocation>, 
+        CancelInvocationMessage, 
+        PingMessage, 
+        CloseMessage>
 ```

@@ -6,6 +6,9 @@ language
     F#
 tags
     fsharp, fable, react, websocket, signalr
+include-referenced-projects true
 files
     *.fsproj ==> fable
     *.fs ==> fable
+    ../Fable.SignalR.Shared/*.fsproj ==> fable/Shared
+    ../Fable.SignalR.Shared/*.fs ==> fable/Shared

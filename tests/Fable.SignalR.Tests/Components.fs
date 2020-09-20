@@ -1,7 +1,6 @@
 ﻿module Components
 
 open Elmish
-open Fable.Core
 open Fable.SignalR
 open Fable.SignalR.Elmish
 open Feliz

@@ -1,5 +1,6 @@
 ﻿group Fable.SignalR
     Fable.Core
     Fable.Promise
+    Fable.Remoting.MsgPack
     Fable.SimpleJson
     FSharp.Core

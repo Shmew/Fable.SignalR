@@ -41,7 +41,9 @@ let repo = "https://github.com/Shmew/Fable.SignalR"
 let relaxedNameLinting = 
     [ __SOURCE_DIRECTORY__ @@ "src/Fable.SignalR/*.fs"
       __SOURCE_DIRECTORY__ @@ "src/Fable.SignalR.Elmish/*.fs"
-      __SOURCE_DIRECTORY__ @@ "src/Fable.SignalR.Feliz/*.fs" ]
+      __SOURCE_DIRECTORY__ @@ "src/Fable.SignalR.Feliz/*.fs"
+      __SOURCE_DIRECTORY__ @@ "src/Fable.SignalR.Shared/*.fs"
+      __SOURCE_DIRECTORY__ @@ "tests/**/*.fs" ]
 
 // Read additional information from the release notes document
 let release = ReleaseNotes.load (__SOURCE_DIRECTORY__ @@ "RELEASE_NOTES.md")

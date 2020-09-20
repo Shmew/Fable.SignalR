@@ -6,6 +6,7 @@ module SignalRExtension =
     open Fable.SignalR
     open Microsoft.AspNetCore.Builder
     open Microsoft.AspNetCore.SignalR
+    open Microsoft.AspNetCore.SignalR.Protocol
     open Microsoft.AspNetCore.Routing
     open Microsoft.Extensions.DependencyInjection
     open Microsoft.Extensions.Hosting
@@ -23,13 +24,20 @@ module SignalRExtension =
 
     [<RequireQualifiedAccess>]
     module internal Impl =
-        let config<'T when 'T :> Hub> (builder: IServiceCollection) (hubOptions: (HubOptions -> unit) option) (transients: IServiceCollection -> IServiceCollection) =
-            builder
-                .AddSignalR()
-                .AddNewtonsoftJsonProtocol(fun o -> 
-                    o.PayloadSerializerSettings.DateParseHandling <- DateParseHandling.None
-                    o.PayloadSerializerSettings.ContractResolver <- new Serialization.DefaultContractResolver()
-                    o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
+        let config<'T, 'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi when 'T :> Hub> (builder: IServiceCollection) (hubOptions: (HubOptions -> unit) option) (msgPack: bool) (transients: IServiceCollection -> IServiceCollection) =
+            builder.AddSignalR()
+            |> fun builder ->
+                if msgPack then
+                    builder.Services.AddSingleton<IHubProtocol,MsgPackProtocol.FableHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>()
+                    |> ignore
+
+                    builder
+                else
+                    builder
+                        .AddNewtonsoftJsonProtocol(fun o -> 
+                            o.PayloadSerializerSettings.DateParseHandling <- DateParseHandling.None
+                            o.PayloadSerializerSettings.ContractResolver <- new Serialization.DefaultContractResolver()
+                            o.PayloadSerializerSettings.Converters.Add(FableJsonConverter()))
             |> fun builder ->
                 match hubOptions with
                 | Some hubOptions ->
@@ -55,6 +63,7 @@ module SignalRExtension =
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
             let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let msgPk = Option.defaultValue false (settings.Config |> Option.map (fun c -> c.UseMessagePack))
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
@@ -64,7 +73,7 @@ module SignalRExtension =
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
                 fun s -> FableHub.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, s)
             | _ -> fun s -> BaseFableHub.AddServices(settings.Send, settings.Invoke, s)
-            |> Impl.config<BaseFableHub<'ClientApi,'ServerApi>> this hubOptions
+            |> Impl.config<BaseFableHub<'ClientApi,'ServerApi>,'ClientApi,unit,unit,'ServerApi,unit> this hubOptions msgPk
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
@@ -72,6 +81,7 @@ module SignalRExtension =
              streamFrom: 'ClientStreamApi -> FableHub<'ClientApi,'ServerApi> -> IAsyncEnumerable<'ServerStreamApi>) =
 
             let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let msgPk = Option.defaultValue false (settings.Config |> Option.map (fun c -> c.UseMessagePack))
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
@@ -81,7 +91,7 @@ module SignalRExtension =
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
                 fun s -> FableHub.Stream.From.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, streamFrom, s)
             | _ -> fun s -> StreamFromFableHub.AddServices(settings.Send, settings.Invoke, streamFrom, s)
-            |> Impl.config<StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>> this hubOptions
+            |> Impl.config<StreamFromFableHub<'ClientApi,'ClientStreamApi,'ServerApi,'ServerStreamApi>,'ClientApi,'ClientStreamApi,unit,'ServerApi,'ServerStreamApi> this hubOptions msgPk
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
@@ -89,6 +99,7 @@ module SignalRExtension =
              streamTo: IAsyncEnumerable<'ClientStreamApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
 
             let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let msgPk = Option.defaultValue false (settings.Config |> Option.map (fun c -> c.UseMessagePack))
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
@@ -98,7 +109,7 @@ module SignalRExtension =
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
                 fun s -> FableHub.Stream.To.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, Task.toGen streamTo, s)
             | _ -> fun s -> StreamToFableHub.AddServices(settings.Send, settings.Invoke, Task.toGen streamTo, s)
-            |> Impl.config<StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>> this hubOptions
+            |> Impl.config<StreamToFableHub<'ClientApi,'ClientStreamApi,'ServerApi>,'ClientApi,unit,'ClientStreamApi,'ServerApi,unit> this hubOptions msgPk
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR
@@ -107,6 +118,7 @@ module SignalRExtension =
              streamTo: IAsyncEnumerable<'ClientStreamToApi> -> FableHub<'ClientApi,'ServerApi> -> #Task) =
 
             let hubOptions = settings.Config |> Option.bind (fun s -> s.HubOptions)
+            let msgPk = Option.defaultValue false (settings.Config |> Option.map (fun c -> c.UseMessagePack))
 
             match settings.Config with
             | Some { OnConnected = Some onConnect; OnDisconnected = None } ->
@@ -116,7 +128,7 @@ module SignalRExtension =
             | Some { OnConnected = Some onConnect; OnDisconnected = Some onDisconnect } ->
                 fun s -> FableHub.Stream.Both.Both.AddServices(onConnect, onDisconnect, settings.Send, settings.Invoke, streamFrom, Task.toGen streamTo, s)
             | _ -> fun s -> StreamBothFableHub.AddServices(settings.Send, settings.Invoke, streamFrom, Task.toGen streamTo, s)
-            |> Impl.config<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>> this hubOptions
+            |> Impl.config<StreamBothFableHub<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>,'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> this hubOptions msgPk
         
         /// Adds SignalR services to the specified Microsoft.Extensions.DependencyInjection.IServiceCollection.
         member this.AddSignalR(endpoint: string, update: 'ClientApi -> FableHub<'ClientApi,'ServerApi> -> #Task, invoke: 'ClientApi -> FableHub -> Task<'ServerApi>) =
