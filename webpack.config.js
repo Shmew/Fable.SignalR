@@ -26,6 +26,9 @@ var CONFIG = {
     // When using webpack-dev-server, you may need to redirect some calls
     // to a external API server. See https://webpack.js.org/configuration/dev-server/#devserver-proxy
     devServerProxy: {
+        '/Api': {
+            target: 'http://localhost:' + (process.env.GIRAFFE_FABLE_PORT || '8085')
+        },
         '/SignalR': {
             target: 'http://localhost:' + (process.env.GIRAFFE_FABLE_PORT || '8085'),
             changeOrigin: true,

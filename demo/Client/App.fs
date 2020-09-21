@@ -11,7 +11,25 @@ module App =
     type Bulma = CssClasses<"https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css", Naming.PascalCase>
 
     type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response>
+
+    module Api =
+        open Fable.Remoting.Client
+
+        let private api =
+            Remoting.createApi()
+            |> Remoting.withRouteBuilder Api.path
+            |> Remoting.buildProxy<Api.IApi>
         
+        let login () =
+            async {
+                let! res = api.login "admin" "admin"
+
+                return 
+                    match res with
+                    | Ok res -> res
+                    | Error e -> failwithf "Authentication failed: %s" e
+            }
+
     let private graph = React.functionComponent(fun (input: {| dates: System.DateTime list; lows: float list; highs: float list |}) ->
         Plotly.plot [
             plot.traces [
@@ -220,7 +238,7 @@ module App =
 
         let hub =
             React.useSignalR<Action,StreamFrom.Action,Response,StreamFrom.Response> <| fun hub -> 
-                hub.withUrl(Endpoints.Root)
+                hub.withUrl(Endpoints.Root, fun builder -> builder.accessTokenFactory Api.login)
                     .withAutomaticReconnect()
                     .configureLogging(LogLevel.Debug)
                     .useMessagePack()

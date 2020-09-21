@@ -8,6 +8,9 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="Data\apple.csv" />
+    <Compile Include="Auth.fs" />
+    <Compile Include="SaturnExtensions.fs" />
+    <Compile Include="Api.fs" />
     <Compile Include="Stocks.fs" />
     <Compile Include="Ticker.fs" />
     <Compile Include="SignalR.fs" />

@@ -1,4 +1,5 @@
 ﻿group Server
+    Fable.Remoting.Giraffe
 	FSharp.Core
     FSharp.Control.AsyncSeq
     FSharp.Data

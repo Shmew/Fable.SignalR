@@ -2,6 +2,7 @@ group Client
 	Fable.Browser.Dom
 	Fable.Core
     Fable.Promise
+    Fable.Remoting.Client
     Feliz
     Feliz.Plotly
     FSharp.Core

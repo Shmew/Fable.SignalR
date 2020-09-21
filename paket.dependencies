@@ -87,6 +87,7 @@ group Client
 
 	nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
+    nuget Fable.Remoting.Client ~> 6
     nuget Feliz ~> 1
     nuget Feliz.Plotly ~> 1
     nuget FSharp.Core ~> 4.7
@@ -96,6 +97,7 @@ group Server
     source https://nuget.org/api/v2
 	source https://api.nuget.org/v3/index.json
 
+    nuget Fable.Remoting.Giraffe ~> 4
     nuget FSharp.Control.AsyncSeq ~> 2
 	nuget FSharp.Core ~> 4.7
     nuget FSharp.Data ~> 3

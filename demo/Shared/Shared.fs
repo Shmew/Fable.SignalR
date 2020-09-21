@@ -29,3 +29,9 @@ module SignalRHub =
 
 module Endpoints =   
     let [<Literal>] Root = "/SignalR"
+
+module Api =
+    let path _ (method: string) = "/Api/" + method
+
+    type IApi = 
+        { login: string -> string -> Async<Result<string,string>> }

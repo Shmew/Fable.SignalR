@@ -2,9 +2,28 @@ namespace SignalRApp
 
 module App =
     open Fable.SignalR
+    open Microsoft.AspNetCore.Builder
+    open Microsoft.Extensions.DependencyInjection
     open Microsoft.Extensions.Logging
     open Saturn
     open System
+
+    module Setup =
+        open SignalRApp.Auth
+
+        let url = sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us
+
+        let jwtIssuer =
+            { Audience = sprintf "http://localhost:%i" <| Env.getPortsOrDefault 8085us
+              Issuer = "SignalRApp Api"
+              NotBefore = DateTime.Now
+              RequiredHttpsMetadata = false
+              ValidFor = TimeSpan.FromDays(1.) }
+            |> JwtIssuer.create
+
+        let services (services: IServiceCollection) =
+            services
+            |> Ticker.Create
 
     [<EntryPoint>]
     let main args =
@@ -17,12 +36,22 @@ module App =
                             send SignalRHub.send
                             invoke SignalRHub.invoke
                             stream_from SignalRHub.Stream.sendToClient
+                            use_bearer_auth
+                            with_after_routing (fun builder ->
+                                builder
+                                    .UseAuthentication()
+                                    .UseAuthorization()
+                            )
+                            with_endpoint_config (fun builder ->
+                                builder.RequireAuthorization()
+                            )
                             use_messagepack
                         }
                     )
-                    service_config Ticker.Create
-                    url (sprintf "http://0.0.0.0:%i/" <| Env.getPortsOrDefault 8085us)
-                    no_router
+                    config_auth Setup.jwtIssuer
+                    service_config Setup.services
+                    url Setup.url
+                    use_router Api.router
                     use_static (Env.clientPath args)
                     use_developer_exceptions
                 }
