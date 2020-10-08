@@ -64,5 +64,5 @@ dotnet add package Fable.SignalR.Saturn // For Saturn
 
 # paket
 paket add Fable.SignalR.AspNetCore --project ./project/path // For ASP.NET Core or Giraffe
-paket add Fable.SignalR.Feliz --project ./project/path // For Saturn
+paket add Fable.SignalR.Saturn --project ./project/path // For Saturn
 ```
