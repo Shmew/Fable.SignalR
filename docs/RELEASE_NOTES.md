@@ -1,3 +1,7 @@
+### 0.8.2 - Monday, October 12th, 2020
+* Pin Fable.SimpleJson
+* Use Fable.Remoting.MsgPack for serialization
+
 ### 0.8.1 - Sunday, September 20th, 2020
 * Fix Fable compilation
 

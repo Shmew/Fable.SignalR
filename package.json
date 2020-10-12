@@ -1,6 +1,6 @@
 {
   "name": "fable.-signal-r",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Fable and server bindings for SignalR.",
   "homepage": "https://github.com/Shmew/Fable.SignalR",
   "bugs": {

@@ -10,7 +10,7 @@ group Fable.SignalR
     nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Fable.Remoting.MsgPack ~> 1
-    nuget Fable.SimpleJson ~> 3
+    nuget Fable.SimpleJson 3.11.0
     nuget FSharp.Core ~> 4.7
 
 group Fable.SignalR.AspNetCore
@@ -88,6 +88,7 @@ group Client
 	nuget Fable.Core ~> 3
     nuget Fable.Promise ~> 2
     nuget Fable.Remoting.Client ~> 6
+    nuget Fable.SimpleJson 3.11.0
     nuget Feliz ~> 1
     nuget Feliz.Plotly ~> 1
     nuget FSharp.Core ~> 4.7
