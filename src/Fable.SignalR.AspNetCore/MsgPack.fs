@@ -15,6 +15,7 @@ module internal MsgPackProtocol =
 
     let [<Literal>] private ProtocolName = "messagepack"
     let [<Literal>] private ProtocolVersion = 1
+    let [<Literal>] private MaxPayloadSize = 2147483648L
 
     [<AutoOpen>]
     module private MsgHelpers =
@@ -77,63 +78,69 @@ module internal MsgPackProtocol =
 
         let message<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> (input: byref<ReadOnlySequence<byte>>) (message: byref<HubMessage>) =
             let reader = Read.Reader(input.ToArray())
-            
-            input <- input.Slice(input.Length)
+
+            let len = reader.Read typeof<uint32> |> unbox<uint32> |> int64
+
+            input <- input.Slice(len + 1L)
 
             try
-                message <-
-                    reader.Read typeof<Msg<'ClientStreamFromApi,'ClientApi,'ClientApi,'ClientStreamToApi>>
-                    |> unbox<Msg<'ClientStreamFromApi,'ClientApi,'ClientApi,'ClientStreamToApi>>
-                    |> function
-                    | Msg.Invocation (headers, invocationId, target, args, streamIds) ->
-                        match invocationId with
-                        | Some invocationId ->
-                            match streamIds with
-                            | Some streamIds -> InvocationMessage(invocationId, target, boxArr args, streamIds)
-                            | None -> InvocationMessage(invocationId, target, boxArr args)
-                        | None -> InvocationMessage(target, boxArr args)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.InvokeInvocation (headers, invocationId, target, msg, invokeId, streamIds) ->
-                        let args = [| box msg; box invokeId |]
+                if len > MaxPayloadSize then
+                    message <- null
+                    false
+                else
+                    message <-
+                        reader.Read typeof<Msg<'ClientStreamFromApi,'ClientApi,'ClientApi,'ClientStreamToApi>>
+                        |> unbox<Msg<'ClientStreamFromApi,'ClientApi,'ClientApi,'ClientStreamToApi>>
+                        |> function
+                        | Msg.Invocation (headers, invocationId, target, args, streamIds) ->
+                            match invocationId with
+                            | Some invocationId ->
+                                match streamIds with
+                                | Some streamIds -> InvocationMessage(invocationId, target, boxArr args, streamIds)
+                                | None -> InvocationMessage(invocationId, target, boxArr args)
+                            | None -> InvocationMessage(target, boxArr args)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.InvokeInvocation (headers, invocationId, target, msg, invokeId, streamIds) ->
+                            let args = [| box msg; box invokeId |]
                         
-                        match invocationId with
-                        | Some invocationId -> 
+                            match invocationId with
+                            | Some invocationId -> 
+                                match streamIds with
+                                | Some streamIds -> InvocationMessage(invocationId, target, args, streamIds)
+                                | None -> InvocationMessage(invocationId, target, args)
+                            | None -> InvocationMessage(target, args)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.InvocationExplicit (headers, invocationId, target, args, streamIds) ->
+                            match invocationId with
+                            | Some invocationId ->
+                                match streamIds with
+                                | Some streamIds -> InvocationMessage(invocationId, target, boxArr args, streamIds)
+                                | None -> InvocationMessage(invocationId, target, boxArr args)
+                            | None -> InvocationMessage(target, boxArr args)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.StreamItem (headers, invocationId, item) ->
+                            StreamItemMessage(invocationId.Value, item)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.Completion (headers, invocationId, error, result) ->
+                            CompletionMessage(invocationId, Option.defaultValue null error, Option.defaultValue Unchecked.defaultof<'ClientApi> result, result.IsSome)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.StreamInvocation (headers, invocationId, target, args, streamIds) ->
                             match streamIds with
-                            | Some streamIds -> InvocationMessage(invocationId, target, args, streamIds)
-                            | None -> InvocationMessage(invocationId, target, args)
-                        | None -> InvocationMessage(target, args)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.InvocationExplicit (headers, invocationId, target, args, streamIds) ->
-                        match invocationId with
-                        | Some invocationId ->
-                            match streamIds with
-                            | Some streamIds -> InvocationMessage(invocationId, target, boxArr args, streamIds)
-                            | None -> InvocationMessage(invocationId, target, boxArr args)
-                        | None -> InvocationMessage(target, boxArr args)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.StreamItem (headers, invocationId, item) ->
-                        StreamItemMessage(invocationId.Value, item)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.Completion (headers, invocationId, error, result) ->
-                        CompletionMessage(invocationId, Option.defaultValue null error, Option.defaultValue Unchecked.defaultof<'ClientApi> result, result.IsSome)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.StreamInvocation (headers, invocationId, target, args, streamIds) ->
-                        match streamIds with
-                        | Some streamIds -> StreamInvocationMessage(invocationId, target, boxArr args, streamIds)
-                        | None -> StreamInvocationMessage(invocationId, target, unbox args)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.CancelInvocation (headers, invocationId) ->
-                        CancelInvocationMessage(invocationId.Value)
-                        |> Headers.set headers :> HubMessage
-                    | Msg.Ping -> PingMessage.Instance :> HubMessage
-                    | Msg.Close (error, allowReconnect) ->
-                        let error = Option.defaultValue null error
+                            | Some streamIds -> StreamInvocationMessage(invocationId, target, boxArr args, streamIds)
+                            | None -> StreamInvocationMessage(invocationId, target, unbox args)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.CancelInvocation (headers, invocationId) ->
+                            CancelInvocationMessage(invocationId.Value)
+                            |> Headers.set headers :> HubMessage
+                        | Msg.Ping -> PingMessage.Instance :> HubMessage
+                        | Msg.Close (error, allowReconnect) ->
+                            let error = Option.defaultValue null error
 
-                        match allowReconnect with
-                        | Some allowReconnect -> CloseMessage(error, allowReconnect) :> HubMessage
-                        | None -> CloseMessage(error) :> HubMessage
-                true
-            with _ ->
+                            match allowReconnect with
+                            | Some allowReconnect -> CloseMessage(error, allowReconnect) :> HubMessage
+                            | None -> CloseMessage(error) :> HubMessage
+                    true
+            with e ->
                 message <- Unchecked.defaultof<HubMessage>
                 true
 
@@ -211,9 +218,17 @@ module internal MsgPackProtocol =
                 |> raise
             |> serialize
 
-            ms.Flush()
+            if ms.Length > MaxPayloadSize then
+                sprintf "Writing messages above 2GB is not supported."
+                |> InvalidOperationException
+                |> raise
+            
+            use msgMs = new MemoryStream()
 
+            Write.writeUInt64 (uint64 ms.Length) msgMs
+            
             ms.ToArray()
+            |> Array.append (msgMs.ToArray())
 
     type FableHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> () =
         interface IHubProtocol with

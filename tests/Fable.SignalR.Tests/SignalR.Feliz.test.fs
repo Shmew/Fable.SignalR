@@ -76,4 +76,14 @@ Jest.describe("SignalR works with Feliz", fun () ->
         
         do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("client-complete")).toHaveTextContent("true"))
     })
+
+    Jest.test("Can stream twice at once", async {
+        let render = RTL.render(Components.DoubleStream.render())
+
+        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("server-complete")).toHaveTextContent("true"))
+        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("server-complete2")).toHaveTextContent("true"))
+
+        Jest.expect(render.getByTestId("count")).toHaveTextContent("100")
+        Jest.expect(render.getByTestId("count2")).toHaveTextContent("100")
+    })
 )

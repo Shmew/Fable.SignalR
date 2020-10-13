@@ -246,6 +246,8 @@ module Protocol =
         open Fable.Remoting.MsgPack
         open Fable.SignalR.Shared.MsgPack
 
+        let [<Literal>] private MaxPayloadSize = 2147483648UL
+
         [<Erase>]
         module StreamIds =
             let inline toOpt (streamIds: string []) =
@@ -273,6 +275,65 @@ module Protocol =
             if message.target = (unbox InvocationTarget.Invoke) then
                 InvocationTarget.Invoke
             else InvocationTarget.Send
+
+        let parseMsg (msg: Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>) =
+            match msg with
+            | Msg.Invocation (headers, invocationId, target, args, streamIds) ->
+                HubRecords.InvocationMessage.create<'ServerApi> headers invocationId target (ResizeArray args) (unbox<ResizeArray<string> option> streamIds)
+                |> U8.Case1
+            | Msg.InvocationExplicit (headers, invocationId, target, args, streamIds) ->
+                HubRecords.InvocationMessage.create<InvokeArg<'ServerApi>> headers invocationId target (ResizeArray args) (unbox<ResizeArray<string> option> streamIds)
+                |> U8.Case2
+            | Msg.StreamItem (headers, invocationId, item) ->
+                HubRecords.StreamItemMessage.create<'ServerStreamApi> headers invocationId item
+                |> U8.Case3
+            | Msg.Completion (headers, invocationId, error, result) ->
+                HubRecords.CompletionMessage.create<'ServerApi> headers invocationId error result
+                |> U8.Case4
+            | Msg.CancelInvocation (headers, invocationId) ->
+                HubRecords.CancelInvocationMessage.create headers invocationId
+                |> U8.Case6
+            | Msg.Ping -> 
+                HubRecords.PingMessage.create()
+                |> U8.Case7
+            | Msg.Close (error, allowReconnect) ->
+                HubRecords.CloseMessage.create error allowReconnect
+                |> unbox<CloseMessage>
+                |> U8.Case8
+            // Shouldn't ever match
+            | Msg.InvokeInvocation (headers, invocationId, target, msg, invokeId, streamIds) ->
+                let args = ResizeArray [| box msg; box invokeId |]
+                HubRecords.InvocationMessage.create<obj> headers invocationId target args (unbox<ResizeArray<string> option> streamIds)
+                |> unbox
+                |> U8.Case1
+            // Shouldn't ever match
+            | Msg.StreamInvocation (headers, invocationId, target, args, streamIds) ->
+                HubRecords.StreamInvocationMessage.create<unit> headers invocationId target (ResizeArray args) (unbox<ResizeArray<string> option> streamIds)
+                |> U8.Case5
+
+        [<Erase>]
+        module List =
+            let inline cons xs x = x::xs
+
+        let inline parseMsgs<'ServerApi,'ServerStreamApi> (buffer: JS.ArrayBuffer) : HubMessage<unit,'ServerApi,'ServerApi,'ServerStreamApi> list =
+            let reader = Read.Reader(unbox (JS.Constructors.Uint8Array.Create(buffer)))
+
+            let rec read pos xs =
+                match (unbox<uint64> (reader.Read (typeof<uint64>))) + pos + 1UL with
+                | pos when uint64 buffer.byteLength - pos > 0UL ->
+                    reader.Read typeof<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
+                    |> unbox<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
+                    |> parseMsg
+                    |> List.cons xs 
+                    |> read pos
+                | _ ->
+                    reader.Read typeof<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
+                    |> unbox<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
+                    |> parseMsg
+                    |> List.cons xs
+
+            read 0UL []
+            |> List.rev
 
         type MsgPackProtocol () =
             member inline _.writeMessage<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> (message: HubMessageBase) =
@@ -351,58 +412,31 @@ module Protocol =
                     let outArr = ResizeArray []
                     Write.Fable.writeObject msg typeof<Msg<'ClientStreamFromApi,'ClientApi,unit,'ClientStreamToApi>> outArr
                 
-                    JS.Constructors.Uint8Array.Create(outArr).buffer
-                    |> U2.Case2
-            
+                    if uint64 outArr.Count > MaxPayloadSize then
+                        failwith "Messages over 2GB are not supported."
+                    else
+                        let msgArr = ResizeArray []
+                        Write.Fable.writeObject (uint64 outArr.Count) typeof<uint64> msgArr
+
+                        msgArr.AddRange(outArr)
+
+                        JS.Constructors.Uint8Array.Create(msgArr).buffer
+                        |> U2.Case2
+
             #if FABLE_COMPILER
             member inline _.parseMsgs<'ServerApi,'ServerStreamApi> (buffer: JS.ArrayBuffer) (logger: ILogger) : ResizeArray<HubMessage<unit,'ServerApi,'ServerApi,'ServerStreamApi>> =
             #else
             member _.parseMsgs<'ServerApi,'ServerStreamApi> (buffer: JS.ArrayBuffer) (logger: ILogger) : ResizeArray<HubMessage<unit,'ServerApi,'ServerApi,'ServerStreamApi>> =
             #endif
                 try
-                    let reader = Read.Reader(unbox (JS.Constructors.Uint8Array.Create(buffer)))
+                    if uint64 buffer.byteLength > MaxPayloadSize then
+                        failwith "Messages over 2GB are not supported."
 
-                    reader.Read typeof<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
-                    |> unbox<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>
-                    |> function
-                    | Msg.Invocation (headers, invocationId, target, args, streamIds) ->
-                        HubRecords.InvocationMessage.create<'ServerApi> headers invocationId target (ResizeArray args) (unbox<ResizeArray<string> option> streamIds)
-                        |> U8.Case1
-                    | Msg.InvocationExplicit (headers, invocationId, target, args, streamIds) ->
-                        HubRecords.InvocationMessage.create<InvokeArg<'ServerApi>> headers invocationId target (ResizeArray args) (unbox<ResizeArray<string> option> streamIds)
-                        |> U8.Case2
-                    | Msg.StreamItem (headers, invocationId, item) ->
-                        HubRecords.StreamItemMessage.create<'ServerStreamApi> headers invocationId item
-                        |> U8.Case3
-                    | Msg.Completion (headers, invocationId, error, result) ->
-                        HubRecords.CompletionMessage.create<'ServerApi> headers invocationId error result
-                        |> U8.Case4
-                    
-                    | Msg.CancelInvocation (headers, invocationId) ->
-                        HubRecords.CancelInvocationMessage.create headers invocationId
-                        |> U8.Case6
-                    | Msg.Ping -> 
-                        HubRecords.PingMessage.create()
-                        |> U8.Case7
-                    | Msg.Close (error, allowReconnect) ->
-                        HubRecords.CloseMessage.create error allowReconnect
-                        |> unbox<CloseMessage>
-                        |> U8.Case8
-                    // Shouldn't ever match
-                    | Msg.InvokeInvocation (headers, invocationId, target, msg, invokeId, streamIds) ->
-                        let args = ResizeArray [| box msg; box invokeId |]
-                        HubRecords.InvocationMessage.create<obj> headers invocationId target args (unbox<ResizeArray<string> option> streamIds)
-                        |> unbox
-                        |> U8.Case1
-                    // Shouldn't ever match
-                    | Msg.StreamInvocation (headers, invocationId, target, args, streamIds) ->
-                        HubRecords.StreamInvocationMessage.create<unit> headers invocationId target (ResizeArray args) (unbox<ResizeArray<string> option> streamIds)
-                        |> U8.Case5
-                    |> Array.singleton
+                    parseMsgs<'ServerApi,'ServerStreamApi> buffer
                 with e ->
                     sprintf "An error occured during message deserialization: %s" e.Message
                     |> logger.log LogLevel.Error
-                    [||]
+                    []
                 |> ResizeArray
 
         let inline create<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> () =

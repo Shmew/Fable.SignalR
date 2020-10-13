@@ -503,3 +503,89 @@ module StreamingHook =
                 display {| hub = hub; callback = setCount |}
             ]
         ])
+
+module DoubleStream =
+    type Hub = StreamHub.ServerToClient<Action,StreamFrom.Action,Response,StreamFrom.Response>
+
+    let textDisplay = React.functionComponent(fun (input: {| count: int |}) ->
+        Html.div [
+            prop.testId "count"
+            prop.textf "%i" input.count
+        ])
+    
+    let textDisplay2 = React.functionComponent(fun (input: {| count: int |}) ->
+        Html.div [
+            prop.testId "count2"
+            prop.textf "%i" input.count
+        ])
+
+    let display = React.functionComponent(fun (input: {| hub: Hub; callback: int -> unit; callback2: int -> unit |}) ->
+        let serverIsComplete,setServerIsComplete = React.useState false
+        let serverIsComplete2,setServerIsComplete2 = React.useState false
+        let subscription = React.useRef(None : System.IDisposable option)
+        let subscription2 = React.useRef(None : System.IDisposable option)
+
+        let subscriber = 
+            React.useRef ( 
+                { next = fun (msg: StreamFrom.Response) -> 
+                    match msg with
+                    | StreamFrom.Response.GetInts i -> input.callback i
+                  complete = fun () -> setServerIsComplete true
+                  error = fun _ -> () }
+            )
+
+        let subscriber2 = 
+            React.useRef ( 
+                { next = fun (msg: StreamFrom.Response) -> 
+                    match msg with
+                    | StreamFrom.Response.GetInts i -> input.callback2 i
+                  complete = fun () -> setServerIsComplete2 true
+                  error = fun _ -> () }
+            )
+
+        React.useEffectOnce(fun () ->
+            async {
+                let! sub = input.hub.current.streamFrom StreamFrom.Action.GenInts
+                subscription.current <- Some (sub.subscribe subscriber.current)
+
+                let! sub2 = input.hub.current.streamFrom StreamFrom.Action.GenInts
+                subscription2.current <- Some (sub2.subscribe subscriber2.current)
+            }
+            |> Async.StartImmediate
+
+            React.createDisposable(subscription, subscription2)
+        )
+
+        React.fragment [
+            Html.div [
+                prop.testId "server-complete"
+                prop.textf "%b" serverIsComplete
+            ]
+            Html.div [
+                prop.testId "server-complete2"
+                prop.textf "%b" serverIsComplete2
+            ]
+        ])
+
+    let render = React.functionComponent(fun () ->
+        let count,setCount = React.useState 0
+        let count2,setCount2 = React.useState 0
+        
+        let setCount = React.useCallback(setCount, [||])
+        let setCount2 = React.useCallback(setCount2, [||])
+        
+        let hub =
+            React.useSignalR<Action,StreamFrom.Action,Response,StreamFrom.Response>(fun hub -> 
+                hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root2)
+                    .withAutomaticReconnect()
+                    .configureLogging(LogLevel.None)
+                    .useMessagePack()
+            )
+
+        Html.div [
+            prop.children [
+                textDisplay {| count = count |}
+                textDisplay2 {| count = count2 |}
+                display {| hub = hub; callback = setCount; callback2 = setCount2 |}
+            ]
+        ])

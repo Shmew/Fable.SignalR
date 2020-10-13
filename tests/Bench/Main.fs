@@ -4,50 +4,31 @@ open System
 open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Running
 
-module IDictionary =
-    let mutable cache = Map.empty<int,Map<string,string>>
+module ArrayCreation =
+    let append (a1: int []) (a2: int []) = Array.append a1 a2
 
-    let toMap iDict =
-        iDict
-        |> Seq.map (|KeyValue|)
-        |> Map.ofSeq
+    let createCopy (a1: int []) (a2: int []) = 
+        let arr = Array.CreateInstance(typeof<int>, a1.Length + a2.Length)
+        a1.CopyTo(arr, 0)
+        a2.CopyTo(arr, a1.Length)
 
-    let toMapCached (iDict: Collections.Generic.IDictionary<string,string>) =
-        let hashCode = iDict.GetHashCode()
-        match cache.TryFind hashCode with
-        | Some v -> v
-        | None -> 
-            let v = toMap iDict
-            cache <- cache.Add(hashCode, v)
-            v
+        arr
 
 [<MemoryDiagnoser>]
 type BenchClass () =
     [<Params (10,1000,10000)>] 
-    member val ListSize : int = 0 with get, set
+    member val ArrSize : int = 0 with get, set
 
-    member self.dict = 
-        List.init self.ListSize (fun i -> string i, string i)
-        |> Map.ofList
-        |> fun map -> map :> Collections.Generic.IDictionary<string,string>
+    member self.a1 = Array.init self.ArrSize id
+    member self.a2 = Array.init self.ArrSize id            
 
     [<Benchmark>]
-    member self.ToMap () =
-        IDictionary.toMap self.dict |> ignore
-        IDictionary.toMap self.dict
+    member self.Append () =
+        ArrayCreation.append self.a1 self.a2
 
     [<Benchmark>]
-    member self.ToMapOnce () =
-        IDictionary.toMap self.dict
-
-    [<Benchmark>]
-    member self.ToMapCachedOnce () =
-        IDictionary.toMapCached self.dict
-
-    [<Benchmark>]
-    member self.ToMapCached () =
-        IDictionary.toMapCached self.dict |> ignore
-        IDictionary.toMapCached self.dict
+    member self.CreateCopy () =
+        ArrayCreation.createCopy self.a1 self.a2
 
 [<EntryPoint>]
 let main _ =
