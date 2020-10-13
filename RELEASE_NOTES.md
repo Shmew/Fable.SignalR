@@ -1,3 +1,7 @@
+### 0.8.3 - Tuesday, October 13th, 2020
+* Fix issue with MsgPack protocol handling when messages
+are batched.
+
 ### 0.8.2 - Monday, October 12th, 2020
 * Pin Fable.SimpleJson
 * Use Fable.Remoting.MsgPack for serialization
