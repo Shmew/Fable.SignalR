@@ -304,17 +304,55 @@ let commandArb = Arbitrary.asyncCommands [
     Arbitrary.constant (Commands.StreamTo() :> IAsyncCommand<HubModel,HubModel>)
 ]
 
-Jest.test.prop("Normal model tests run", commandArb, fun cmds ->
-    FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds)
-, timeout = 60000)
+Jest.describe("Native SignalR", fun () ->
+    Jest.test.prop("Normal model tests run", commandArb, fun cmds ->
+        FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds)
+    , timeout = 60000)
     
-Jest.test.prop("MessagePack works", commandArb, fun cmds ->
-    FastCheck.asyncModelRun(HubModel(msgPackHub), HubModel(msgPackHub), cmds)
-, timeout = 60000)
+    Jest.test.prop("MessagePack works", commandArb, fun cmds ->
+        FastCheck.asyncModelRun(HubModel(msgPackHub), HubModel(msgPackHub), cmds)
+    , timeout = 60000)
 
-Jest.test.prop("Can run two hubs at once", commandArb, commandArb, fun cmds1 cmds2 ->
-    async {
-        do! FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds1)
-        do! FastCheck.asyncModelRun(HubModel(msgPackHub), HubModel(msgPackHub), cmds2)
-    }
-, timeout = 60000)
+    Jest.test.prop("Can run two hubs at once", commandArb, commandArb, fun cmds1 cmds2 ->
+        async {
+            do! FastCheck.asyncModelRun(HubModel(hub), HubModel(hub), cmds1)
+            do! FastCheck.asyncModelRun(HubModel(msgPackHub), HubModel(msgPackHub), cmds2)
+        }
+    , timeout = 60000)
+
+    Jest.test("Can execute many invocations at once", async {
+        let! res =
+            [ 1 .. 50 ]
+            |> List.map (fun _ -> 
+                async {
+                    let! msg = hub.invoke(Action.IncrementCount 0)
+
+                    return
+                        match msg with
+                        | Response.NewCount i -> i
+                        | _ -> failwith "Invalid server response"
+                }
+            )
+            |> Async.Parallel
+
+        Jest.expect(res |> Array.sum).toBe(50)
+    })
+
+    Jest.test("Can execute many invocations at once with MsgPack", async {
+        let! res =
+            [ 1 .. 50 ]
+            |> List.map (fun _ -> 
+                async {
+                    let! msg = msgPackHub.invoke(Action.IncrementCount 0)
+
+                    return
+                        match msg with
+                        | Response.NewCount i -> i
+                        | _ -> failwith "Invalid server response"
+                }
+            )
+            |> Async.Parallel
+
+        Jest.expect(res |> Array.sum).toBe(50)
+    })
+)
