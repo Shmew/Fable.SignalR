@@ -275,7 +275,7 @@ module Commands =
                     let! modelState = model.GetState(fun _ -> true)
                     let! newReal = real.StreamFrom()
                     
-                    Jest.expect(newReal.SFCount).toBe(modelState.SFCount + 5050)
+                    Jest.expect(newReal.SFCount).toBe(modelState.SFCount + 55)
                     Jest.expect(newReal.StreamState).toEqual(StreamStatus.Finished)
                     
                     do! model.StreamFrom() |> Async.Ignore

@@ -63,7 +63,7 @@ Jest.describe("SignalR works with Feliz", fun () ->
 
         render.getByTestId("start-server-stream").click()
         
-        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("count")).toHaveTextContent("100"))
+        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("count")).toHaveTextContent("10"))
         do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("server-complete")).toHaveTextContent("true"))
     })
 
@@ -83,7 +83,7 @@ Jest.describe("SignalR works with Feliz", fun () ->
         do! RTL.waitFor((fun () -> Jest.expect(render.getByTestId("server-complete")).toHaveTextContent("true")), [ waitForOption.timeout 10000 ])
         do! RTL.waitFor((fun () -> Jest.expect(render.getByTestId("server-complete2")).toHaveTextContent("true")), [ waitForOption.timeout 10000 ])
 
-        Jest.expect(render.getByTestId("count")).toHaveTextContent("100")
-        Jest.expect(render.getByTestId("count2")).toHaveTextContent("100")
+        Jest.expect(render.getByTestId("count")).toHaveTextContent("10")
+        Jest.expect(render.getByTestId("count2")).toHaveTextContent("10")
     }, timeout = 60000)
 )

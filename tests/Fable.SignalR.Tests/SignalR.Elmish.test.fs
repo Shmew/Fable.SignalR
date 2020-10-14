@@ -63,7 +63,7 @@ Jest.describe("SignalR works with Elmish", fun () ->
 
         render.getByTestId("start-server-stream").click()
         
-        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("count")).toHaveTextContent("100"))
+        do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("count")).toHaveTextContent("10"))
         do! RTL.waitFor(fun () -> Jest.expect(render.getByTestId("server-stream-status")).toHaveTextContent("Finished"))
     })
 

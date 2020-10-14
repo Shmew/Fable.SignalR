@@ -43,7 +43,7 @@ module SignalRHub =
             match msg with
             | StreamFrom.Action.GenInts ->
                 asyncSeq {
-                    for i in [ 1 .. 100 ] do
+                    for i in [ 1 .. 10 ] do
                         yield StreamFrom.Response.GetInts i
                 }
                 |> AsyncSeq.toAsyncEnum
@@ -86,7 +86,7 @@ module SignalRHub2 =
             match msg with
             | StreamFrom.Action.GenInts ->
                 asyncSeq {
-                    for i in [ 1 .. 100 ] do
+                    for i in [ 1 .. 10 ] do
                         yield StreamFrom.Response.GetInts i
                 }
                 |> AsyncSeq.toAsyncEnum
