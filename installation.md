@@ -66,3 +66,22 @@ dotnet add package Fable.SignalR.Saturn // For Saturn
 paket add Fable.SignalR.AspNetCore --project ./project/path // For ASP.NET Core or Giraffe
 paket add Fable.SignalR.Saturn --project ./project/path // For Saturn
 ```
+
+## .NET Client
+
+To install for .NET clients add one (or both) of the following
+nuget packages into your F# project:
+
+* Fable.SignalR.DotNet
+* Fable.SignalR.DotNet.Elmish
+ - If you want to use Elmish Cmds.
+
+```bash
+# nuget
+dotnet add package Fable.SignalR.DotNet
+dotnet add package Fable.SignalR.DotNet.Elmish
+
+# paket
+paket add Fable.SignalR.DotNet --project ./project/path
+paket add Fable.SignalR.DotNet.Elmish --project ./project/path
+```
