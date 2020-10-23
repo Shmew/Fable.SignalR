@@ -135,7 +135,7 @@ module Elmish =
 
             member internal _.Build () =
                 if useMsgPack then 
-                    hub.Services.AddSingleton<IHubProtocol,MsgPackProtocol.FableHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>()
+                    hub.Services.AddSingleton<IHubProtocol,MsgPackProtocol.ClientFableHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi>>()
                     |> ignore
 
                     hub

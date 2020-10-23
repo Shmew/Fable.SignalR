@@ -53,7 +53,8 @@ module Generation =
             SignalR.Connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
                 hub.WithUrl("http://localhost:8085" + Endpoints.Root2, fun o -> o.HttpMessageHandlerFactory <- (fun _ -> server.CreateHandler()))
                     .WithAutomaticReconnect()
-                    .ConfigureLogging(fun logBuilder -> logBuilder.SetMinimumLevel(LogLevel.None)))
+                    .ConfigureLogging(fun logBuilder -> logBuilder.SetMinimumLevel(LogLevel.None))
+                    .UseMessagePack())
 
         type HubModel (hub: Hub) =
             let replyIfNew newState (waiting: ((Model -> bool) * AsyncReplyChannel<Model>) list) =

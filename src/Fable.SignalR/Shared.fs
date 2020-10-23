@@ -1,5 +1,7 @@
 ﻿namespace Fable.SignalR.Shared
 
+open Fable.Core
+
 type InvokeArg<'ServerApi> =
     { connectionId: string
       invocationId: System.Guid
@@ -53,3 +55,10 @@ module MsgPack =
         | Close of 
             errMsg:string option * 
             allowReconnect:bool option
+
+[<Erase;RequireQualifiedAccess>]
+module HubMethod =
+    let [<Literal>] Invoke = "Invoke"
+    let [<Literal>] Send = "Send"
+    let [<Literal>] StreamFrom = "StreamFrom"
+    let [<Literal>] StreamTo = "StreamTo"

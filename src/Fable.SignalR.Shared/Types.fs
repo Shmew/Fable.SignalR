@@ -53,3 +53,10 @@ module MsgPack =
         | Close of 
             errMsg:string option * 
             allowReconnect:bool option
+
+[<RequireQualifiedAccess>]
+module HubMethod =
+    let [<Literal>] Invoke = "Invoke"
+    let [<Literal>] Send = "Send"
+    let [<Literal>] StreamFrom = "StreamFrom"
+    let [<Literal>] StreamTo = "StreamTo"

@@ -110,10 +110,13 @@ type Config<'ClientApi,'ServerApi> =
       OnConnected: (FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
 
       /// Called when a connection with the hub is terminated.
-      OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option }
+      OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
 
       /// Enable MessagePack binary (de)serialization instead of JSON.
       UseMessagePack: bool
+
+      /// Configure the SignalR server.
+      UseServerBuilder: (ISignalRServerBuilder -> ISignalRServerBuilder) option }
 
     /// Creates an empty record.
     static member Default () : Config<'ClientApi,'ServerApi>
@@ -187,6 +190,9 @@ type ConfigBuilder<'ClientApi,'ServerApi> (settings: Settings<'ClientApi,'Server
 
     /// Enable MessagePack binary (de)serialization instead of JSON.
     member UseMessagePack () : ConfigBuilder
+
+    /// Configure the SignalR server.
+    member UseServerBuilder (handler: ISignalRServerBuilder -> ISignalRServerBuilder) : ConfigBuilder
 ```
 
 ## configure_signalr
@@ -225,6 +231,9 @@ configure_signalr {
 
     /// Enable MessagePack binary (de)serialization instead of JSON.
     use_messagepack
+
+    /// Configure the SignalR server.
+    use_server_builder: ISignalRServerBuilder -> ISignalRServerBuilder
 
     /// App configuration after app.UseRouting() is called.
     with_after_routing: IApplicationBuilder -> IApplicationBuilder

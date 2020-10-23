@@ -270,11 +270,7 @@ module Protocol =
         type InvocationTarget =
             | Invoke
             | Send
-
-        let inline getInvocationTarget (message: InvocationMessage<_>) =
-            if message.target = (unbox InvocationTarget.Invoke) then
-                InvocationTarget.Invoke
-            else InvocationTarget.Send
+            | StreamTo
 
         let parseMsg (msg: Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>) =
             match msg with
@@ -341,16 +337,8 @@ module Protocol =
                 | MessageType.Invocation ->
                     let invocation = unbox<InvocationMessage<'ClientApi>> message
 
-                    match getInvocationTarget invocation with
-                    | InvocationTarget.Send ->
-                        Msg<'ClientStreamFromApi,'ClientApi,unit,'ClientStreamToApi>.Invocation (
-                            invocation.headers,
-                            invocation.invocationId,
-                            invocation.target,
-                            unbox invocation.arguments,
-                            unbox<string [] option> invocation.streamIds
-                        )
-                    | InvocationTarget.Invoke ->
+                    match invocation.target with
+                    | HubMethod.Invoke ->
                         if invocation.arguments.Count = 2 then
                             Msg<'ClientStreamFromApi,'ClientApi,unit,'ClientStreamToApi>.InvokeInvocation (
                                 invocation.headers,
@@ -370,6 +358,16 @@ module Protocol =
                                 unbox invocation.arguments,
                                 unbox<string [] option> invocation.streamIds
                             )
+                    | HubMethod.Send 
+                    | HubMethod.StreamTo ->
+                        Msg<'ClientStreamFromApi,'ClientApi,unit,'ClientStreamToApi>.Invocation (
+                            invocation.headers,
+                            invocation.invocationId,
+                            invocation.target,
+                            unbox invocation.arguments,
+                            unbox<string [] option> invocation.streamIds
+                        )
+                    | _ -> failwithf "Invalid Invocation Target: %s" invocation.target
                 | MessageType.StreamItem ->
                     let streamItem = unbox<StreamItemMessage<'ClientStreamToApi>> message
                     

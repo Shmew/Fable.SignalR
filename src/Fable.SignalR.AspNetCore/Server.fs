@@ -581,7 +581,9 @@ module SignalR =
           /// Called when a connection with the hub is terminated.
           OnDisconnected: (exn -> FableHub<'ClientApi,'ServerApi> -> Task<unit>) option
           /// Enable MessagePack binary (de)serialization instead of JSON.
-          UseMessagePack: bool }
+          UseMessagePack: bool
+          /// Configure the SignalR server.
+          UseServerBuilder: (ISignalRServerBuilder -> ISignalRServerBuilder) option }
 
         /// Creates an empty record.
         static member Default () =
@@ -594,7 +596,8 @@ module SignalR =
               NoRouting = false
               OnConnected = None
               OnDisconnected = None
-              UseMessagePack = false }
+              UseMessagePack = false
+              UseServerBuilder = None }
 
     [<RequireQualifiedAccess>]
     module internal Config =
@@ -735,6 +738,16 @@ module SignalR =
                     Config =
                         { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
                             UseMessagePack = true }
+                        |> Some }
+            this
+            
+        /// Configure the SignalR server.
+        member this.UseServerBuilder (handler: ISignalRServerBuilder -> ISignalRServerBuilder) =
+            state <-
+                { state with
+                    Config =
+                        { Settings<'ClientApi,'ServerApi>.GetConfigOrDefault state with
+                            UseServerBuilder = Some handler }
                         |> Some }
             this
 

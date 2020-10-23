@@ -120,6 +120,16 @@ module SignalRExtension =
                             { SignalR.Settings.GetConfigOrDefault state with
                                 UseMessagePack = true }
                             |> Some }
+            
+            /// Configure the SignalR server.
+            [<CustomOperation("use_server_builder")>]
+            member _.UseServerBuilder (state: State.Settings<_,_,_,_,_>, f: ISignalRServerBuilder -> ISignalRServerBuilder) =
+                state.MapSettings <| fun state ->  
+                    { state with
+                        Config =
+                            { SignalR.Settings.GetConfigOrDefault state with
+                                UseServerBuilder = Some f }
+                            |> Some }
 
             /// App configuration after app.UseRouting() is called.
             [<CustomOperation("with_after_routing")>]

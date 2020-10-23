@@ -259,7 +259,7 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     member _.invoke' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
 
     member inline this.invoke (msg: 'ClientApi, invocationId: System.Guid) : Async<unit> =
-        this.invoke'("Invoke", ResizeArray [| msg :> obj; invocationId :> obj |]) |> Async.AwaitPromise
+        this.invoke'(HubMethod.Invoke, ResizeArray [| msg :> obj; invocationId :> obj |]) |> Async.AwaitPromise
     
     [<Emit("$0.keepAliveIntervalInMilliseconds")>]
     member _.keepAliveInterval : int = jsNative
@@ -269,7 +269,7 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     [<Emit("$0.off($1, $2)")>]
     member _.off'<'T> (methodName: string, handler: 'T -> unit) : unit = jsNative
 
-    member inline this.off () = this.off'("Send")
+    member inline this.off () = this.off'(HubMethod.Send)
     
     [<Emit("$0.on($1, $2)")>]
     member _.on<'T> (methodName: string, handler: 'T -> unit) : unit = jsNative
@@ -278,7 +278,7 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     member _.onClose (callback: (exn option -> unit)) : unit = jsNative
 
     member inline this.onMessage (callback: 'ServerApi -> unit) = 
-        this.on<'ServerApi>("Send", callback)
+        this.on<'ServerApi>(HubMethod.Send, callback)
     
     [<Emit("$0.onreconnected($1)")>]
     member _.onReconnected (callback: (string option -> unit)) : unit = jsNative
@@ -290,7 +290,7 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     member _.send' (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : JS.Promise<unit> = jsNative
 
     member inline this.send (msg: 'ClientApi) = 
-        this.send'("Send", ResizeArray [| msg :> obj |]) |> Async.AwaitPromise     
+        this.send'(HubMethod.Send, ResizeArray [| msg :> obj |]) |> Async.AwaitPromise     
 
     [<Emit("$0.serverTimeoutInMilliseconds")>]
     member _.serverTimeout : int = jsNative
@@ -314,13 +314,13 @@ type internal IHubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,
     member _.stream (methodName: string, [<ParamArray>] args: ResizeArray<obj>) : StreamResult<'ServerStreamApi> = jsNative
 
     member inline this.streamFrom (msg: 'ClientStreamFromApi) : StreamResult<'ServerStreamApi> = 
-        this.stream("StreamFrom", ResizeArray [| msg :> obj |])
+        this.stream(HubMethod.StreamFrom, ResizeArray [| msg :> obj |])
     
     [<Emit("$0.send($1, $2)")>]
     member _.streamTo' (methodName: string, subscriber: ISubject<'ClientStreamToApi>) : JS.Promise<unit> = jsNative
 
     member inline this.streamTo (subject: ISubject<'ClientStreamToApi>) = 
-        this.streamTo'("StreamTo", subject) |> Async.AwaitPromise
+        this.streamTo'(HubMethod.StreamTo, subject) |> Async.AwaitPromise
 
 type internal IHubConnectionBuilder<'ClientApi,'ServerApi> =
     abstract configureLogging: logLevel: LogLevel -> IHubConnectionBuilder<'ClientApi,'ServerApi>
@@ -547,11 +547,11 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                 |> Option.defaultValue (fun _ -> mailbox.Post(HubMailbox.ProcessSends))
                 |> Some }
         |> fun handlers -> handlers.apply(hub)
-        hub.on<InvokeArg<'ServerApi>>("Invoke", fun rsp -> onRsp(rsp.connectionId, rsp.invocationId, rsp.message))
+        hub.on<InvokeArg<'ServerApi>>(HubMethod.Invoke, fun rsp -> onRsp(rsp.connectionId, rsp.invocationId, rsp.message))
 
     interface System.IDisposable with
         member _.Dispose () =
-            hub.off'("Invoke", onRsp)
+            hub.off'(HubMethod.Invoke, onRsp)
             cts.Cancel()
             cts.Dispose()
             hub.stopNow()

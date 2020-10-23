@@ -3,13 +3,6 @@
 open System
 open System.Threading.Tasks
 
-[<RequireQualifiedAccess>]
-module internal HubMethod =
-    let [<Literal>] Invoke = "Invoke"
-    let [<Literal>] Send = "Send"
-    let [<Literal>] StreamFrom = "StreamFrom"
-    let [<Literal>] StreamTo = "StreamTo"
-
 [<AutoOpen>]
 module internal Util =
     let genTask (t: Task<_>) : Task = upcast t
