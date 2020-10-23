@@ -4,9 +4,10 @@ module Client =
     open Expecto
     open Microsoft.AspNetCore.TestHost
     open Microsoft.Extensions.Hosting
+    open SignalRApp
 
     let host =
-        SignalRApp.App.app
+        App.app
             .ConfigureWebHost(fun webBuilder -> webBuilder.UseTestServer() |> ignore)
             .StartAsync()
         |> Async.AwaitTask

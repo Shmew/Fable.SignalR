@@ -1,3 +1,7 @@
+### 0.10.0 - Friday, October 23rd, 2020
+* Fix MsgPack protocol issue
+* Add support for using the ISignalRServerBuilder
+
 ### 0.9.0 - Friday, October 23rd, 2020
 * Added support for the .NET client
 

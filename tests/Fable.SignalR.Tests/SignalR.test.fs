@@ -41,7 +41,8 @@ let msgPackHub : Hub =
     SignalR.connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
         hub.withUrl("http://0.0.0.0:8085" + Endpoints.Root2)
             .withAutomaticReconnect()
-            .configureLogging(LogLevel.None))
+            .configureLogging(LogLevel.None)
+            .useMessagePack())
 
 type HubModel (hub: Hub) =
     let replyIfNew newState (waiting: ((Model -> bool) * AsyncReplyChannel<Model>) list) =

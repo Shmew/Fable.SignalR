@@ -29,3 +29,5 @@ module SignalRHub =
 module Endpoints =   
     let [<Literal>] Root = "/SignalR"
     let [<Literal>] Root2 = "/SignalR2"
+    let [<Literal>] RootAkka = "/SignalRAkka"
+    let [<Literal>] RootAkka2 = "/SignalRAkka2"
