@@ -1,0 +1,11 @@
+﻿group Fable.SignalR.Akka
+    Akka.Cluster
+    Akka.Cluster.Tools
+    Akka.DistributedData
+    Akka.FSharp
+    Akka.Remote
+    Akka.Serialization.Hyperion
+    Akka.Streams
+    FSharp.Core
+    FSharp.Data.LiteralProviders
+    TaskBuilder.fs

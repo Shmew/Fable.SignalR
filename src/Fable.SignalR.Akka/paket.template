@@ -1,0 +1,11 @@
+﻿type project
+authors Cody Johnson
+description
+    A type-safe functional wrapper for SignalR and Fable
+language
+    F#
+tags
+    fsharp, fable, react, websocket, signalr
+files
+    *.fsproj ==> fable
+    *.fs ==> fable

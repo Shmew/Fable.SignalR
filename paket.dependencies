@@ -13,6 +13,21 @@ group Fable.SignalR
     nuget Fable.SimpleJson 3.11.0
     nuget FSharp.Core ~> 4.7
 
+group Fable.SignalR.Akka
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+    
+    nuget Akka.Cluster ~> 1
+    nuget Akka.Cluster.Tools ~> 1
+    nuget Akka.DistributedData ~> 1
+    nuget Akka.FSharp ~> 1
+    nuget Akka.Remote ~> 1
+    nuget Akka.Serialization.Hyperion ~> 1
+    nuget Akka.Streams ~> 1
+    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Data.LiteralProviders ~> 0
+    nuget TaskBuilder.fs ~> 2 
+
 group Fable.SignalR.AspNetCore
     source https://nuget.org/api/v2
 	source https://api.nuget.org/v3/index.json

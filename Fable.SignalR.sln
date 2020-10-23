@@ -122,6 +122,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.DotNet.Elmish
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.DotNet.Tests", "tests\Fable.SignalR.DotNet.Tests\Fable.SignalR.DotNet.Tests.fsproj", "{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.Akka", "src\Fable.SignalR.Akka\Fable.SignalR.Akka.fsproj", "{90F7806F-9B63-4BAE-9E85-BB8232DD7F22}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -196,6 +198,10 @@ Global
 		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90F7806F-9B63-4BAE-9E85-BB8232DD7F22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90F7806F-9B63-4BAE-9E85-BB8232DD7F22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90F7806F-9B63-4BAE-9E85-BB8232DD7F22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90F7806F-9B63-4BAE-9E85-BB8232DD7F22}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="akka.conf" />
+    <Compile Include="Actors.fs" />
+    <Compile Include="SignalR.fs" />
+    <None Include="paket.references" />
+    <None Include="paket.template" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fable.SignalR.AspNetCore\Fable.SignalR.AspNetCore.fsproj" />
+    <ProjectReference Include="..\Fable.SignalR.Saturn\Fable.SignalR.Saturn.fsproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <NpmDependencies>
+      <NpmPackage Name="@microsoft/signalr" Version="gte 3.1.5 lt 4" ResolutionStrategy="max" DevDependency="true" />
+    </NpmDependencies>
+  </PropertyGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
