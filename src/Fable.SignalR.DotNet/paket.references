@@ -1,6 +1,6 @@
-﻿group Fable.SignalR.AspNetCore
+﻿group Fable.SignalR.DotNet
     Fable.Remoting.Json
     Fable.Remoting.MsgPack
     FSharp.Core
+    Microsoft.AspNetCore.SignalR.Client
     Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
-    TaskBuilder.fs

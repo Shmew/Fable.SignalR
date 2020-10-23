@@ -1,4 +1,4 @@
-﻿namespace Fable.SignalR
+﻿namespace Fable.SignalR.Shared
 
 open Fable.Remoting.MsgPack
 open Microsoft.AspNetCore.SignalR
@@ -9,7 +9,7 @@ open System.IO
 open System.Buffers
 
 [<RequireQualifiedAccess>]
-module internal MsgPackProtocol =
+module MsgPackProtocol =
     open Fable.SignalR.Shared
     open Fable.SignalR.Shared.MsgPack
 

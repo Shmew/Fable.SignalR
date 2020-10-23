@@ -21,8 +21,38 @@ group Fable.SignalR.AspNetCore
     nuget Fable.Remoting.MsgPack ~> 1
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
-    nuget Microsoft.Toolkit.HighPerformance ~> 6
     nuget TaskBuilder.fs ~> 2
+
+group Fable.SignalR.DotNet
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+    
+    nuget Fable.Remoting.Json ~> 2
+    nuget Fable.Remoting.MsgPack ~> 1
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.SignalR.Client ~> 3
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+    
+group Fable.SignalR.DotNet.Elmish
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+    
+    nuget Elmish ~> 3
+    nuget Fable.Remoting.Json ~> 2
+    nuget Fable.Remoting.MsgPack ~> 1
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.SignalR.Client ~> 3
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+
+group Fable.SignalR.DotNet.Tests
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Expecto ~> 9
+    nuget Expecto.FsCheck ~> 9
+    nuget FSharp.Control.AsyncSeq ~> 3
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.TestHost ~> 3
 
 group Fable.SignalR.Elmish
     source https://nuget.org/api/v2
@@ -50,6 +80,15 @@ group Fable.SignalR.Saturn
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
     nuget Saturn ~> 0
+
+group Fable.SignalR.Shared
+    source https://nuget.org/api/v2
+	source https://api.nuget.org/v3/index.json
+
+    nuget Fable.Remoting.Json ~> 2
+    nuget Fable.Remoting.MsgPack ~> 1
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
 
 group Fable.SignalR.Tests
     source https://nuget.org/api/v2
@@ -141,6 +180,7 @@ group FakeBuild
     nuget Fake.JavaScript.Yarn ~> 5
 	nuget Fake.JavaScript.Npm ~> 5
 	nuget Fake.Tools.Git ~> 5
+	nuget FSharp.Core ~> 4.7
     nuget FSharp.Json ~> 0
 	nuget FSharpLint.Core ~> 0
     nuget NuGet.Packaging 5.6

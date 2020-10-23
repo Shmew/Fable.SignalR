@@ -10,10 +10,8 @@ install:
 cache:
   - .cache/yarn
 build_script:
-  - cmd: build.cmd -t CopyBinaries
+  - cmd: build.cmd -t CI
 test: off
-test_script:
-  - yarn test-server
 version: 0.0.1.{build}
 artifacts:
   - path: bin

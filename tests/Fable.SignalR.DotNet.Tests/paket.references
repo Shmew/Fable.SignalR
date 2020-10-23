@@ -1,0 +1,6 @@
+group Fable.SignalR.DotNet.Tests
+	Expecto
+	Expecto.FsCheck
+    FSharp.Control.AsyncSeq
+	FSharp.Core
+    Microsoft.AspNetCore.TestHost

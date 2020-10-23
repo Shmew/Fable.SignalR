@@ -120,3 +120,14 @@ to authenticate. If you do not, your transport **will be downgraded**.
 hub.withUrl(Endpoints.Root, fun builder -> builder.accessTokenFactory(myAccessTokenFunction))
     ...
 ```
+
+## On the .NET client
+
+The above notes apply for the .NET client as well.
+
+```fsharp
+hub.WithUrl(Endpoints.Root, fun o -> 
+        o.AccessTokenProvider <- fun () -> myAccessTokenFunction |> Async.StartAsTask
+    )
+    ...
+```

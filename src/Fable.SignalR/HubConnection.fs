@@ -495,7 +495,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
                     let! msg = inbox.Receive()
                     
-                    let hubId =  hub.connectionId
+                    let hubId = hub.connectionId
                     
                     return!
                         match msg with
@@ -512,7 +512,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                                 else [ action ]
 
                             loop waitingInvocations (newConnections @ waitingConnections)
-                        | HubMailbox.ServerRsp(connectionId, invocationId, msg) ->
+                        | HubMailbox.ServerRsp (connectionId, invocationId, msg) ->
                             match hubId,connectionId, msg with
                             | Some hubId, connectionId, msg when hubId = connectionId ->
                                 waitingInvocations.TryFind(invocationId)
@@ -520,7 +520,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
 
                                 loop (waitingInvocations.Remove(invocationId)) waitingConnections
                             | _ -> loop waitingInvocations waitingConnections
-                        | HubMailbox.StartInvocation(serverMsg, reply) ->
+                        | HubMailbox.StartInvocation (serverMsg, reply) ->
                             let newGuid = System.Guid.NewGuid()
 
                             let newConnections =
@@ -547,7 +547,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
                 |> Option.defaultValue (fun _ -> mailbox.Post(HubMailbox.ProcessSends))
                 |> Some }
         |> fun handlers -> handlers.apply(hub)
-        hub.on<InvokeArg<'ServerApi>>("Invoke", fun rsp -> onRsp(rsp.connectionId,rsp.invocationId,rsp.message))
+        hub.on<InvokeArg<'ServerApi>>("Invoke", fun rsp -> onRsp(rsp.connectionId, rsp.invocationId, rsp.message))
 
     interface System.IDisposable with
         member _.Dispose () =

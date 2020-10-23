@@ -55,6 +55,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{D05F59F8-1
 	ProjectSection(SolutionItems) = preProject
 		docs\authorization.md = docs\authorization.md
 		docs\contributing.md = docs\contributing.md
+		docs\dotnet-client.md = docs\dotnet-client.md
 		docs\index.html = docs\index.html
 		docs\installation.md = docs\installation.md
 		docs\integration-testing.md = docs\integration-testing.md
@@ -112,6 +113,14 @@ EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.TestShared", "tests\Fable.SignalR.TestShared\Fable.SignalR.TestShared.fsproj", "{BE9FFEDE-5036-46EA-A4EA-345476C2F678}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Bench", "tests\Bench\Bench.fsproj", "{DCCCDD76-0140-4882-BB1E-96EB427720ED}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.DotNet", "src\Fable.SignalR.DotNet\Fable.SignalR.DotNet.fsproj", "{DBB95791-058C-4970-B704-D10F02076596}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.Shared", "src\Fable.SignalR.Shared\Fable.SignalR.Shared.fsproj", "{EE2A2B10-4862-4BFC-9F66-0BB0DE3A521E}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.DotNet.Elmish", "src\Fable.SignalR.DotNet.Elmish\Fable.SignalR.DotNet.Elmish.fsproj", "{72C39C35-A803-4D38-992D-28FB6FD880FC}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.SignalR.DotNet.Tests", "tests\Fable.SignalR.DotNet.Tests\Fable.SignalR.DotNet.Tests.fsproj", "{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -171,6 +180,22 @@ Global
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBB95791-058C-4970-B704-D10F02076596}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBB95791-058C-4970-B704-D10F02076596}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBB95791-058C-4970-B704-D10F02076596}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBB95791-058C-4970-B704-D10F02076596}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE2A2B10-4862-4BFC-9F66-0BB0DE3A521E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE2A2B10-4862-4BFC-9F66-0BB0DE3A521E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE2A2B10-4862-4BFC-9F66-0BB0DE3A521E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE2A2B10-4862-4BFC-9F66-0BB0DE3A521E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72C39C35-A803-4D38-992D-28FB6FD880FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72C39C35-A803-4D38-992D-28FB6FD880FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72C39C35-A803-4D38-992D-28FB6FD880FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72C39C35-A803-4D38-992D-28FB6FD880FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -187,6 +212,7 @@ Global
 		{6DCEC050-2B9B-4DF7-AE21-D554965EF5A1} = {27F9F1A6-C6B4-4539-B013-8549B4A6E1B5}
 		{BE9FFEDE-5036-46EA-A4EA-345476C2F678} = {27F9F1A6-C6B4-4539-B013-8549B4A6E1B5}
 		{DCCCDD76-0140-4882-BB1E-96EB427720ED} = {27F9F1A6-C6B4-4539-B013-8549B4A6E1B5}
+		{F42ADD8F-C6F1-4D82-A08B-8454ABDC3010} = {27F9F1A6-C6B4-4539-B013-8549B4A6E1B5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {96DAE6A9-B1CC-4FF7-B08C-D5FBFD55B385}

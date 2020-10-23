@@ -1,4 +1,4 @@
-﻿namespace Fable.SignalR
+﻿namespace Fable.SignalR.Shared
 
 module internal MemoryCache =
     open FSharp.Control

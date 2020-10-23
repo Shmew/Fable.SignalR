@@ -3,7 +3,7 @@
 [<AutoOpen>]
 module SignalRExtension =
     open Fable.Remoting.Json
-    open Fable.SignalR
+    open Fable.SignalR.Shared
     open Microsoft.AspNetCore.Builder
     open Microsoft.AspNetCore.SignalR
     open Microsoft.AspNetCore.SignalR.Protocol

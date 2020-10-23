@@ -55,3 +55,11 @@ let hub =
         hub ...
             .configureLogging(LogLevel.None)
 ```
+
+### On the .NET client
+
+```fsharp
+let hub =
+    hub ...
+        .configureLogging(fun logBuilder -> logBuilder.SetMinimumLevel(LogLevel.None))
+```

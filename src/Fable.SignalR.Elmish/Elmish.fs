@@ -352,14 +352,14 @@ module Elmish =
                 | Some hub ->
                     Cmd.OfAsyncWith.attempt 
                         (fun msg -> Async.StartImmediate(msg, hub.cts.Token)) 
-                        (fun msg -> hub.hub.invoke msg) 
+                        hub.hub.invoke 
                         msg
                         onError
                 | None -> 
                     #if DEBUG
                     JS.console.error("Cannot send a message if hub is not initialized!")
                     #endif
-                    [ fun _ -> () ]
+                    [ ignore ]
 
             /// Invokes a hub method on the server and maps the success or error.
             /// 
@@ -371,7 +371,7 @@ module Elmish =
                 | Some hub ->
                     Cmd.OfAsyncWith.either 
                         (fun msg -> Async.StartImmediate(msg, hub.cts.Token)) 
-                        (fun msg -> hub.hub.invoke msg) 
+                        hub.hub.invoke 
                         msg 
                         onSuccess
                         onError
@@ -379,7 +379,7 @@ module Elmish =
                     #if DEBUG
                     JS.console.error("Cannot send a message if hub is not initialized!")
                     #endif
-                    [ fun _ -> () ]
+                    [ ignore ]
 
             /// Invokes a hub method on the server and maps the success.
             /// 
@@ -391,14 +391,14 @@ module Elmish =
                 | Some hub ->
                     Cmd.OfAsyncWith.perform 
                         (fun msg -> Async.StartImmediate(msg, hub.cts.Token)) 
-                        (fun msg -> hub.hub.invoke msg) 
+                        hub.hub.invoke 
                         msg
                         onSuccess
                 | None -> 
                     #if DEBUG
                     JS.console.error("Cannot send a message if hub is not initialized!")
                     #endif
-                    [ fun _ -> () ]
+                    [ ignore ]
 
             /// Invokes a hub method on the server. Does not wait for a response from the receiver.
             /// 
@@ -443,6 +443,7 @@ module Elmish =
             static member inline streamTo (hub: Elmish.StreamHub.ClientToServer<'ClientApi,'ClientStreamToApi,'ServerApi> option) =
                 fun (subject: #ISubject<'ClientStreamToApi>) ->
                     [ fun _ -> hub |> Option.iter (fun hub -> hub.hub.streamToNow(subject)) ] : Cmd<_>
+
             /// Streams to the hub.
             static member inline streamTo (hub: Elmish.StreamHub.Bidrectional<'ClientApi,_,'ClientStreamToApi,'ServerApi,_> option) =
                 fun (subject: #ISubject<'ClientStreamToApi>) ->

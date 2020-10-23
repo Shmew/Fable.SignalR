@@ -5,17 +5,12 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Server.fs" />
-    <Compile Include="WebSocketsMiddleware.fs" />
-    <Compile Include="AspNetCore.fs" />
+    <Compile Include="Elmish.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Fable.SignalR.Shared\Fable.SignalR.Shared.fsproj" />
+    <ProjectReference Include="..\Fable.SignalR.DotNet\Fable.SignalR.DotNet.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -1,10 +1,10 @@
 # Fable.SignalR [![Nuget](https://img.shields.io/nuget/v/Fable.SignalR.svg?maxAge=0&colorB=brightgreen&label=Fable.SignalR)](https://www.nuget.org/packages/Fable.SignalR)
 
-Fable bindings for the SignalR client, and ASP.NET Core/Giraffe/Saturn wrappers for SignalR server hubs.
+Fable bindings for the SignalR client, a wrapper for the .NET client, 
+and ASP.NET Core/Giraffe/Saturn wrappers for SignalR server hubs.
 
-A quick look:
+### On the client
 
-On the client:
 ```fsharp
 let textDisplay = React.functionComponent(fun (input: {| count: int; text: string |}) ->
     React.fragment [
@@ -51,7 +51,7 @@ let render = React.functionComponent(fun () ->
     ])
 ```
 
-On the server:
+### On the server
 
 ```fsharp
 module SignalRHub =
@@ -88,7 +88,7 @@ application {
 }
 ```
 
-The shared file:
+### The shared file
 
 ```fsharp
 [<RequireQualifiedAccess>]

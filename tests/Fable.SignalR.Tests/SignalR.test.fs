@@ -28,7 +28,6 @@ type Msg =
     | SetClientStreamState of StreamStatus
     | GetState of (Model -> bool) * AsyncReplyChannel<Model>
     | SetState of (Model -> Model)
-    | IsConnected of AsyncReplyChannel<bool>
 
 type Hub = HubConnection<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>
 
@@ -90,18 +89,6 @@ type HubModel (hub: Hub) =
 
                             replyIfNew newState waitingState
                             |> loop newState
-                        | IsConnected reply ->
-                            async {
-                                if hub.state = ConnectionState.Disconnected then 
-                                    do! hub.start()
-
-                                while hub.state <> ConnectionState.Connected do
-                                    do! Async.Sleep 10
-
-                                do reply.Reply(hub.state = ConnectionState.Connected)
-
-                                return! loop state waitingState
-                            }
                 }
 
             loop { 

@@ -57,16 +57,17 @@ let (|Fsproj|Csproj|Vbproj|Shproj|) (projFileName:string) =
     | f when f.EndsWith("shproj") -> Shproj
     | _                           -> failwith (sprintf "Project file %s not supported. Unknown project type." projFileName)
     
-let srcGlob    = __SOURCE_DIRECTORY__ @@ "src/**/*.??proj"
-let fsSrcGlob  = __SOURCE_DIRECTORY__ @@ "src/**/*.fs"
-let fsTestGlob = __SOURCE_DIRECTORY__ @@ "tests/**/*.fs"
-let bin        = __SOURCE_DIRECTORY__ @@ "bin"
-let docs       = __SOURCE_DIRECTORY__ @@ "docs"
-let temp       = __SOURCE_DIRECTORY__ @@ "temp"
-let objFolder  = __SOURCE_DIRECTORY__ @@ "obj"
-let dist       = __SOURCE_DIRECTORY__ @@ "dist"
-let libGlob    = __SOURCE_DIRECTORY__ @@ "src/**/*.fsproj"
-let demoGlob   = __SOURCE_DIRECTORY__ @@ "demo/**/*.fsproj"
+let srcGlob        = __SOURCE_DIRECTORY__ @@ "src/**/*.??proj"
+let fsSrcGlob      = __SOURCE_DIRECTORY__ @@ "src/**/*.fs"
+let fsTestGlob     = __SOURCE_DIRECTORY__ @@ "tests/**/*.fs"
+let bin            = __SOURCE_DIRECTORY__ @@ "bin"
+let docs           = __SOURCE_DIRECTORY__ @@ "docs"
+let temp           = __SOURCE_DIRECTORY__ @@ "temp"
+let objFolder      = __SOURCE_DIRECTORY__ @@ "obj"
+let dist           = __SOURCE_DIRECTORY__ @@ "dist"
+let libGlob        = __SOURCE_DIRECTORY__ @@ "src/**/*.fsproj"
+let demoGlob       = __SOURCE_DIRECTORY__ @@ "demo/**/*.fsproj"
+let dotnetTestGlob = __SOURCE_DIRECTORY__ @@ "tests/*DotNet*/*.fsproj"
 
 let foldExcludeGlobs (g: IGlobbingPattern) (d: string) = g -- d
 let foldIncludeGlobs (g: IGlobbingPattern) (d: string) = g ++ d
@@ -224,6 +225,7 @@ Target.create "Build" <| fun _ ->
 
     !! libGlob
     ++ demoGlob
+    ++ dotnetTestGlob
     |> List.ofSeq
     |> List.iter (MSBuild.build setParams)
 
@@ -250,6 +252,7 @@ Target.create "PublishDotNet" <| fun _ ->
 
     !! libGlob
     ++ demoGlob
+    ++ dotnetTestGlob
     |> Seq.map
         ((fun f -> (((Path.getDirectory f) @@ "bin" @@ configuration()), f) )
         >>
@@ -280,6 +283,15 @@ Target.create "Lint" <| fun _ ->
 
 Target.create "RunTests" <| fun _ ->
     Yarn.exec "test-server" id
+
+    !! (__SOURCE_DIRECTORY__ @@ "tests/**/bin" @@ configuration() @@ "**/*Tests.exe")
+        |> Seq.iter (fun f ->
+            Command.RawCommand(f, Arguments.Empty)
+            |> CreateProcess.fromCommand
+            |> CreateProcess.withTimeout (System.TimeSpan.MaxValue)
+            |> CreateProcess.ensureExitCodeWithMessage "Tests failed."
+            |> Proc.run
+            |> ignore)
 
 // --------------------------------------------------------------------------------------
 // Update package.json version & name    
@@ -367,6 +379,7 @@ Target.create "All" ignore
 Target.create "Dev" ignore
 Target.create "Release" ignore
 Target.create "Publish" ignore
+Target.create "CI" ignore
 
 "Clean"
   ==> "Restore"
@@ -427,5 +440,7 @@ Target.create "Publish" ignore
 "Release" <== ["All"; "NuGet"; "ConfigRelease"]
 
 "Publish" <== ["Release"; "ConfigRelease"; "NuGetPublish"; "PublishDocs"; "GitTag"; "GitPush" ]
+
+"CI" <== ["CopyBinaries"; "RunTests"]
 
 Target.runOrDefaultWithArguments "Dev"

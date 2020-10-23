@@ -5,9 +5,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Server.fs" />
-    <Compile Include="WebSocketsMiddleware.fs" />
-    <Compile Include="AspNetCore.fs" />
+    <Compile Include="Common.fs" />
+    <Compile Include="HubConnection.fs" />
+    <Compile Include="SignalR.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>

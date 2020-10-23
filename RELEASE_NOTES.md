@@ -1,6 +1,9 @@
+### 0.9.0 - Friday, October 23rd, 2020
+* Added support for the .NET client
+
 ### 0.8.3 - Tuesday, October 13th, 2020
 * Fix issue with MsgPack protocol handling when messages
-are batched.
+are batched
 
 ### 0.8.2 - Monday, October 12th, 2020
 * Pin Fable.SimpleJson

@@ -25,7 +25,7 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         this
 
     /// Callback when the connection is closed.
-    member this.onClose callback =
+    member this.onClose (callback: exn option -> unit) =
         handlers <- { handlers with onClose = Some callback }
         this
 
@@ -35,12 +35,12 @@ type HubConnectionBuilder<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'Se
         this
     
     /// Callback when the connection successfully reconnects.
-    member this.onReconnected (callback: (string option -> unit)) =
+    member this.onReconnected (callback: string option -> unit) =
         handlers <- { handlers with onReconnected = Some callback }
         this
 
     /// Callback when the connection starts reconnecting.
-    member this.onReconnecting (callback: (exn option -> unit)) =
+    member this.onReconnecting (callback: exn option -> unit) =
         handlers <- { handlers with onReconnecting = Some callback }
         this
 

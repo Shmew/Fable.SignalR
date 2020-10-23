@@ -1,0 +1,8 @@
+﻿type project
+authors Cody Johnson
+description
+    A type-safe functional wrapper for SignalR and .NET clients
+language
+    F#
+tags
+    fsharp, fable, websocket, signalr, dotnet, client, elmish

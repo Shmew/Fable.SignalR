@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Util.fs" />
+    <Compile Include="Extensions.fs" />
+    <Compile Include="Generation.fs" />
+    <Compile Include="Config.fs" />
+    <Compile Include="Client.fs" />
+    <Compile Include="RunTests.fs" />
+    <None Include="paket.references" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fable.SignalR.DotNet.Elmish\Fable.SignalR.DotNet.Elmish.fsproj" />
+    <ProjectReference Include="..\..\src\Fable.SignalR.DotNet\Fable.SignalR.DotNet.fsproj" />
+    <ProjectReference Include="..\Fable.SignalR.TestServer\Fable.SignalR.TestServer.fsproj" />
+    <ProjectReference Include="..\Fable.SignalR.TestShared\Fable.SignalR.TestShared.fsproj" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
