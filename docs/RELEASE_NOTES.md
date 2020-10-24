@@ -1,3 +1,6 @@
+### 0.10.1 - Friday, October 23rd, 2020
+* Add target netstandard for dotnet client
+
 ### 0.10.0 - Friday, October 23rd, 2020
 * Fix MsgPack protocol issue
 * Add support for using the ISignalRServerBuilder
