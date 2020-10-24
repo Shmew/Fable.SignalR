@@ -2,6 +2,7 @@ namespace SignalRApp
 
 module App =
     open Fable.SignalR
+    open Fable.SignalR.Akka
     open Microsoft.Extensions.Logging
     open Microsoft.Extensions.DependencyInjection
     open Saturn
@@ -27,6 +28,31 @@ module App =
                     invoke SignalRHub2.invoke
                     stream_from SignalRHub2.Stream.sendToClient
                     stream_to SignalRHub2.Stream.getFromClient
+                    with_log_level Microsoft.Extensions.Logging.LogLevel.None
+                    with_hub_options (fun ho -> ho.EnableDetailedErrors <- Nullable<bool>(true))
+                    use_messagepack
+                }
+            )
+            use_signalr (
+                configure_signalr {
+                    endpoint Endpoints.RootAkka
+                    send SignalRHub.send
+                    invoke SignalRHub.invoke
+                    stream_from SignalRHub.Stream.sendToClient
+                    stream_to SignalRHub.Stream.getFromClient
+                    use_server_builder (fun builder -> builder.AddAkkaClustering())
+                    with_log_level Microsoft.Extensions.Logging.LogLevel.None
+                    with_hub_options (fun ho -> ho.EnableDetailedErrors <- Nullable<bool>(true))
+                }
+            )
+            use_signalr (
+                configure_signalr {
+                    endpoint Endpoints.RootAkka2
+                    send SignalRHub2.send
+                    invoke SignalRHub2.invoke
+                    stream_from SignalRHub2.Stream.sendToClient
+                    stream_to SignalRHub2.Stream.getFromClient
+                    use_server_builder (fun builder -> builder.AddAkkaClustering())
                     with_log_level Microsoft.Extensions.Logging.LogLevel.None
                     with_hub_options (fun ho -> ho.EnableDetailedErrors <- Nullable<bool>(true))
                     use_messagepack

@@ -2,6 +2,7 @@ namespace SignalRApp
 
 module App =
     open Fable.SignalR
+    open Fable.SignalR.Akka
     open Microsoft.AspNetCore.Builder
     open Microsoft.Extensions.DependencyInjection
     open Microsoft.Extensions.Logging
@@ -37,6 +38,7 @@ module App =
                             invoke SignalRHub.invoke
                             stream_from SignalRHub.Stream.sendToClient
                             use_bearer_auth
+                            use_server_builder (fun builder -> builder.AddAkkaClustering())
                             with_after_routing (fun builder ->
                                 builder
                                     .UseAuthentication()

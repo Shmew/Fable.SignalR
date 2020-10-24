@@ -15,10 +15,5 @@
     <ProjectReference Include="..\Fable.SignalR.AspNetCore\Fable.SignalR.AspNetCore.fsproj" />
     <ProjectReference Include="..\Fable.SignalR.Saturn\Fable.SignalR.Saturn.fsproj" />
   </ItemGroup>
-  <PropertyGroup>
-    <NpmDependencies>
-      <NpmPackage Name="@microsoft/signalr" Version="gte 3.1.5 lt 4" ResolutionStrategy="max" DevDependency="true" />
-    </NpmDependencies>
-  </PropertyGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

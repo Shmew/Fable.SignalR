@@ -24,9 +24,9 @@ open System.Threading.Tasks
 
 type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLifetimeManager<'Hub>>) =
     inherit HubLifetimeManager<'Hub>()
-
-    //let config = ConfigurationFactory.ParseString("")
-    let system = System.create (typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i") <| Configuration.parse(AkkaConfig.Hub)
+    
+    let config = Configuration.defaultConfig()
+    let system = System.create (typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i") config //<| Configuration.parse(AkkaConfig.Hub)
     
     let manager = Actors.manager system
 

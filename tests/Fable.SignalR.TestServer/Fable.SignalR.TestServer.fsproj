@@ -13,6 +13,7 @@
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Fable.SignalR.Akka\Fable.SignalR.Akka.fsproj" />
     <ProjectReference Include="..\..\src\Fable.SignalR.Saturn\Fable.SignalR.Saturn.fsproj" />
     <ProjectReference Include="..\Fable.SignalR.TestShared\Fable.SignalR.TestShared.fsproj" />
   </ItemGroup>

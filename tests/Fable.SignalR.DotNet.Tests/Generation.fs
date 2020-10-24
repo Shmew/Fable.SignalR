@@ -56,6 +56,19 @@ module Generation =
                     .ConfigureLogging(fun logBuilder -> logBuilder.SetMinimumLevel(LogLevel.None))
                     .UseMessagePack())
 
+        let akkaHub (server: TestServer) : Hub =
+            SignalR.Connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
+                hub.WithUrl("http://localhost:8085" + Endpoints.RootAkka, fun o -> o.HttpMessageHandlerFactory <- (fun _ -> server.CreateHandler()))
+                    .WithAutomaticReconnect()
+                    .ConfigureLogging(fun logBuilder -> logBuilder.SetMinimumLevel(LogLevel.None)))
+
+        let akkaMsgPackHub (server: TestServer) : Hub =
+            SignalR.Connect<Action,StreamFrom.Action,StreamTo.Action,Response,StreamFrom.Response>(fun hub ->
+                hub.WithUrl("http://localhost:8085" + Endpoints.RootAkka2, fun o -> o.HttpMessageHandlerFactory <- (fun _ -> server.CreateHandler()))
+                    .WithAutomaticReconnect()
+                    .ConfigureLogging(fun logBuilder -> logBuilder.SetMinimumLevel(LogLevel.None))
+                    .UseMessagePack())
+
         type HubModel (hub: Hub) =
             let replyIfNew newState (waiting: ((Model -> bool) * AsyncReplyChannel<Model>) list) =
                 waiting
@@ -378,6 +391,56 @@ module Generation =
             { new ICommandGenerator<Model.HubModel, Model.Model> with
                 member _.InitialActual = 
                     let actual = Model.HubModel(Model.msgPackHub server)
+
+                    actual.IsConnected()
+                    |> Async.RunSynchronously
+                    |> function
+                    | true -> ()
+                    | false -> failwith "Hub not running"
+
+                    actual
+
+                member _.InitialModel = Model.Model.empty
+                member _.Next _ = 
+                    Gen.elements [
+                        SendIncrement()
+                        SendDecrement()
+                        InvokeIncrement()
+                        InvokeDecrement()
+                        StreamFrom()
+                        StreamTo()
+                    ] }
+            |> Command.toProperty
+            
+        let akkaCommandGen (server: TestServer) =
+            { new ICommandGenerator<Model.HubModel, Model.Model> with
+                member _.InitialActual = 
+                    let actual = Model.HubModel(Model.akkaHub server)
+                    
+                    actual.IsConnected()
+                    |> Async.RunSynchronously
+                    |> function
+                    | true -> ()
+                    | false -> failwith "Hub not running"
+
+                    actual
+
+                member _.InitialModel = Model.Model.empty
+                member _.Next _ = 
+                    Gen.elements [
+                        SendIncrement()
+                        SendDecrement()
+                        InvokeIncrement()
+                        InvokeDecrement()
+                        StreamFrom()
+                        StreamTo()
+                    ] }
+            |> Command.toProperty
+
+        let akkaMsgPackCommandGen (server: TestServer) =
+            { new ICommandGenerator<Model.HubModel, Model.Model> with
+                member _.InitialActual = 
+                    let actual = Model.HubModel(Model.akkaMsgPackHub server)
 
                     actual.IsConnected()
                     |> Async.RunSynchronously

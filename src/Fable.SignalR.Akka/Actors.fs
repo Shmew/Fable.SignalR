@@ -73,11 +73,6 @@ module internal Helpers =
                 }
             | None -> task { return None }
 
-    module ValueTask =
-        let start (valueTask: ValueTask) = 
-            if not (valueTask.IsCanceled || valueTask.IsCompleted) then
-                valueTask.AsTask().Start()
-
     module Set =
         let asIReadOnlyList (set: Set<'T>) = (ResizeArray set) :> IReadOnlyList<'T>
 
@@ -155,39 +150,49 @@ module private Name =
 
 [<RequireQualifiedAccess>]
 module private Addr =
-    let root = "akka://"
-    let up = ".."
+    type Connections (path: string) =
+        member _.connection (connectionId: string) = path @@ connectionId
+        member _.up = path
 
-    module Root =
-        let manager = root @@ Name.Manager
+    type Groups (path: string) =
+        member _.group (groupName: string) = path @@ groupName
+        member _.up = path
 
-        module Manager =
-            let connections = manager @@ Name.Connections
+    type Users (path: string) =
+        member _.user (userId: string) = path @@ userId
+        member _.up = path
 
-            module Connections =
-                let connection (connectionId: string) = connections @@ connectionId
+    type Manager (path: string) =
+        member _.connections = path @@ Name.Connections
+        member _.groups = path @@ Name.Groups
+        member _.users = path @@ Name.Users
+        member _.up = path
 
-            let groups = manager @@ Name.Groups
+        member this.Connections = Connections(this.connections)
+        member this.Groups = Groups(this.groups)
+        member this.Users = Users(this.users)
 
-            module Groups =
-                let group (groupName: string) = groups @@ groupName
+    type Root (root: string) =
+        member _.manager = root @@ Name.Manager
 
-            let users = manager @@ Name.Users
-    
-            module Users =
-                let user (userId: string) = users @@ userId
+        member this.Manager = Manager(this.manager)
 
-[<RequireQualifiedAccess>]
-module private Providers =
-    type Groups =
-        static member GetMembers (mailbox: Actor<_>) (groupName: string) : Task<Set<string> option> =
-            Msg.Groups.GetMembers groupName
-            |> mailbox.Context.ActorSelection(Addr.root @@ Addr.Root.Manager.groups).Ask<Set<string> option>
+[<AutoOpen>]
+module private ActorExtensions =
+    type Actor<'Message> with
+        member this.Addr = Addr.Root(this.Self.Path.Address.ToString() @@ "user")
 
-        static member GetMembersAsync (mailbox: Actor<_>) (groupName: string) : Async<Set<string> option> =
-            Msg.Groups.GetMembers groupName
-            |> mailbox.Context.ActorSelection(Addr.root @@ Addr.Root.Manager.groups).Ask<Set<string> option>
-            |> Async.AwaitTask
+//[<RequireQualifiedAccess>]
+//module private Providers =
+//    type Groups =
+//        static member GetMembers (mailbox: Actor<_>) (groupName: string) : Task<Set<string> option> =
+//            Msg.Groups.GetMembers groupName
+//            |> mailbox.Context.ActorSelection(Addr.root @@ Addr.Root.Manager.groups).Ask<Set<string> option>
+
+//        static member GetMembersAsync (mailbox: Actor<_>) (groupName: string) : Async<Set<string> option> =
+//            Msg.Groups.GetMembers groupName
+//            |> mailbox.Context.ActorSelection(Addr.root @@ Addr.Root.Manager.groups).Ask<Set<string> option>
+//            |> Async.AwaitTask
 
 module Actors =
     open Microsoft.AspNetCore.SignalR.Protocol
@@ -216,7 +221,7 @@ module Actors =
 
                         members
                         |> Seq.iter (
-                            Addr.Root.Manager.Connections.connection 
+                            mailbox.Addr.Manager.Connections.connection
                             >> mailbox.Context.ActorSelection 
                             >> ActorSelection.tell msg
                         )
@@ -227,7 +232,7 @@ module Actors =
                         
                         Set.difference members excludedMembers
                         |> Seq.iter (
-                            Addr.Root.Manager.Connections.connection
+                            mailbox.Addr.Manager.Connections.connection
                             >> mailbox.Context.ActorSelection
                             >> ActorSelection.tell msg
                         )
@@ -269,7 +274,7 @@ module Actors =
 
     let private connection name system =
         let findGroupActor (mailbox: Actor<Msg.Connection>) (group: string) =
-            Addr.root @@ Addr.Root.Manager.Groups.group group
+            mailbox.Addr.Manager.Groups.group group
             |> mailbox.Context.ActorSelection
 
         let leaveGroup (mailbox: Actor<Msg.Connection>) (group: string) =
@@ -283,7 +288,7 @@ module Actors =
         spawn system name <| fun (mailbox: Actor<Msg.Connection>) ->
             let rec loop (state: ConnectionState) = actor {
                 let! msg = mailbox.Receive()
-
+                
                 let state =
                     match state,msg with
                     | ConnectionState.Connected (_,groups), Msg.Connection.Disconnected ->
@@ -302,7 +307,7 @@ module Actors =
                         InvocationMessage(methodName, args)
                         |> SerializedHubMessage
                         |> ctx.WriteAsync
-                        |> ValueTask.start
+                        |> ignore
 
                         None
                     | _, Msg.Connection.Connected ctx ->
@@ -361,7 +366,7 @@ module Actors =
                     | Msg.User.SendToConnections msg ->
                         connections
                         |> Seq.iter (
-                            Addr.Root.Manager.Connections.connection
+                            mailbox.Addr.Manager.Connections.connection
                             >> mailbox.Context.ActorSelection
                             >> ActorSelection.tell msg
                         )
@@ -442,14 +447,14 @@ module Actors =
                     |> Child.iterMsg mailbox Name.Connections
 
                 | Msg.Manager.SendConnection(connectionId, methodName, args, ct) ->
-                    Addr.Root.Manager.Connections.connection connectionId
+                    mailbox.Addr.Manager.Connections.connection connectionId
                     |> mailbox.Context.ActorSelection
                     |> ActorSelection.tell (Msg.Connection.SendToConnection(methodName, args))
 
                 | Msg.Manager.SendConnections(connectionIds, methodName, args, ct) ->
                     connectionIds
                     |> Seq.iter (
-                        Addr.Root.Manager.Connections.connection
+                        mailbox.Addr.Manager.Connections.connection
                         >> mailbox.Context.ActorSelection
                         >> ActorSelection.tell (Msg.Connection.SendToConnection(methodName, args))
                     )
@@ -474,7 +479,7 @@ module Actors =
                         Msg.Connection.SendToConnection(methodName, args)
                         |> Msg.User.SendToConnections
 
-                    Addr.Root.Manager.Users.user userName
+                    mailbox.Addr.Manager.Users.user userName
                     |> mailbox.Context.ActorSelection
                     |> ActorSelection.tell msg
 
@@ -485,7 +490,7 @@ module Actors =
 
                     userNames
                     |> Seq.iter (
-                        Addr.Root.Manager.Users.user
+                        mailbox.Addr.Manager.Users.user
                         >> mailbox.Context.ActorSelection
                         >> ActorSelection.tell msg
                     )
