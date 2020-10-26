@@ -115,13 +115,12 @@ module Child =
 
     let create (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef<'Message>) =
         getOrCreate mailbox name f
-        |> ignore
     
-    let iter (mailbox: Actor<_>) (name: string) (f: IActorRef<'Message> -> _) =
+    let private iter (mailbox: Actor<_>) (name: string) (f: IActorRef<'Message> -> _) =
         tryGet mailbox name
         |> Option.iter (f >> ignore)
 
-    let iterMsg (mailbox: Actor<_>) (name: string) (msg: 'Msg) =
+    let tell (mailbox: Actor<_>) (name: string) (msg: 'Msg) =
         iter mailbox name (fun child -> child <! msg)
 
     let tryAsk (mailbox: Actor<_>) (name: string) (msg: 'Msg) =
@@ -142,6 +141,11 @@ module Child =
             return mailbox.Sender().Tell(res, (mailbox.Self :> IInternalTypedActorRef).Underlying)
         }
         |> Async.Start
+
+[<RequireQualifiedAccess>]
+module Actor =
+    let tell (actor: IActorRef<'Message>) (msg: 'Message) = actor <! msg
+    let ask (actor: IActorRef<'Message>) (msg: 'Message) = actor <? msg
 
 [<RequireQualifiedAccess>]
 module ActorSelection =

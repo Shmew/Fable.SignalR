@@ -134,9 +134,13 @@ module Generation =
                     return hub.State = HubConnectionState.Connected  
                 }
 
-            member _.GetState (predicate: Model -> bool) = 
-                mailbox.PostAndAsyncReply(fun reply -> GetState(predicate,reply))
-
+            member _.GetState (predicate: Model -> bool) =
+                async {
+                    try
+                        return! mailbox.PostAndAsyncReply((fun reply -> GetState(predicate,reply)), timeout = 5000)
+                    with _ -> return! mailbox.PostAndAsyncReply((fun reply -> GetState((fun _ -> true),reply)), timeout = 5000)
+                }
+                
             member this.SendIncrement () =
                 async {
                     let! initState = this.GetState(fun _ -> true)
@@ -230,7 +234,7 @@ module Generation =
         type SendIncrement () =
             inherit Command<Model.HubModel, Model.Model>()
 
-            override _.RunActual hm = 
+            override _.RunActual hm =
                 hm.SendIncrement()
                 |> Async.Ignore
                 |> Async.RunSynchronously
@@ -368,7 +372,7 @@ module Generation =
                     let actual = Model.HubModel(Model.hub server)
                     
                     actual.IsConnected()
-                    |> Async.RunSynchronously
+                    |> fun a -> Async.RunSynchronously(a, timeout = 5000)
                     |> function
                     | true -> ()
                     | false -> failwith "Hub not running"
@@ -393,7 +397,7 @@ module Generation =
                     let actual = Model.HubModel(Model.msgPackHub server)
 
                     actual.IsConnected()
-                    |> Async.RunSynchronously
+                    |> fun a -> Async.RunSynchronously(a, timeout = 5000)
                     |> function
                     | true -> ()
                     | false -> failwith "Hub not running"
@@ -411,14 +415,14 @@ module Generation =
                         StreamTo()
                     ] }
             |> Command.toProperty
-            
+
         let akkaCommandGen (server: TestServer) =
             { new ICommandGenerator<Model.HubModel, Model.Model> with
                 member _.InitialActual = 
                     let actual = Model.HubModel(Model.akkaHub server)
                     
                     actual.IsConnected()
-                    |> Async.RunSynchronously
+                    |> fun a -> Async.RunSynchronously(a, timeout = 5000)
                     |> function
                     | true -> ()
                     | false -> failwith "Hub not running"
@@ -443,7 +447,7 @@ module Generation =
                     let actual = Model.HubModel(Model.akkaMsgPackHub server)
 
                     actual.IsConnected()
-                    |> Async.RunSynchronously
+                    |> fun a -> Async.RunSynchronously(a, timeout = 5000)
                     |> function
                     | true -> ()
                     | false -> failwith "Hub not running"

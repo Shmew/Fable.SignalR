@@ -219,17 +219,22 @@ module Actors =
                     group groupName
                     |> Child.getOrCreate mailbox groupName
                     <! Msg.Group.AddConnection user
+
                 | Msg.Groups.RemoveFromGroup(groupName,user) ->
                     Msg.Group.RemoveConnection user
-                    |> Child.iterMsg mailbox groupName
+                    |> Child.tell mailbox groupName
+
                 | Msg.Groups.SendToGroup(groupName, msg) ->
-                    Child.iterMsg mailbox groupName msg
+                    Child.tell mailbox groupName msg
+
                 | Msg.Groups.SendToGroups(groups, msg) ->
                     groups
-                    |> Seq.iter (fun groupName -> Child.iterMsg mailbox groupName msg)
+                    |> Seq.iter (fun groupName -> Child.tell mailbox groupName msg)
+
                 | Msg.Groups.GetMembers groupName ->
                     Msg.Group.GetMembers
                     |> Child.tryAskThenTell mailbox groupName
+
                 return! loop ()
             }
 
@@ -258,14 +263,17 @@ module Actors =
                         Set.iter leaveGroup groups
 
                         Some ConnectionState.Disconnected
+
                     | ConnectionState.Connected (ctx,groups), Msg.Connection.JoinedGroup group ->
                         joinGroup group
                         
                         ConnectionState.Connected(ctx,groups.Add group) |> Some
+
                     | ConnectionState.Connected (ctx,groups), Msg.Connection.LeftGroup group ->
                         leaveGroup group
 
                         ConnectionState.Connected(ctx,groups.Remove group) |> Some
+
                     | ConnectionState.Connected (ctx,_), Msg.Connection.SendToConnection(methodName, args) ->
                         InvocationMessage(methodName, args)
                         |> SerializedHubMessage
@@ -273,8 +281,10 @@ module Actors =
                         |> ignore
 
                         None
+
                     | _, Msg.Connection.Connected ctx ->
                         ConnectionState.Connected(ctx,Set.empty) |> Some
+
                     | _ -> None
                     |> Option.defaultValue state
 
@@ -293,23 +303,29 @@ module Actors =
                 | Msg.Connections.AddConnection ctx ->
                     connection ctx.ConnectionId
                     |> Child.create mailbox ctx.ConnectionId
+                    |> ignore
 
                     Msg.Connection.Connected ctx
-                    |> Child.iterMsg mailbox ctx.ConnectionId
+                    |> Child.tell mailbox ctx.ConnectionId
+
                 | Msg.Connections.RemoveConnection connectionId ->
-                    Child.iterMsg mailbox connectionId Msg.Connection.Disconnected
+                    Child.tell mailbox connectionId Msg.Connection.Disconnected
+
                 | Msg.Connections.SendConnections(connectionIds, msg) ->
-                    connectionIds |> Seq.iter (fun connectionId -> Child.iterMsg mailbox connectionId msg)
+                    connectionIds |> Seq.iter (fun connectionId -> Child.tell mailbox connectionId msg)
+
                 | Msg.Connections.SendAll msg ->
                     mailbox.UntypedContext.GetChildren()
                     |> Seq.iter (fun child -> child.Tell msg)
+
                 | Msg.Connections.SendConnectionsExcept(excludedConnectionIds, msg) ->
                     mailbox.UntypedContext.GetChildren() 
                     |> Seq.iter (fun child -> 
                         if excludedConnectionIds.Contains(child.Path.Name) |> not then
                             child.Tell msg)
+
                 | Msg.Connections.ConnectionMsg(connectionId, msg) -> 
-                    Child.iterMsg mailbox connectionId msg
+                    Child.tell mailbox connectionId msg
 
                 return! loop ()
             }
@@ -328,16 +344,20 @@ module Actors =
                     match msg with
                     | Msg.User.AddConnection connectionId ->
                         connections.Add connectionId |> Some
+
                     | Msg.User.RemoveConnection connectionId ->
                         connections.Remove connectionId |> Some
+
                     | Msg.User.SendToConnections msg ->
                         Seq.iter (addressbook.tell msg) connections
 
                         None
+
                     | Msg.User.GetConnections ->
                         mailbox.UntypedContext.Sender.Tell connections
 
                         None
+
                     |> Option.defaultValue connections
 
                 return! loop connections
@@ -356,19 +376,24 @@ module Actors =
                     user userName
                     |> Child.getOrCreate mailbox userName
                     <! Msg.User.AddConnection connectionId
+
                 | Msg.Users.RemoveFromUser(userName,connectionId) ->
                     Msg.User.RemoveConnection connectionId
-                    |> Child.iterMsg mailbox userName
+                    |> Child.tell mailbox userName
+
                 | Msg.Users.SendToUser(user, msg) ->
                     mailbox.UntypedContext.Child(user).Tell msg
+
                 | Msg.Users.SendToUsers(users, msg) ->
                     mailbox.UntypedContext.GetChildren()
                     |> Seq.iter (fun child -> 
                         if users.Contains(child.Path.Name) then
                             child.Tell msg)
+
                 | Msg.Users.GetConnections userName ->
                     Msg.User.GetConnections
                     |> Child.tryAskThenTell mailbox userName
+
                 return! loop ()
             }
 
@@ -377,9 +402,9 @@ module Actors =
 
     let manager system =
         props <| fun (mailbox: Actor<Msg.Manager>) ->
-            Child.create mailbox Name.Groups groups
-            Child.create mailbox Name.Connections connections
-            Child.create mailbox Name.Users users
+            let groups = Child.create mailbox Name.Groups groups
+            let connections = Child.create mailbox Name.Connections connections
+            let users = Child.create mailbox Name.Users users
 
             let connectionAddressbook = AddressBook(system, mailbox.Addr.Manager.Connections.connection)
             let userAddressbook = AddressBook(system, mailbox.Addr.Manager.Users.user)
@@ -392,28 +417,24 @@ module Actors =
 
                 match msg with
                 | Msg.Manager.OnConnected ctx ->
-                    Msg.Connections.AddConnection ctx
-                    |> Child.iterMsg mailbox Name.Connections
+                    connections <! Msg.Connections.AddConnection ctx
 
                 | Msg.Manager.OnDisconnected ctx ->
-                    Msg.Connections.RemoveConnection ctx.ConnectionId
-                    |> Child.iterMsg mailbox Name.Connections
+                    connections <! Msg.Connections.RemoveConnection ctx.ConnectionId
 
                     match ctx.UserIdentifier with
                     | null -> ()
-                    | userName -> 
-                        Msg.Users.RemoveFromUser(userName, ctx.ConnectionId)
-                        |> Child.iterMsg mailbox Name.Users
-
+                    | userName -> users <! Msg.Users.RemoveFromUser(userName, ctx.ConnectionId)
+                        
                 | Msg.Manager.SendAll(methodName, args) ->
-                    Msg.Connection.SendToConnection(methodName, args)
+                    Msg.Connection.SendToConnection(methodName, args) 
                     |> Msg.Connections.SendAll
-                    |> Child.iterMsg mailbox Name.Connections
+                    |> Actor.tell connections
 
                 | Msg.Manager.SendAllExcept(methodName, args, excludedConnectionIds) ->
                     Msg.Connection.SendToConnection(methodName, args)
                     |> fun msg -> Msg.Connections.SendConnectionsExcept(Set.ofSeq excludedConnectionIds, msg)
-                    |> Child.iterMsg mailbox Name.Connections
+                    |> Actor.tell connections
 
                 | Msg.Manager.SendConnection(connectionId, methodName, args) ->
                     Msg.Connection.SendToConnection(methodName, args)
@@ -427,17 +448,17 @@ module Actors =
                 | Msg.Manager.SendGroup(groupName, methodName, args) ->
                     Msg.Group.SendToMembers(methodName, args)
                     |> fun msg -> Msg.Groups.SendToGroup(groupName, msg)
-                    |> Child.iterMsg mailbox Name.Groups
+                    |> Actor.tell groups
 
                 | Msg.Manager.SendGroups(groupNames, methodName, args) ->
                     Msg.Group.SendToMembers(methodName, args)
                     |> fun msg -> Msg.Groups.SendToGroups(Set.ofSeq groupNames, msg)
-                    |> Child.iterMsg mailbox Name.Groups
+                    |> Actor.tell groups
 
                 | Msg.Manager.SendGroupExcept(groupName, methodName, args, excludedConnectionIds) ->
                     Msg.Group.SendToMembersExcept(Set.ofSeq excludedConnectionIds, methodName, args)
                     |> fun msg -> Msg.Groups.SendToGroup(groupName, msg)
-                    |> Child.iterMsg mailbox Name.Groups
+                    |> Actor.tell groups
 
                 | Msg.Manager.SendUser(userName, methodName, args) ->
                     Msg.Connection.SendToConnection(methodName, args)
@@ -452,11 +473,11 @@ module Actors =
                     
                 | Msg.Manager.AddToGroup(connectionId, groupName) ->
                     Msg.Groups.AddToGroup(groupName, connectionId)
-                    |> Child.iterMsg mailbox Name.Groups
+                    |> Actor.tell groups
 
                 | Msg.Manager.RemoveFromGroup(connectionId, groupName) ->
                     Msg.Groups.RemoveFromGroup(groupName, connectionId)
-                    |> Child.iterMsg mailbox Name.Groups
+                    |> Actor.tell groups
 
                 return! loop ()
             }
