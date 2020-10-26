@@ -1,32 +1,23 @@
 ﻿namespace Fable.SignalR.Akka
 
-open Akka
-open Akka.Actor
 open Akka.Cluster
 open Akka.Configuration
-open Akka.FSharp
-open Fable.SignalR
-open FSharp.Control.Tasks.ContextInsensitive
-open FSharp.Data.LiteralProviders
+open Akkling
 open Microsoft.AspNetCore.SignalR
-open Microsoft.AspNetCore.SignalR.Protocol
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open System
 open System.Runtime.InteropServices
-open System.Threading
-open System.Threading.Tasks
- 
- module private AkkaConfig =
-    let [<Literal>] Hub = TextFile.``akka.conf``.Text
 
  // TODO: Add logging actor and log errors for when things like group name and connection ids are null
 
-type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLifetimeManager<'Hub>>) =
+type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLifetimeManager<'Hub>>, config: Config) =
     inherit HubLifetimeManager<'Hub>()
-    
-    let config = Configuration.defaultConfig()
-    let system = System.create (typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i") config //<| Configuration.parse(AkkaConfig.Hub)
+
+    let system = 
+        config
+        |> Config.setLogLevel logger.IsEnabled
+        |> System.create (typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i")
     
     let manager = Actors.manager system
 
@@ -59,48 +50,48 @@ type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLi
            |> Task.liftGen
 
     override _.SendAllAsync (methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendAll(methodName, args, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendAll(methodName, args)
 
     override _.SendAllExceptAsync (methodName, args, excludedConnectionIds, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendAllExcept(methodName, args, excludedConnectionIds, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendAllExcept(methodName, args, excludedConnectionIds)
 
     override _.SendConnectionAsync (connectionId, methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendConnection(connectionId, methodName, args, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendConnection(connectionId, methodName, args)
 
     override _.SendConnectionsAsync (connectionIds, methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendConnections(connectionIds, methodName, args, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendConnections(connectionIds, methodName, args)
 
     override _.SendGroupAsync (groupName, methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendGroup(groupName, methodName, args, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendGroup(groupName, methodName, args)
 
     override _.SendGroupsAsync (groupNames, methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendGroups(groupNames, methodName, args, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendGroups(groupNames, methodName, args)
 
     override _.SendGroupExceptAsync (groupName, methodName, args, excludedConnectionIds, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendGroupExcept(groupName, methodName, args, excludedConnectionIds, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendGroupExcept(groupName, methodName, args, excludedConnectionIds)
 
     override _.SendUserAsync (userId, methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendUser(userId, methodName, args, cancellationToken) 
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendUser(userId, methodName, args) 
         
     override _.SendUsersAsync (userIds, methodName, args, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.SendUsers(userIds, methodName, args, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.SendUsers(userIds, methodName, args)
 
     override _.AddToGroupAsync (connectionId, groupName, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.AddToGroup(connectionId, groupName, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.AddToGroup(connectionId, groupName)
 
     override _.RemoveFromGroupAsync (connectionId, groupName, [<Optional>] cancellationToken) =
-        manager <! Msg.Manager.RemoveFromGroup(connectionId, groupName, cancellationToken)
-        |> Task.liftGen
+        CancellationToken.iterTask cancellationToken <| fun () ->
+            manager <! Msg.Manager.RemoveFromGroup(connectionId, groupName)
 
     interface IDisposable with
         member _.Dispose () =
@@ -109,9 +100,24 @@ type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLi
 
 [<AutoOpen>]
 module SignalRServerBuilderExtensions =
+    open FSharp.Data.LiteralProviders
+
+    module private AkkaConfig =
+       let [<Literal>] Hub = TextFile.``akka.conf``.Text
+       let [<Literal>] TestHub = TextFile.``testConfig.conf``.Text
+
     type ISignalRServerBuilder with
-        member this.AddAkkaClustering () =
-            this.Services.AddSingleton(typedefof<HubLifetimeManager<_>>,typedefof<AkkaHubLifetimeManager<_>>)
+        member this.AddAkkaClustering (?akkaConfig: Config) =
+            let config = 
+                let baseConfig = Configuration.parse AkkaConfig.TestHub
+
+                akkaConfig
+                |> Option.map (fun config -> config.SafeWithFallback baseConfig)
+                |> Option.defaultValue baseConfig
+
+            this.Services
+                .AddSingleton<Config>(config)
+                .AddSingleton(typedefof<HubLifetimeManager<_>>,typedefof<AkkaHubLifetimeManager<_>>)
             |> ignore
 
             this

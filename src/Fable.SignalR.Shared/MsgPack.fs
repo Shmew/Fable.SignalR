@@ -10,7 +10,6 @@ open System.Buffers
 
 [<RequireQualifiedAccess>]
 module MsgPackProtocol =
-    open Fable.SignalR.Shared
     open Fable.SignalR.Shared.MsgPack
 
     let [<Literal>] private ProtocolName = "messagepack"

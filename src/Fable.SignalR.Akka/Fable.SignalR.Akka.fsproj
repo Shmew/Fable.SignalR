@@ -5,7 +5,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="testConfig.conf" />
     <None Include="akka.conf" />
+    <Compile Include="Util.fs" />
     <Compile Include="Actors.fs" />
     <Compile Include="SignalR.fs" />
     <None Include="paket.references" />

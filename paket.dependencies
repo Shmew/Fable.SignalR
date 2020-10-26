@@ -24,9 +24,11 @@ group Fable.SignalR.Akka
     nuget Akka.Remote ~> 1
     nuget Akka.Serialization.Hyperion ~> 1
     nuget Akka.Streams ~> 1
+    nuget Akkling ~> 0
     nuget FSharp.Core ~> 4.7
     nuget FSharp.Data.LiteralProviders ~> 0
-    nuget TaskBuilder.fs ~> 2 
+    nuget FsToolkit.ErrorHandling 2.0.0-beta001
+    nuget Ply ~> 0
 
 group Fable.SignalR.AspNetCore
     source https://nuget.org/api/v2
@@ -36,7 +38,7 @@ group Fable.SignalR.AspNetCore
     nuget Fable.Remoting.MsgPack ~> 1
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
-    nuget TaskBuilder.fs ~> 2
+    nuget Ply ~> 0
 
 group Fable.SignalR.DotNet
     source https://nuget.org/api/v2

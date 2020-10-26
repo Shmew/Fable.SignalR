@@ -6,6 +6,8 @@
     Akka.Remote
     Akka.Serialization.Hyperion
     Akka.Streams
+    Akkling
     FSharp.Core
     FSharp.Data.LiteralProviders
-    TaskBuilder.fs
+    FsToolkit.ErrorHandling
+    Ply

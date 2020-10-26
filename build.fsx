@@ -281,17 +281,18 @@ Target.create "Lint" <| fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests
 
-Target.create "RunTests" <| fun _ ->
+Target.create "TestJS" <| fun _ ->
     Yarn.exec "test-server" id
 
+Target.create "TestDotNet" <| fun _ ->
     !! (__SOURCE_DIRECTORY__ @@ "tests/**/bin" @@ configuration() @@ "**/*Tests.exe")
-        |> Seq.iter (fun f ->
-            Command.RawCommand(f, Arguments.Empty)
-            |> CreateProcess.fromCommand
-            |> CreateProcess.withTimeout (System.TimeSpan.MaxValue)
-            |> CreateProcess.ensureExitCodeWithMessage "Tests failed."
-            |> Proc.run
-            |> ignore)
+    |> Seq.iter (fun f ->
+        Command.RawCommand(f, Arguments.Empty)
+        |> CreateProcess.fromCommand
+        |> CreateProcess.withTimeout (System.TimeSpan.MaxValue)
+        |> CreateProcess.ensureExitCodeWithMessage "Tests failed."
+        |> Proc.run
+        |> ignore)
 
 // --------------------------------------------------------------------------------------
 // Update package.json version & name    
@@ -375,11 +376,14 @@ Target.create "PublishDocs" <| fun _ ->
 // --------------------------------------------------------------------------------------
 // Run all targets by default. Invoke 'build -t <Target>' to override
 
+Target.create "RunTests" ignore
 Target.create "All" ignore
 Target.create "Dev" ignore
 Target.create "Release" ignore
 Target.create "Publish" ignore
 Target.create "CI" ignore
+
+"RunTests" <== ["TestJS"; "TestDotNet"]
 
 "Clean"
   ==> "Restore"
@@ -403,13 +407,15 @@ Target.create "CI" ignore
   ?=> "RunTests"
   ?=> "CleanDocs"
 
+"Build" ==> "TestJS"
+"Build" ==> "TestDotNet"
 "Build" ==> "RunTests"
 
 "All"
   ==> "GitPush"
   ?=> "GitTag"
 
-"All" <== ["Lint"; "RunTests"; "CopyBinaries" ]
+"All" <== ["Lint"; "RunTests"; "CopyBinaries"]
 
 "CleanDocs"
   ==> "CopyDocFiles"

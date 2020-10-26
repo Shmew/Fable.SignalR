@@ -1,6 +1,6 @@
 ﻿namespace Fable.SignalR.Shared
 
-module internal MemoryCache =
+module MemoryCache =
     open FSharp.Control
     open System
     open System.Collections.Concurrent
@@ -8,7 +8,7 @@ module internal MemoryCache =
     open System.Timers
 
     [<RequireQualifiedAccess>]
-    module Async =
+    module private Async =
         let lift x = async { return x }
         let map f a = 
             async {

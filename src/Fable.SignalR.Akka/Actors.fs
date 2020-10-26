@@ -1,86 +1,11 @@
 ﻿namespace Fable.SignalR.Akka
 
 open Akka.Actor
-open Akka.FSharp
-open Akka.FSharp.Actors
-open FSharp.Control.Tasks.ContextInsensitive
+open Akkling
+open FsToolkit.ErrorHandling
 open Microsoft.AspNetCore.SignalR
 open System
 open System.Collections.Generic
-open System.Threading
-open System.Threading.Tasks
-
-[<AutoOpen>]
-module internal Helpers =
-    let private tryCast (t:Task<obj>) : 'Message =
-        match t.Result with
-        | :? 'Message as m -> m
-        | o ->
-            let context = Akka.Actor.Internal.InternalCurrentActorCellKeeper.Current
-            if isNull context
-            then failwith "Cannot cast object outside the actor system context "
-            else
-                match o with
-                | :? (byte[]) as bytes -> 
-                    let serializer = context.System.Serialization.FindSerializerForType typeof<'Message>
-                    serializer.FromBinary(bytes, typeof<'Message>) :?> 'Message
-                | _ -> raise (InvalidCastException("Tried to cast object to " + typeof<'Message>.ToString()))
-
-    let inline (<!!) (actorRef : #ICanTell) (msg : obj) : Task = 
-        task { return actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender()) } :> Task
-
-    let (<??) (tell : #ICanTell) (msg : obj) = 
-        tell.Ask(msg).ContinueWith(tryCast, TaskContinuationOptions.ExecuteSynchronously)
-
-    let inline (|!!>) (computation : Task) (recipient : ICanTell) = pipeTo (computation |> Async.AwaitTask) recipient ActorRefs.NoSender
-
-    let inline (<!!|) (recipient : ICanTell) (computation : Task) = pipeTo (computation |> Async.AwaitTask) recipient ActorRefs.NoSender
-
-    let (@@) (path1: string) (path2: string) = path1 + "/" + path2
-
-    module Child =
-        let tryGet (mailbox: Actor<_>) (name: string) =
-            let child = mailbox.Context.Child(name)
-
-            if child.IsNobody() then None
-            else Some child
-
-        let getOrCreate (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef) =
-            tryGet mailbox name
-            |> function
-            | Some child -> child
-            | None -> f mailbox.Context
-
-        let create (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef) =
-            getOrCreate mailbox name f
-            |> ignore
-
-        let iter (mailbox: Actor<_>) (name: string) (f: IActorRef -> _) =
-            tryGet mailbox name
-            |> Option.iter (f >> ignore)
-
-        let iterMsg (mailbox: Actor<_>) (name: string) (msg: 'Msg) =
-            iter mailbox name (fun child -> child <! msg)
-
-        let tryAsk<'Response,'Msg,'ParentMsg> (mailbox: Actor<'ParentMsg>) (name: string) (msg: 'Msg) =
-            tryGet mailbox name
-            |> Option.map (fun child -> child.Ask<'Response> msg)
-            |> function
-            | Some rsp -> 
-                task { 
-                    let! res = rsp 
-                    return Some res
-                }
-            | None -> task { return None }
-
-    module Set =
-        let asIReadOnlyList (set: Set<'T>) = (ResizeArray set) :> IReadOnlyList<'T>
-
-    module Task =
-        let liftGen x = task { return x } :> Task
-
-    module ActorSelection =
-        let tell msg (actorSel: ActorSelection) = actorSel.Tell msg
 
 [<RequireQualifiedAccess>]
 module Msg =
@@ -129,17 +54,17 @@ module Msg =
     type Manager =
         | OnConnected of ctx: HubConnectionContext
         | OnDisconnected of ctx: HubConnectionContext
-        | SendAll of methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | SendAllExcept of methodName:string * args: obj [] * connectionIds: IReadOnlyList<string> * cancellationToken:CancellationToken
-        | SendConnection of connectionId:string * methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | SendConnections of connectionIds: IReadOnlyList<string> * methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | SendGroup of groupName:string * methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | SendGroups of groupNames: IReadOnlyList<string> * methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | SendGroupExcept of groupName:string * methodName:string * args: obj [] * excludedUserIds: IReadOnlyList<string> * cancellationToken:CancellationToken
-        | SendUser of userId:string * methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | SendUsers of userIds: IReadOnlyList<string> * methodName:string * args: obj [] * cancellationToken:CancellationToken
-        | AddToGroup of connectionId:string * groupName:string * cancellationToken:CancellationToken
-        | RemoveFromGroup of connectionId:string * groupName:string * cancellationToken:CancellationToken
+        | SendAll of methodName:string * args: obj []
+        | SendAllExcept of methodName:string * args: obj [] * connectionIds: IReadOnlyList<string>
+        | SendConnection of connectionId:string * methodName:string * args: obj []
+        | SendConnections of connectionIds: IReadOnlyList<string> * methodName:string * args: obj []
+        | SendGroup of groupName:string * methodName:string * args: obj []
+        | SendGroups of groupNames: IReadOnlyList<string> * methodName:string * args: obj []
+        | SendGroupExcept of groupName:string * methodName:string * args: obj [] * excludedUserIds: IReadOnlyList<string>
+        | SendUser of userId:string * methodName:string * args: obj []
+        | SendUsers of userIds: IReadOnlyList<string> * methodName:string * args: obj []
+        | AddToGroup of connectionId:string * groupName:string
+        | RemoveFromGroup of connectionId:string * groupName:string
 
 [<RequireQualifiedAccess>]
 module private Name =
@@ -147,6 +72,64 @@ module private Name =
     let [<Literal>] Groups = "Groups"
     let [<Literal>] Manager = "Manager"
     let [<Literal>] Users = "Users"
+    let [<Literal>] User = "user"
+
+module private AddressBook =
+    open Fable.SignalR.Shared.MemoryCache
+
+    module private Internal =
+        let lookupF (system: IActorRefFactory) (identity: string) (addr: string) =
+            async {
+                let selection = select system addr
+
+                match! selection <? Identify(identity) with
+                | ActorIdentity (returnedIdentity, Some ref) when returnedIdentity = identity -> return Some ref
+                | _ -> return None
+            }
+
+    open Internal
+
+    [<NoComparison;NoEquality>]
+    type AddressBook (system: IActorRefFactory, pathResolver: string -> string) =
+        let addressBook = MemoryCache<string,IActorRef>(CacheExpirationPolicy.SlidingExpiration(TimeSpan(2, 0, 0)))
+
+        let getAddr = memoize pathResolver
+
+        let lookup identity =
+            async {
+                let! lookup = lookupF system identity (getAddr identity)
+
+                return
+                    match lookup with
+                    | Some ref -> Ok (untyped ref) 
+                    | None -> Error "Address not found."
+            }
+            
+        member _.tryLookup<'Message> (identity: string) : Async<IActorRef<'Message> option> =            
+            addressBook.TryGetOrAddAsync identity (lookup identity)
+            |> Async.map (function | Ok ref -> Some (typed ref) | Error _ -> None)
+
+        member this.tell (msg: 'Message) (identity: string) =
+            async {
+                let! res = this.tryLookup<'Message> identity
+                
+                return
+                    match res with
+                    | Some ref -> ref <! msg
+                    | None -> ()
+            }
+            |> Async.Start
+
+        member this.tryAsk (msg: 'Message) (identity: string): Async<'Response option> =
+            async {
+                let! res = this.tryLookup<'Message> identity
+                
+                match res with
+                | Some ref -> return! ref <? msg |> Async.map Some
+                | None -> return None
+            }
+
+open AddressBook
 
 [<RequireQualifiedAccess>]
 module private Addr =
@@ -180,19 +163,7 @@ module private Addr =
 [<AutoOpen>]
 module private ActorExtensions =
     type Actor<'Message> with
-        member this.Addr = Addr.Root(this.Self.Path.Address.ToString() @@ "user")
-
-//[<RequireQualifiedAccess>]
-//module private Providers =
-//    type Groups =
-//        static member GetMembers (mailbox: Actor<_>) (groupName: string) : Task<Set<string> option> =
-//            Msg.Groups.GetMembers groupName
-//            |> mailbox.Context.ActorSelection(Addr.root @@ Addr.Root.Manager.groups).Ask<Set<string> option>
-
-//        static member GetMembersAsync (mailbox: Actor<_>) (groupName: string) : Async<Set<string> option> =
-//            Msg.Groups.GetMembers groupName
-//            |> mailbox.Context.ActorSelection(Addr.root @@ Addr.Root.Manager.groups).Ask<Set<string> option>
-//            |> Async.AwaitTask
+        member this.Addr = Addr.Root(this.Self.Path.Address.ToString() @@ Name.User)
 
 module Actors =
     open Microsoft.AspNetCore.SignalR.Protocol
@@ -203,7 +174,12 @@ module Actors =
         | Disconnected
 
     let private group name system =
-        spawn system name <| fun (mailbox: Actor<Msg.Group>) ->
+        props <| fun (mailbox: Actor<Msg.Group>) ->
+            let addressbook = AddressBook(system, mailbox.Addr.Manager.Connections.connection)
+            
+            let sendToConnection methodName args connectionId =
+                addressbook.tell (Msg.Connection.SendToConnection(methodName, args)) connectionId
+
             let rec loop (members: Set<string>) = actor {
                 let! msg = mailbox.Receive()
 
@@ -214,28 +190,15 @@ module Actors =
                     | Msg.Group.RemoveConnection user ->
                         members.Remove user |> Some
                     | Msg.Group.GetMembers ->
-                        mailbox.Context.Sender.Tell members
+                        mailbox.UntypedContext.Sender.Tell members
                         None
                     | Msg.Group.SendToMembers(methodName, args) ->
-                        let msg = Msg.Connection.SendToConnection(methodName, args)
-
-                        members
-                        |> Seq.iter (
-                            mailbox.Addr.Manager.Connections.connection
-                            >> mailbox.Context.ActorSelection 
-                            >> ActorSelection.tell msg
-                        )
+                        Seq.iter (sendToConnection methodName args) members
 
                         None
                     | Msg.Group.SendToMembersExcept(excludedMembers, methodName, args) ->
-                        let msg = Msg.Connection.SendToConnection(methodName, args)
-                        
                         Set.difference members excludedMembers
-                        |> Seq.iter (
-                            mailbox.Addr.Manager.Connections.connection
-                            >> mailbox.Context.ActorSelection
-                            >> ActorSelection.tell msg
-                        )
+                        |> Seq.iter (sendToConnection methodName args)
 
                         None
                     |> Option.defaultValue members
@@ -244,12 +207,13 @@ module Actors =
             }
 
             loop Set.empty
+        |> spawn system name
 
     let private groups system =
-        spawn system Name.Groups <| fun (mailbox: Actor<Msg.Groups>) ->
+        props <| fun (mailbox: Actor<Msg.Groups>) ->
             let rec loop () = actor {
                 let! msg = mailbox.Receive()
-
+                
                 match msg with
                 | Msg.Groups.AddToGroup(groupName,user) ->
                     group groupName
@@ -265,42 +229,41 @@ module Actors =
                     |> Seq.iter (fun groupName -> Child.iterMsg mailbox groupName msg)
                 | Msg.Groups.GetMembers groupName ->
                     Msg.Group.GetMembers
-                    |> Child.tryAsk mailbox groupName
-                    |> mailbox.Sender().Tell
+                    |> Child.tryAskThenTell mailbox groupName
                 return! loop ()
             }
 
             loop ()
+        |> spawn system Name.Groups
 
     let private connection name system =
-        let findGroupActor (mailbox: Actor<Msg.Connection>) (group: string) =
-            mailbox.Addr.Manager.Groups.group group
-            |> mailbox.Context.ActorSelection
+        props <| fun (mailbox: Actor<Msg.Connection>) ->
+            let addressbook = AddressBook(system, mailbox.Addr.Manager.Groups.group)
+            let pathName = mailbox.UntypedContext.Self.Path.Name
 
-        let leaveGroup (mailbox: Actor<Msg.Connection>) (group: string) =
-            findGroupActor mailbox group
-            <! Msg.Group.RemoveConnection mailbox.Context.Self.Path.Name
-        
-        let joinGroup (mailbox: Actor<Msg.Connection>) (group: string) =
-            findGroupActor mailbox group
-            <! Msg.Group.AddConnection mailbox.Context.Self.Path.Name
+            let leaveGroup =
+                Msg.Group.RemoveConnection pathName
+                |> addressbook.tell
 
-        spawn system name <| fun (mailbox: Actor<Msg.Connection>) ->
+            let joinGroup =
+                Msg.Group.AddConnection pathName
+                |> addressbook.tell
+
             let rec loop (state: ConnectionState) = actor {
                 let! msg = mailbox.Receive()
                 
                 let state =
-                    match state,msg with
+                    match state, msg with
                     | ConnectionState.Connected (_,groups), Msg.Connection.Disconnected ->
-                        Set.iter (leaveGroup mailbox) groups
+                        Set.iter leaveGroup groups
 
                         Some ConnectionState.Disconnected
                     | ConnectionState.Connected (ctx,groups), Msg.Connection.JoinedGroup group ->
-                        joinGroup mailbox group
+                        joinGroup group
                         
                         ConnectionState.Connected(ctx,groups.Add group) |> Some
                     | ConnectionState.Connected (ctx,groups), Msg.Connection.LeftGroup group ->
-                        leaveGroup mailbox group
+                        leaveGroup group
 
                         ConnectionState.Connected(ctx,groups.Remove group) |> Some
                     | ConnectionState.Connected (ctx,_), Msg.Connection.SendToConnection(methodName, args) ->
@@ -319,9 +282,10 @@ module Actors =
             }
 
             loop <| ConnectionState.Disconnected
+        |> spawn system name
 
     let private connections system =
-        spawn system Name.Connections <| fun (mailbox: Actor<Msg.Connections>) ->
+        props <| fun (mailbox: Actor<Msg.Connections>) ->
             let rec loop () = actor {
                 let! msg = mailbox.Receive()
 
@@ -337,10 +301,10 @@ module Actors =
                 | Msg.Connections.SendConnections(connectionIds, msg) ->
                     connectionIds |> Seq.iter (fun connectionId -> Child.iterMsg mailbox connectionId msg)
                 | Msg.Connections.SendAll msg ->
-                    mailbox.Context.GetChildren()
+                    mailbox.UntypedContext.GetChildren()
                     |> Seq.iter (fun child -> child.Tell msg)
                 | Msg.Connections.SendConnectionsExcept(excludedConnectionIds, msg) ->
-                    mailbox.Context.GetChildren() 
+                    mailbox.UntypedContext.GetChildren() 
                     |> Seq.iter (fun child -> 
                         if excludedConnectionIds.Contains(child.Path.Name) |> not then
                             child.Tell msg)
@@ -351,9 +315,12 @@ module Actors =
             }
 
             loop ()
+        |> spawn system Name.Connections
 
     let private user name system = 
-        spawn system name <| fun (mailbox: Actor<Msg.User>) ->
+        props <| fun (mailbox: Actor<Msg.User>) ->
+            let addressbook = AddressBook(system, mailbox.Addr.Manager.Connections.connection)
+
             let rec loop (connections: Set<string>) = actor {
                 let! msg = mailbox.Receive()
 
@@ -364,16 +331,12 @@ module Actors =
                     | Msg.User.RemoveConnection connectionId ->
                         connections.Remove connectionId |> Some
                     | Msg.User.SendToConnections msg ->
-                        connections
-                        |> Seq.iter (
-                            mailbox.Addr.Manager.Connections.connection
-                            >> mailbox.Context.ActorSelection
-                            >> ActorSelection.tell msg
-                        )
+                        Seq.iter (addressbook.tell msg) connections
 
                         None
                     | Msg.User.GetConnections ->
-                        mailbox.Context.Sender.Tell connections
+                        mailbox.UntypedContext.Sender.Tell connections
+
                         None
                     |> Option.defaultValue connections
 
@@ -381,9 +344,10 @@ module Actors =
             }
 
             loop Set.empty
+        |> spawn system name
 
     let private users system =
-        spawn system Name.Users <| fun (mailbox: Actor<Msg.Users>) ->
+        props <| fun (mailbox: Actor<Msg.Users>) ->
             let rec loop () = actor {
                 let! msg = mailbox.Receive()
 
@@ -396,30 +360,35 @@ module Actors =
                     Msg.User.RemoveConnection connectionId
                     |> Child.iterMsg mailbox userName
                 | Msg.Users.SendToUser(user, msg) ->
-                    mailbox.Context.Child(user).Tell msg
+                    mailbox.UntypedContext.Child(user).Tell msg
                 | Msg.Users.SendToUsers(users, msg) ->
-                    mailbox.Context.GetChildren()
+                    mailbox.UntypedContext.GetChildren()
                     |> Seq.iter (fun child -> 
                         if users.Contains(child.Path.Name) then
                             child.Tell msg)
                 | Msg.Users.GetConnections userName ->
                     Msg.User.GetConnections
-                    |> Child.tryAsk mailbox userName
-                    |> mailbox.Sender().Tell
+                    |> Child.tryAskThenTell mailbox userName
                 return! loop ()
             }
 
             loop ()
+        |> spawn system Name.Users
 
-    // figure out what to do with cancellation tokens
     let manager system =
-        spawn system Name.Manager <| fun (mailbox: Actor<Msg.Manager>) ->
+        props <| fun (mailbox: Actor<Msg.Manager>) ->
             Child.create mailbox Name.Groups groups
             Child.create mailbox Name.Connections connections
             Child.create mailbox Name.Users users
 
+            let connectionAddressbook = AddressBook(system, mailbox.Addr.Manager.Connections.connection)
+            let userAddressbook = AddressBook(system, mailbox.Addr.Manager.Users.user)
+
             let rec loop () = actor {
                 let! msg = mailbox.Receive()
+
+                mailbox.Log.Force().Debug(sprintf "Manager got msg: %A" msg)
+                Logging.logDebugf mailbox "Manager got msg: %A" msg
 
                 match msg with
                 | Msg.Manager.OnConnected ctx ->
@@ -430,76 +399,62 @@ module Actors =
                     Msg.Connections.RemoveConnection ctx.ConnectionId
                     |> Child.iterMsg mailbox Name.Connections
 
-                    match ctx.UserIdentifier with // double check this is how they do this in signalr for users
+                    match ctx.UserIdentifier with
                     | null -> ()
                     | userName -> 
                         Msg.Users.RemoveFromUser(userName, ctx.ConnectionId)
                         |> Child.iterMsg mailbox Name.Users
 
-                | Msg.Manager.SendAll(methodName, args, ct) ->
+                | Msg.Manager.SendAll(methodName, args) ->
                     Msg.Connection.SendToConnection(methodName, args)
                     |> Msg.Connections.SendAll
                     |> Child.iterMsg mailbox Name.Connections
 
-                | Msg.Manager.SendAllExcept(methodName, args, excludedConnectionIds, ct) ->
+                | Msg.Manager.SendAllExcept(methodName, args, excludedConnectionIds) ->
                     Msg.Connection.SendToConnection(methodName, args)
                     |> fun msg -> Msg.Connections.SendConnectionsExcept(Set.ofSeq excludedConnectionIds, msg)
                     |> Child.iterMsg mailbox Name.Connections
 
-                | Msg.Manager.SendConnection(connectionId, methodName, args, ct) ->
-                    mailbox.Addr.Manager.Connections.connection connectionId
-                    |> mailbox.Context.ActorSelection
-                    |> ActorSelection.tell (Msg.Connection.SendToConnection(methodName, args))
+                | Msg.Manager.SendConnection(connectionId, methodName, args) ->
+                    Msg.Connection.SendToConnection(methodName, args)
+                    |> flip connectionAddressbook.tell connectionId
 
-                | Msg.Manager.SendConnections(connectionIds, methodName, args, ct) ->
-                    connectionIds
-                    |> Seq.iter (
-                        mailbox.Addr.Manager.Connections.connection
-                        >> mailbox.Context.ActorSelection
-                        >> ActorSelection.tell (Msg.Connection.SendToConnection(methodName, args))
-                    )
+                | Msg.Manager.SendConnections(connectionIds, methodName, args) ->
+                    Msg.Connection.SendToConnection(methodName, args)
+                    |> connectionAddressbook.tell
+                    |> flip Seq.iter connectionIds
 
-                | Msg.Manager.SendGroup(groupName, methodName, args, ct) ->
+                | Msg.Manager.SendGroup(groupName, methodName, args) ->
                     Msg.Group.SendToMembers(methodName, args)
                     |> fun msg -> Msg.Groups.SendToGroup(groupName, msg)
                     |> Child.iterMsg mailbox Name.Groups
 
-                | Msg.Manager.SendGroups(groupNames, methodName, args, ct) ->
+                | Msg.Manager.SendGroups(groupNames, methodName, args) ->
                     Msg.Group.SendToMembers(methodName, args)
                     |> fun msg -> Msg.Groups.SendToGroups(Set.ofSeq groupNames, msg)
                     |> Child.iterMsg mailbox Name.Groups
 
-                | Msg.Manager.SendGroupExcept(groupName, methodName, args, excludedConnectionIds, ct) ->
+                | Msg.Manager.SendGroupExcept(groupName, methodName, args, excludedConnectionIds) ->
                     Msg.Group.SendToMembersExcept(Set.ofSeq excludedConnectionIds, methodName, args)
                     |> fun msg -> Msg.Groups.SendToGroup(groupName, msg)
                     |> Child.iterMsg mailbox Name.Groups
 
-                | Msg.Manager.SendUser(userName, methodName, args, ct) ->
-                    let msg =
-                        Msg.Connection.SendToConnection(methodName, args)
-                        |> Msg.User.SendToConnections
+                | Msg.Manager.SendUser(userName, methodName, args) ->
+                    Msg.Connection.SendToConnection(methodName, args)
+                    |> Msg.User.SendToConnections
+                    |> flip userAddressbook.tell userName
 
-                    mailbox.Addr.Manager.Users.user userName
-                    |> mailbox.Context.ActorSelection
-                    |> ActorSelection.tell msg
-
-                | Msg.Manager.SendUsers(userNames, methodName, args, ct) ->
-                    let msg =
-                        Msg.Connection.SendToConnection(methodName, args)
-                        |> Msg.User.SendToConnections
-
-                    userNames
-                    |> Seq.iter (
-                        mailbox.Addr.Manager.Users.user
-                        >> mailbox.Context.ActorSelection
-                        >> ActorSelection.tell msg
-                    )
-
-                | Msg.Manager.AddToGroup(connectionId, groupName, _) ->
+                | Msg.Manager.SendUsers(userNames, methodName, args) ->
+                    Msg.Connection.SendToConnection(methodName, args)
+                    |> Msg.User.SendToConnections
+                    |> userAddressbook.tell
+                    |> flip Seq.iter userNames
+                    
+                | Msg.Manager.AddToGroup(connectionId, groupName) ->
                     Msg.Groups.AddToGroup(groupName, connectionId)
                     |> Child.iterMsg mailbox Name.Groups
 
-                | Msg.Manager.RemoveFromGroup(connectionId, groupName, _) ->
+                | Msg.Manager.RemoveFromGroup(connectionId, groupName) ->
                     Msg.Groups.RemoveFromGroup(groupName, connectionId)
                     |> Child.iterMsg mailbox Name.Groups
 
@@ -507,3 +462,4 @@ module Actors =
             }
 
             loop ()
+        |> spawn system Name.Manager
