@@ -7,7 +7,7 @@
     Akka.Serialization.Hyperion
     Akka.Streams
     Akkling
+    Akkling.Cluster.Sharding
     FSharp.Core
-    FSharp.Data.LiteralProviders
     FsToolkit.ErrorHandling
     Ply

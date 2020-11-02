@@ -27,6 +27,18 @@ module Extensions =
             |> fun a -> Async.StartAsTask(a, ?taskCreationOptions = taskCreationOptions, ?cancellationToken = cancellationToken)
 
 [<RequireQualifiedAccess>]
+module List =
+    let distinctSequential (xs: 'T list) =
+        []
+        |> List.foldBack (fun x xs ->
+            match xs with
+            | [] -> [x]
+            | [h] when h = x -> xs
+            | h::_ when h = x -> xs
+            | _ -> x::xs
+        ) xs
+
+[<RequireQualifiedAccess>]
 module Set =
     let asIReadOnlyList (set: Set<'T>) = (ResizeArray set) :> IReadOnlyList<'T>
 
@@ -99,23 +111,35 @@ module Helpers =
 
     let (@@) (path1: string) (path2: string) = path1 + "/" + path2
 
+    let (!!) (path: string) = "/" + path
+
 [<RequireQualifiedAccess>]
 module Child =
-    let inline tryGet (mailbox: Actor<'ParentMsg>) (name: string) =
+    let tryGetUntyped (mailbox: Actor<'Message>) (name: string) =
         let child : IActorRef = mailbox.UntypedContext.Child(name)
 
         if child.IsNobody() then None
-        else TypedActorRef<'Message>(child) :> IActorRef<'Message> |> Some
+        else Some child
+
+    let tryGet (mailbox: Actor<'ParentMsg>) (name: string) =
+        tryGetUntyped mailbox name
+        |> Option.map (fun child -> TypedActorRef<'Message>(child) :> IActorRef<'Message>)
         
-    let getOrCreate (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef<'Message>) =
+    let create (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef<'Message>) =
         tryGet mailbox name
         |> function
         | Some child -> child
         | None -> f mailbox.UntypedContext
 
-    let create (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef<'Message>) =
-        getOrCreate mailbox name f
-    
+    let createUntyped (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef) =
+        tryGetUntyped mailbox name
+        |> function
+        | Some child -> child
+        | None -> f mailbox.UntypedContext
+
+    let createIgnore (mailbox: Actor<_>) (name: string) (f: IActorRefFactory -> IActorRef<'Message>) =
+        create mailbox name f |> ignore
+
     let private iter (mailbox: Actor<_>) (name: string) (f: IActorRef<'Message> -> _) =
         tryGet mailbox name
         |> Option.iter (f >> ignore)
@@ -173,12 +197,14 @@ module Config =
         let [<Literal>] Off = "OFF"
         let [<Literal>] Warning = "WARNING"
 
+    let empty = Configuration.parse ""
+
     let private applyFallback (config: Config) (rawConfig: string) =
         rawConfig
         |> Configuration.parse
         |> config.SafeWithFallback
 
-    let setLogLevel (predicate: LogLevel -> bool) (config: Config) =
+    let logLevel (predicate: LogLevel -> bool) (config: Config) =
         logLevelList
         |> List.tryFind predicate
         |> function
@@ -198,9 +224,108 @@ module Config =
             match logLevel with
             | LogLevel.Trace 
             | LogLevel.Debug ->
-                sprintf "akka.actor : { stdout-loglevel = %s, loglevel = %s, log-config-on-start = on }"
-                    logStr logStr
+                sprintf """
+                    akka.actor {
+                        stdout-loglevel = %s
+                        loglevel = %s
+                            
+                        log-config-on-start = on
+
+                        debug {
+                            receive = on
+                            autoreceive = on
+                            lifecycle = on
+                            event-stream = on
+                            unhandled = on
+                        }
+                    }
+                    """ logStr logStr
                 |> applyFallback config
             | _ ->
-                sprintf "akka.actor : { stdout-loglevel = %s, loglevel = %s }" logStr logStr
+                sprintf "akka.actor { stdout-loglevel = %s, loglevel = %s }" logStr logStr
                 |> applyFallback config
+
+    let seedNodes (systemName: string) (nodes: (string * uint16) list) (config: Config) =
+        if List.distinct nodes <> nodes then
+            sprintf "Duplicate seed-node names detected on system: %s!%s%A" 
+                systemName System.Environment.NewLine nodes
+            |> InvalidOperationException
+            |> raise
+        
+        let nodesStr =
+            nodes
+            |> List.map (fun (node, port) -> sprintf "\"akka.tcp://%s@%s:%i\"" systemName node port)
+            |> String.concat ","
+
+        sprintf "akka.cluster.seed-nodes = [ %s ]" nodesStr
+        |> applyFallback config
+
+    let instanceInfo (hostname: string) (pubHostname: string) (port: uint16) (config: Config) =
+        let instanceInfo =
+            sprintf 
+                """
+                akka.remote.dot-netty.tcp {
+                    public-hostname = "%s"
+                    hostname = "%s"
+                    port = %i
+                }
+                """
+                hostname pubHostname port
+        
+        if isNull hostname || isNull pubHostname then
+            sprintf "Invalid instance configuration provided: %s%s" 
+                System.Environment.NewLine instanceInfo
+            |> InvalidOperationException
+            |> raise
+
+        applyFallback config instanceInfo
+
+    let extensions (extensions: string list) (config: Config) =
+        extensions 
+        |> List.map (sprintf "\"%s\"") 
+        |> String.concat ","
+        |> sprintf "akka.extensions = [%s]"
+        |> applyFallback config
+
+    let loggers (loggers: string list) (config: Config) =
+        loggers 
+        |> List.map (sprintf "\"%s\"") 
+        |> String.concat ","
+        |> sprintf "akka.loggers = [%s]"
+        |> applyFallback config
+
+    let provider (provider: string) (config: Config) =
+        provider
+        |> sprintf "akka.actor.provider = \"%s\""
+        |> applyFallback config
+
+    let autoDownUnreachable (seconds: int) (config: Config) =
+        sprintf "akka.cluster.auto-down-unreachable-after = %is" seconds
+        |> applyFallback config
+
+    let roles (roles: string list) (config: Config) =
+        roles 
+        |> String.concat ","
+        |> sprintf "akka.cluster.roles = [%s]"
+        |> applyFallback config
+
+    let pubSubRoutingLogicBroadcast (config: Config) =
+        "akka.cluster.pub-sub.routing-logic = broadcast"
+        |> applyFallback config
+
+namespace Akka.Cluster
+
+open Akka.Cluster
+open Akkling
+
+[<AutoOpen>]
+module ClusterExtensions =
+    type Cluster with
+        member this.SubscribeToMemberEvent (actorRef: IActorRef<'Message>) =
+            this.Subscribe(untyped actorRef, ClusterEvent.InitialStateAsEvents, [| typedefof<ClusterEvent.IMemberEvent> |])
+
+        member this.SubscribeToMemberEventSnapshot (actorRef: IActorRef<'Message>) =
+            this.Subscribe(untyped actorRef, ClusterEvent.InitialStateAsSnapshot, [| typedefof<ClusterEvent.IMemberEvent> |])
+
+        member this.Unsubscribe (actorRef: IActorRef<'Message>) =
+            this.Unsubscribe(untyped actorRef)

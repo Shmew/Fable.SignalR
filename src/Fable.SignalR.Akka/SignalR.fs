@@ -1,6 +1,6 @@
 ﻿namespace Fable.SignalR.Akka
 
-open Akka.Cluster
+open Akka.Cluster.Tools.PublishSubscribe
 open Akka.Configuration
 open Akkling
 open Microsoft.AspNetCore.SignalR
@@ -9,37 +9,72 @@ open Microsoft.Extensions.Logging
 open System
 open System.Runtime.InteropServices
 
- // TODO: Add logging actor and log errors for when things like group name and connection ids are null
+type AkkaHubConfig =
+    { Hostname: string
+      PublicHostname: string
+      Port: uint16
+      SeedNodes: (string * uint16) list }
 
-type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLifetimeManager<'Hub>>, config: Config) =
+[<RequireQualifiedAccess>]
+module AkkaHubConfig =
+    let seedNodes (akkaHubConfig: AkkaHubConfig) = akkaHubConfig.SeedNodes
+
+    let setSeedNodes (seedNodes: (string * uint16) list) (akkaHubConfig: AkkaHubConfig) = 
+        { akkaHubConfig with SeedNodes = seedNodes }
+
+ // TODO: Add logging actor and log errors for when things like group name and connection ids are null
+ open ConfigBuilder
+
+type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLifetimeManager<'Hub>>, config: Config, akkaHubConfig: AkkaHubConfig) =
     inherit HubLifetimeManager<'Hub>()
 
-    let system = 
-        config
-        |> Config.setLogLevel logger.IsEnabled
-        |> System.create (typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i")
-    
-    let manager = Actors.manager system
+    let systemName = typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i"
 
-    //let akkaHub =
-    //    spawn system (typeof<'Hub>.FullName.GetHashCode() |> sprintf "AkkaHub-%i") <| fun mailbox ->
-    //        let cluster = Cluster.Get (mailbox.Context.System)
+    let system =
+        { Extensions = [ "Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider, Akka.Cluster.Tools" ]
+          Loggers = [ "Akka.Event.DefaultLogger, Akka" ]
+          Provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+          DownUnreachable = 30<s>
+          Roles = [ "signalr" ]
+          SeedNodes =
+            if List.distinct akkaHubConfig.SeedNodes <> akkaHubConfig.SeedNodes then
+                sprintf "Duplicate seed-node names detected on system: %s!%s%A" 
+                    systemName System.Environment.NewLine akkaHubConfig.SeedNodes
+                |> InvalidOperationException
+                |> raise
+            
+            akkaHubConfig.SeedNodes
+            |> List.map (fun (node, port) -> sprintf "akka.tcp://%s@%s:%i" systemName node port)
+          PublicHostname = akkaHubConfig.PublicHostname
+          Hostname = akkaHubConfig.Hostname
+          Port = akkaHubConfig.Port
+          LogLevelPredicate = logger.IsEnabled }
+        |> create
+        |> fun res ->
+            printfn "%s" res
+            res
+        |> Configuration.parse
+        |> fun initConfig -> initConfig.SafeWithFallback(config)
+        |> System.create systemName
 
-    //        cluster.Subscribe (mailbox.Self, [| typeof<ClusterEvent.IMemberEvent> |])
-    //        mailbox.Defer <| fun () -> cluster.Unsubscribe mailbox.Self
-    //        logger.LogInformation(sprintf "Spawned Akka cluster on node [%A] with roles [%s]" cluster.SelfAddress (cluster.SelfRoles |> String.concat ","))
+    //let system = 
+    //    Config.empty
+    //    |> Config.logLevel logger.IsEnabled 
+    //    |> Config.seedNodes systemName akkaHubConfig.SeedNodes
+    //    |> Config.instanceInfo akkaHubConfig.Hostname akkaHubConfig.PublicHostname akkaHubConfig.Port
+    //    |> Config.extensions [ "Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider, Akka.Cluster.Tools" ]
+    //    |> Config.loggers [ "Akka.Event.DefaultLogger, Akka" ]
+    //    |> Config.provider "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+    //    |> Config.autoDownUnreachable 30
+    //    |> Config.roles [ "signalr" ]
+    //    |> Config.pubSubRoutingLogicBroadcast
+    //    |> fun initConfig -> initConfig.SafeWithFallback(config)
+    //    |> System.create systemName
 
-    //        let rec seed () =
-    //            actor {
-    //                let! (msg: obj) = mailbox.Receive()
+    //let shard = Actors.Clustering.shard system
+    let manager = Actors.distributor system
 
-    //                match msg with
-    //                | :? ClusterEvent.IMemberEvent -> logger.LogInformation(sprintf "Cluster event %A" msg)
-    //                | _ -> logger.LogInformation(sprintf "Recieved: %A" msg)
-
-    //                return! seed ()
-    //            }
-    //        seed ()
+    //do printfn "%s" (system.Settings.ToString())
 
     override _.OnConnectedAsync ctx =
         manager <! Msg.Manager.OnConnected ctx
@@ -100,23 +135,18 @@ type AkkaHubLifetimeManager<'Hub when 'Hub :> Hub> (logger: ILogger<DefaultHubLi
 
 [<AutoOpen>]
 module SignalRServerBuilderExtensions =
-    open FSharp.Data.LiteralProviders
-
-    module private AkkaConfig =
-       let [<Literal>] Hub = TextFile.``akka.conf``.Text
-       let [<Literal>] TestHub = TextFile.``testConfig.conf``.Text
-
+    let internal baseConfig = DistributedPubSub.DefaultConfig()
+    
     type ISignalRServerBuilder with
-        member this.AddAkkaClustering (?akkaConfig: Config) =
+        member this.AddAkkaClustering (hostname: string, publicHostname: string, port: uint16, seedNodes: (string * uint16) list, ?config: Config) =
             let config = 
-                let baseConfig = Configuration.parse AkkaConfig.TestHub
-
-                akkaConfig
-                |> Option.map (fun config -> config.SafeWithFallback baseConfig)
+                config
+                |> Option.map (fun config -> config.SafeWithFallback(baseConfig))
                 |> Option.defaultValue baseConfig
 
             this.Services
                 .AddSingleton<Config>(config)
+                .AddSingleton<AkkaHubConfig>({ Hostname = hostname; PublicHostname = publicHostname; Port = port; SeedNodes = seedNodes })
                 .AddSingleton(typedefof<HubLifetimeManager<_>>,typedefof<AkkaHubLifetimeManager<_>>)
             |> ignore
 

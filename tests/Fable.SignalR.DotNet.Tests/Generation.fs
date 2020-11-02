@@ -420,7 +420,7 @@ module Generation =
             { new ICommandGenerator<Model.HubModel, Model.Model> with
                 member _.InitialActual = 
                     let actual = Model.HubModel(Model.akkaHub server)
-                    
+
                     actual.IsConnected()
                     |> fun a -> Async.RunSynchronously(a, timeout = 5000)
                     |> function

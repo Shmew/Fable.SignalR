@@ -18,9 +18,9 @@ module Client =
     [<Tests>]
     let tests = 
         testList "Client" [ 
-            testPropertyP "DotNet SignalR client works" <| Generation.Commands.commandGen testServer
-            testPropertyP "DotNet SignalR client works with MsgPack" <| Generation.Commands.msgPackCommandGen testServer
+            //testPropertyP "DotNet SignalR client works" <| Generation.Commands.commandGen testServer
+            //testPropertyP "DotNet SignalR client works with MsgPack" <| Generation.Commands.msgPackCommandGen testServer
             testPropertyP "DotNet SignalR client works with Akka" <| Generation.Commands.akkaCommandGen testServer
             testPropertyP "DotNet SignalR client works with Akka and MsgPack" <| Generation.Commands.akkaMsgPackCommandGen testServer
         ]
-        |> testSequenced
+        //|> testSequenced

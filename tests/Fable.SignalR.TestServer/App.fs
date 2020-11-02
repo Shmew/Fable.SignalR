@@ -40,7 +40,7 @@ module App =
                     invoke SignalRHub.invoke
                     stream_from SignalRHub.Stream.sendToClient
                     stream_to SignalRHub.Stream.getFromClient
-                    use_server_builder (fun builder -> builder.AddAkkaClustering())
+                    use_server_builder (fun builder -> builder.AddAkkaClustering("localhost", "localhost", 5000us, [ ("localhost", 5001us); ("localhost", 5000us) ]))
                     with_log_level Microsoft.Extensions.Logging.LogLevel.None
                     with_hub_options (fun ho -> ho.EnableDetailedErrors <- Nullable<bool>(true))
                 }
@@ -52,7 +52,7 @@ module App =
                     invoke SignalRHub2.invoke
                     stream_from SignalRHub2.Stream.sendToClient
                     stream_to SignalRHub2.Stream.getFromClient
-                    use_server_builder (fun builder -> builder.AddAkkaClustering())
+                    use_server_builder (fun builder -> builder.AddAkkaClustering("localhost", "localhost", 5001us, [ ("localhost", 5001us); ("localhost", 5000us) ]))
                     with_log_level Microsoft.Extensions.Logging.LogLevel.None
                     with_hub_options (fun ho -> ho.EnableDetailedErrors <- Nullable<bool>(true))
                     use_messagepack

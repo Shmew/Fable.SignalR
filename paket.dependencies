@@ -1,4 +1,4 @@
-version 5.247.4
+version 5.251.0
 
 framework: auto-detect
 generate_load_scripts: true
@@ -25,8 +25,8 @@ group Fable.SignalR.Akka
     nuget Akka.Serialization.Hyperion ~> 1
     nuget Akka.Streams ~> 1
     nuget Akkling ~> 0
+    nuget Akkling.Cluster.Sharding ~> 0
     nuget FSharp.Core ~> 4.7
-    nuget FSharp.Data.LiteralProviders ~> 0
     nuget FsToolkit.ErrorHandling 2.0.0-beta001
     nuget Ply ~> 0
 
