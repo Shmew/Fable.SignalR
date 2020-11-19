@@ -1,7 +1,8 @@
-﻿group Server
+﻿group NetCoreApp3
     Fable.Remoting.Giraffe
 	FSharp.Core
     FSharp.Control.AsyncSeq
     FSharp.Data
+    Microsoft.AspNetCore.Authentication.JwtBearer
     Saturn
     TaskBuilder.fs

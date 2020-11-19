@@ -1,4 +1,4 @@
-﻿group Fable.SignalR.Elmish
+﻿group Fable
     Fable.Core
     Fable.Elmish
     Fable.Promise

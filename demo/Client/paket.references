@@ -1,4 +1,4 @@
-group Client
+group Fable
 	Fable.Browser.Dom
 	Fable.Core
     Fable.Promise

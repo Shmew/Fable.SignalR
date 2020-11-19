@@ -1,4 +1,4 @@
-﻿group Fable.SignalR.Tests
+﻿group Fable
     Fable.Browser.Dom
     Fable.Browser.Url
     Fable.Core

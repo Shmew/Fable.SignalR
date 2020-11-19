@@ -1,2 +1,5 @@
-﻿group Fable.SignalR.TestShared
+﻿group NetCoreApp3
+	FSharp.Core
+
+group Net5
 	FSharp.Core

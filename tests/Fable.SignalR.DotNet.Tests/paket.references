@@ -1,6 +1,15 @@
-group Fable.SignalR.DotNet.Tests
+group NetCoreApp3
 	Expecto
 	Expecto.FsCheck
     FSharp.Control.AsyncSeq
 	FSharp.Core
+    Microsoft.AspNetCore.Authentication.JwtBearer
+    Microsoft.AspNetCore.TestHost
+
+group Net5
+	Expecto
+	Expecto.FsCheck
+    FSharp.Control.AsyncSeq
+	FSharp.Core
+    Microsoft.AspNetCore.Authentication.JwtBearer
     Microsoft.AspNetCore.TestHost

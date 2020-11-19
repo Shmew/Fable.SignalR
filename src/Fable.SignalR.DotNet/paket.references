@@ -1,4 +1,18 @@
-﻿group Fable.SignalR.DotNet
+﻿group NetCoreApp3
+    Fable.Remoting.Json
+    Fable.Remoting.MsgPack
+    FSharp.Core
+    Microsoft.AspNetCore.SignalR.Client
+    Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+
+group Net5
+    Fable.Remoting.Json
+    Fable.Remoting.MsgPack
+    FSharp.Core
+    Microsoft.AspNetCore.SignalR.Client
+    Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+
+group NetStandard2
     Fable.Remoting.Json
     Fable.Remoting.MsgPack
     FSharp.Core

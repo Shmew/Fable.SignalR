@@ -1,4 +1,4 @@
-﻿group Fable.SignalR.Feliz
+﻿group Fable
     Fable.Core
     Fable.Promise
     Feliz
