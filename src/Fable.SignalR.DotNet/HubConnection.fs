@@ -286,7 +286,7 @@ type HubConnection<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi
     interface System.IDisposable with
         member _.Dispose () =
             async {
-                do! hub.Hub.DisposeAsync() |> Async.AwaitTask
+                do! hub.Hub.DisposeAsync().AsTask() |> Async.AwaitTask
                 do cts.Cancel()
                 do cts.Dispose()
                 

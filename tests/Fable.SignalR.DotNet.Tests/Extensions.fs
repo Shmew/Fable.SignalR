@@ -6,7 +6,7 @@ module TestProperty =
     open FsCheck
     open System
 
-    let private propertyTest methodName focusState configs name (property: Property) =
+    let private propertyTest methodName name (property: Property) =
         let runner (config: FsCheckConfig) =
             { new IRunner with
                 member __.OnStartFixture _ = ()
@@ -75,28 +75,25 @@ module TestProperty =
                         |> FailedException
                         |> raise }
 
-        let test (config: FsCheckConfig) =
-            let config =
-                { MaxTest = config.maxTest
-                  MaxFail = 1000
-                  Replay = Option.map Random.StdGen config.replay
-                  Name = name
-                  StartSize = config.startSize
-                  EndSize = config.endSize
-                  QuietOnSuccess = true
-                  Every = fun _ _ -> String.Empty
-                  EveryShrink = fun _ -> String.Empty
-                  Arbitrary = config.arbitrary
-                  Runner = runner config }
+        let fsConfig = { FsCheckConfig.defaultConfig with maxTest = 100 }
 
-            Check.One(config, property) |> async.Return
+        let config =
+            { MaxTest = 100
+              MaxFail = 1000
+              Replay = Option.map Random.StdGen fsConfig.replay
+              Name = name
+              StartSize = fsConfig.startSize
+              EndSize = fsConfig.endSize
+              QuietOnSuccess = true
+              Every = fun _ _ -> String.Empty
+              EveryShrink = fun _ -> String.Empty
+              Arbitrary = fsConfig.arbitrary
+              Runner = runner fsConfig }
 
-        let testCode =
-            match configs with
-            | None -> AsyncFsCheck(None, None, test)
-            | Some (testConfig, stressConfig) -> AsyncFsCheck(Some testConfig, Some stressConfig, test)
+        Check.One(config, property) |> async.Return
+    
+    let checkProp name = propertyTest "etestProperty" name
 
-        TestLabel(name, TestCase(testCode, focusState), focusState)
-
-    let testPropertyP name =
-        propertyTest "etestProperty" Normal None name
+    let testPropertyP name property = 
+        propertyTest "etestProperty" name property
+        |> fun test -> TestLabel(name, TestCase(Async test, Normal), Normal)

@@ -18,7 +18,6 @@ open Fake.Tools
 open Tools.Linting
 open Tools.Web
 open System
-open System.IO
 
 // The name of the project
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
@@ -57,17 +56,17 @@ let (|Fsproj|Csproj|Vbproj|Shproj|) (projFileName:string) =
     | f when f.EndsWith("shproj") -> Shproj
     | _                           -> failwith (sprintf "Project file %s not supported. Unknown project type." projFileName)
     
-let srcGlob        = __SOURCE_DIRECTORY__ @@ "src/**/*.??proj"
-let fsSrcGlob      = __SOURCE_DIRECTORY__ @@ "src/**/*.fs"
-let fsTestGlob     = __SOURCE_DIRECTORY__ @@ "tests/**/*.fs"
+let srcGlob        = __SOURCE_DIRECTORY__ @@ "src" @@ "**" @@ "*.??proj"
+let fsSrcGlob      = __SOURCE_DIRECTORY__ @@ "src" @@ "**" @@ "*.fs"
+let fsTestGlob     = __SOURCE_DIRECTORY__ @@ "tests" @@ "**" @@ "*.fs"
 let bin            = __SOURCE_DIRECTORY__ @@ "bin"
 let docs           = __SOURCE_DIRECTORY__ @@ "docs"
 let temp           = __SOURCE_DIRECTORY__ @@ "temp"
 let objFolder      = __SOURCE_DIRECTORY__ @@ "obj"
 let dist           = __SOURCE_DIRECTORY__ @@ "dist"
-let libGlob        = __SOURCE_DIRECTORY__ @@ "src/**/*.fsproj"
-let demoGlob       = __SOURCE_DIRECTORY__ @@ "demo/**/*.fsproj"
-let dotnetTestGlob = __SOURCE_DIRECTORY__ @@ "tests/*DotNet*/*.fsproj"
+let libGlob        = __SOURCE_DIRECTORY__ @@ "src" @@ "**" @@ "*.fsproj"
+let demoGlob       = __SOURCE_DIRECTORY__ @@ "demo" @@ "**" @@ "*.fsproj"
+let dotnetTestGlob = __SOURCE_DIRECTORY__ @@ "tests" @@ "*DotNet*" @@ "*.fsproj"
 
 let foldExcludeGlobs (g: IGlobbingPattern) (d: string) = g -- d
 let foldIncludeGlobs (g: IGlobbingPattern) (d: string) = g ++ d
@@ -113,6 +112,14 @@ let getEnvFromAllOrNone (s: string) =
 // Set default
 FakeVar.set "configuration" "Release"
 
+let killProcs () =
+    Process.killAllCreatedProcesses()
+    Process.killAllByName "node"
+    Process.killAllByName "MSBuild"
+
+Target.createFinal "KillProcess" <| fun _ ->
+    killProcs()
+
 // --------------------------------------------------------------------------------------
 // Set configuration mode based on target
 
@@ -121,17 +128,6 @@ Target.create "ConfigDebug" <| fun _ ->
 
 Target.create "ConfigRelease" <| fun _ ->
     FakeVar.set "configuration" "Release"
-
-// --------------------------------------------------------------------------------------
-// Copies binaries from default VS location to expected bin folder
-// But keeps a subdirectory structure for each project in the
-// src folder to support multiple project outputs
-
-Target.create "CopyBinaries" <| fun _ ->
-    !! libGlob
-    -- (__SOURCE_DIRECTORY__ @@ "src/**/*.shproj")
-    |> Seq.map (fun f -> ((Path.getDirectory f) @@ "bin" @@ configuration(), "bin" @@ (Path.GetFileNameWithoutExtension f)))
-    |> Seq.iter (fun (fromDir, toDir) -> Shell.copyDir toDir fromDir (fun _ -> true))
 
 // --------------------------------------------------------------------------------------
 // Clean tasks
@@ -163,24 +159,6 @@ Target.create "CopyDocFiles" <| fun _ ->
 
 Target.create "PrepDocs" ignore
 
-Target.create "PostBuildClean" <| fun _ ->
-    let clean() =
-        !! srcGlob
-        -- (__SOURCE_DIRECTORY__ @@ "src/**/*.shproj")
-        |> Seq.map (
-            (fun f -> (Path.getDirectory f) @@ "bin" @@ configuration()) 
-            >> (fun f -> Directory.EnumerateDirectories(f) |> Seq.toList )
-            >> (fun fL -> fL |> List.map (fun f -> Directory.EnumerateDirectories(f) |> Seq.toList)))
-        |> (Seq.concat >> Seq.concat)
-        |> Seq.iter Directory.delete
-    TaskRunner.runWithRetries clean 10
-
-Target.create "PostPublishClean" <| fun _ ->
-    let clean() =
-        !! (__SOURCE_DIRECTORY__ @@ "src/**/bin" @@ configuration() @@ "/**/publish")
-        |> Seq.iter Directory.delete
-    TaskRunner.runWithRetries clean 10
-
 // --------------------------------------------------------------------------------------
 // Restore tasks
 
@@ -201,6 +179,7 @@ Target.create "YarnInstall" <| fun _ ->
     else Yarn.install id
 
 Target.create "RebuildSass" <| fun _ ->
+    Target.activateFinal "KillProcess"
     TaskRunner.runWithRetries (fun () -> Npm.exec "rebuild node-sass" id) 5
 
 // --------------------------------------------------------------------------------------
@@ -221,6 +200,8 @@ Target.create "Build" <| fun _ ->
                     "DependsOnNETStandard", "true"
                 ]
          }
+
+    Target.activateFinal "KillProcess"
     restoreSolution()
 
     !! libGlob
@@ -228,39 +209,6 @@ Target.create "Build" <| fun _ ->
     ++ dotnetTestGlob
     |> List.ofSeq
     |> List.iter (MSBuild.build setParams)
-
-// --------------------------------------------------------------------------------------
-// Publish net core applications
-
-Target.create "PublishDotNet" <| fun _ ->
-    let runPublish (project: string) (framework: string) =
-        let setParams (defaults:MSBuildParams) =
-            { defaults with
-                Verbosity = Some(Quiet)
-                Targets = ["Publish"]
-                Properties =
-                    [
-                        "Optimize", "True"
-                        "DebugSymbols", "True"
-                        "Configuration", configuration()
-                        "Version", release.AssemblyVersion
-                        "GenerateDocumentationFile", "true"
-                        "TargetFramework", framework
-                    ]
-            }
-        MSBuild.build setParams project
-
-    !! libGlob
-    ++ demoGlob
-    ++ dotnetTestGlob
-    |> Seq.map
-        ((fun f -> (((Path.getDirectory f) @@ "bin" @@ configuration()), f) )
-        >>
-        (fun f ->
-            Directory.EnumerateDirectories(fst f) 
-            |> Seq.filter (fun frFolder -> frFolder.Contains("netcoreapp"))
-            |> Seq.map (fun frFolder -> DirectoryInfo(frFolder).Name), snd f))
-    |> Seq.iter (fun (l,p) -> l |> Seq.iter (runPublish p))
 
 // --------------------------------------------------------------------------------------
 // Lint source code
@@ -282,10 +230,12 @@ Target.create "Lint" <| fun _ ->
 // Run the unit tests
 
 Target.create "RunTests" <| fun _ ->
-    Yarn.exec "test-server" id
-
-    !! (__SOURCE_DIRECTORY__ @@ "tests/**/bin" @@ configuration() @@ "**/*Tests.exe")
+    Target.activateFinal "KillProcess"
+    
+    !! (__SOURCE_DIRECTORY__ @@ "tests" @@ "**" @@ "bin" @@ configuration() @@ "**" @@ "*Tests.exe")
         |> Seq.iter (fun f ->
+            killProcs()
+
             Command.RawCommand(f, Arguments.Empty)
             |> CreateProcess.fromCommand
             |> CreateProcess.withTimeout (System.TimeSpan.MaxValue)
@@ -382,53 +332,38 @@ Target.create "Publish" ignore
 Target.create "CI" ignore
 
 "Clean"
-  ==> "Restore"
-  ==> "PackageJson"
-  ==> "YarnInstall"
-  ==> "Build"
-  ==> "RebuildSass"
-  ==> "PostBuildClean" 
-  ==> "CopyBinaries"
-
-"Build"
-  ==> "PostBuildClean"
-  ==> "PublishDotNet"
-  ==> "PostPublishClean"
-  ==> "CopyBinaries"
-
-"Restore" ==> "Lint"
-
-"Lint" 
-  ?=> "Build"
-  ?=> "RunTests"
-  ?=> "CleanDocs"
-
-"Build" ==> "RunTests"
+    ==> "Restore"
+    ==> "PackageJson"
+    ==> "YarnInstall"
+    ==> "Lint"
+    ==> "Build"
+    ==> "RebuildSass"
+    ==> "RunTests"
 
 "All"
-  ==> "GitPush"
-  ?=> "GitTag"
+    ==> "GitPush"
+    ?=> "GitTag"
 
-"All" <== ["Lint"; "RunTests"; "CopyBinaries" ]
+"All" <== ["Lint"; "RunTests"]
 
 "CleanDocs"
-  ==> "CopyDocFiles"
-  ==> "PrepDocs"
+    ==> "CopyDocFiles"
+    ==> "PrepDocs"
 
 "All"
- ==> "NuGet"
- ?=> "NuGetPublish"
+    ==> "NuGet"
+    ?=> "NuGetPublish"
 
 "PrepDocs" 
- ==> "PublishPages"
- ==> "PublishDocs"
+    ==> "PublishPages"
+    ==> "PublishDocs"
 
 "All" 
-  ==> "PrepDocs"
+    ==> "PrepDocs"
 
 "All" 
-  ==> "PrepDocs"
-  ==> "Start"
+    ==> "PrepDocs"
+    ==> "Start"
 
 "All" ==> "PublishPages"
 
@@ -441,6 +376,6 @@ Target.create "CI" ignore
 
 "Publish" <== ["Release"; "ConfigRelease"; "NuGetPublish"; "PublishDocs"; "GitTag"; "GitPush" ]
 
-"CI" <== ["CopyBinaries"; "RunTests"]
+"CI" <== ["RunTests"]
 
 Target.runOrDefaultWithArguments "Dev"

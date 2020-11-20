@@ -1,4 +1,4 @@
-﻿group Fable.SignalR
+﻿group Fable
     Fable.Core
     Fable.Promise
     Fable.Remoting.MsgPack

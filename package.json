@@ -1,6 +1,6 @@
 {
   "name": "fable.-signal-r",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Fable and server bindings for SignalR.",
   "homepage": "https://github.com/Shmew/Fable.SignalR",
   "bugs": {
@@ -14,21 +14,16 @@
   },
   "scripts": {
     "build": "webpack -p",
-    "dev": "concurrently --kill-others \"yarn start-demo-server-watch\" \"webpack-dev-server\"",
+    "demo-server": "npx ./startDemoServer.js",
+    "demo-server-watch": "npx nodemon -e fs,fsproj,fsi --watch src --watch demo --exec npx ./startDemoServer.js",
+    "dev": "concurrently --kill-others \"yarn demo-server-watch\" \"webpack-dev-server\"",
     "pretest": "rimraf ./dist/tests && fable-splitter -c tests/Fable.SignalR.Tests/splitter.config.js",
     "publish-docs": "node publish.js",
     "start": "live-server --port=8080 docs/",
-    "start-demo-server": "npx ./startDemoServer.js",
-    "start-demo-server-watch": "npx nodemon -e fs,fsproj,fsi --watch src --watch demo --exec npx ./startDemoServer.js",
-    "start-test-server": "npx ./startTestServer.js",
-    "start-test-server-watch": "npx nodemon -e fs,fsproj,fsi --watch src --watch tests --exec npx ./startTestServer.js",
-    "test": "jest",
-    "test-server": "concurrently --success first --kill-others \"yarn start-test-server\" \"yarn test\"",
-    "test-server-watch": "concurrently --kill-others \"yarn start-test-server-watch\" \"yarn test-watch\"",
-    "test-watch": "npx nodemon -e fs,fsproj,fsi --watch tests --watch src --exec yarn test"
+    "test": "jest"
   },
   "dependencies": {
-    "@microsoft/signalr": "^3",
+    "@microsoft/signalr": "^5",
     "plotly.js": "^1",
     "react": "^16",
     "react-dom": "^16",
@@ -45,7 +40,7 @@
     "@testing-library/user-event": "^10",
     "babel-loader": "^8",
     "clean-webpack-plugin": "^3",
-    "concurrently": "^5.2.0",
+    "concurrently": "^5",
     "copy-webpack-plugin": "^5",
     "core-js": "^3",
     "css-loader": "^3",

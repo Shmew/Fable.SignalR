@@ -1,6 +1,23 @@
-group Fable.SignalR.DotNet.Tests
+group NetCoreApp3
+    BlackFox.CommandLine
+    Expecto
+    Expecto.FsCheck
+    Fake.IO.FileSystem
+    Fake.JavaScript.Npm
+    Fake.JavaScript.Yarn
+    FSharp.Control.AsyncSeq
+    FSharp.Core
+    Microsoft.AspNetCore.Authentication.JwtBearer
+    Microsoft.AspNetCore.TestHost
+
+group Net5
+    BlackFox.CommandLine
 	Expecto
 	Expecto.FsCheck
+    Fake.IO.FileSystem
+    Fake.JavaScript.Npm
+    Fake.JavaScript.Yarn
     FSharp.Control.AsyncSeq
 	FSharp.Core
+    Microsoft.AspNetCore.Authentication.JwtBearer
     Microsoft.AspNetCore.TestHost
