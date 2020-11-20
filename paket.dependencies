@@ -2,7 +2,7 @@ version 5.251.0
 
 group Fable
     source https://nuget.org/api/v2
-	source https://api.nuget.org/v3/index.json
+    source https://api.nuget.org/v3/index.json
     
     framework: auto-detect
 
@@ -13,7 +13,7 @@ group Fable
     nuget Fable.FastCheck.Jest ~> 0
     nuget Fable.Jester ~> 0
     nuget Fable.ReactTestingLibrary ~> 0
-    nuget Fable.Remoting.Client ~> 6
+    nuget Fable.Remoting.Client ~> 7
     nuget Fable.Promise ~> 2
     nuget Fable.Remoting.MsgPack ~> 1
     nuget Fable.SimpleJson ~> 3
@@ -25,17 +25,22 @@ group Fable
 
 group Net5
     source https://nuget.org/api/v2
-	source https://api.nuget.org/v3/index.json
+    source https://api.nuget.org/v3/index.json
     
+    condition: net5_0
     framework: net5
     
     nuget BenchmarkDotNet ~> 0
+    nuget BlackFox.CommandLine ~> 1
     nuget Elmish ~> 3
     nuget Expecto ~> 9
     nuget Expecto.FsCheck ~> 9
     nuget Fable.Remoting.Giraffe ~> 4
     nuget Fable.Remoting.Json ~> 2
     nuget Fable.Remoting.MsgPack ~> 1
+	nuget Fake.IO.FileSystem ~> 5
+	nuget Fake.JavaScript.Npm ~> 5
+    nuget Fake.JavaScript.Yarn ~> 5
     nuget FSharp.Control.AsyncSeq ~> 3
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
     nuget FSharp.Data ~> 3
@@ -44,35 +49,43 @@ group Net5
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
     nuget Microsoft.AspNetCore.TestHost ~> 5
     nuget Saturn ~> 0
+    nuget System.Text.Encodings.Web ~> 5
     nuget TaskBuilder.fs ~> 2
 
 group NetCoreApp3
     source https://nuget.org/api/v2
-	source https://api.nuget.org/v3/index.json
+    source https://api.nuget.org/v3/index.json
     
+    condition: netcoreapp3_1
     framework: netcoreapp3.1
     
     nuget BenchmarkDotNet ~> 0
+    nuget BlackFox.CommandLine ~> 1
     nuget Elmish ~> 3
     nuget Expecto ~> 9
     nuget Expecto.FsCheck ~> 9
     nuget Fable.Remoting.Giraffe ~> 4
     nuget Fable.Remoting.Json ~> 2
     nuget Fable.Remoting.MsgPack ~> 1
+	nuget Fake.IO.FileSystem ~> 5
+	nuget Fake.JavaScript.Npm ~> 5
+    nuget Fake.JavaScript.Yarn ~> 5
     nuget FSharp.Control.AsyncSeq ~> 3
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
     nuget FSharp.Data ~> 3
     nuget Microsoft.AspNetCore.Authentication.JwtBearer ~> 3
-    nuget Microsoft.AspNetCore.SignalR.Client ~> 3
-    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
+    nuget Microsoft.AspNetCore.SignalR.Client ~> 5
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
     nuget Microsoft.AspNetCore.TestHost ~> 3
     nuget Saturn ~> 0
+    nuget System.Text.Encodings.Web ~> 5
     nuget TaskBuilder.fs ~> 2
 
 group NetStandard2
     source https://nuget.org/api/v2
-	source https://api.nuget.org/v3/index.json
+    source https://api.nuget.org/v3/index.json
     
+    condition: netstandard2_0
     framework: netstandard2.0
     
     nuget Elmish ~> 3
@@ -83,8 +96,8 @@ group NetStandard2
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 3
 
 group Tooling
-	source https://nuget.org/api/v2
-	source https://api.nuget.org/v3/index.json
+    source https://nuget.org/api/v2
+    source https://api.nuget.org/v3/index.json
 
 	nuget Fake.IO.FileSystem ~> 5
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
@@ -102,8 +115,8 @@ group FakeBuild
 	nuget Fake.DotNet.MSBuild ~> 5
 	nuget Fake.DotNet.Paket ~> 5
 	nuget Fake.IO.FileSystem ~> 5
-    nuget Fake.JavaScript.Yarn ~> 5
 	nuget Fake.JavaScript.Npm ~> 5
+    nuget Fake.JavaScript.Yarn ~> 5
 	nuget Fake.Tools.Git ~> 5
     nuget FSharp.Core ~> 4.7
     nuget FSharp.Json ~> 0

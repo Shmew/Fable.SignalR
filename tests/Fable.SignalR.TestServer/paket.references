@@ -1,5 +1,5 @@
 ﻿group NetCoreApp3
-	FSharp.Core
+    FSharp.Core
     FSharp.Control.AsyncSeq
     Microsoft.AspNetCore.Authentication.JwtBearer
     Saturn

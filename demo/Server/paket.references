@@ -1,6 +1,6 @@
 ﻿group NetCoreApp3
     Fable.Remoting.Giraffe
-	FSharp.Core
+    FSharp.Core
     FSharp.Control.AsyncSeq
     FSharp.Data
     Microsoft.AspNetCore.Authentication.JwtBearer

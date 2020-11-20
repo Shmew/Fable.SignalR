@@ -11,7 +11,7 @@
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' Or '$(TargetFramework)' == 'net5.0' ">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>

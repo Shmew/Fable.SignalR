@@ -1,5 +1,6 @@
-### 0.10.2 - Wednesday, November 18th, 2020
+### 0.11.0 - Friday, November 20th, 2020
 * Support FSharp.Core 5.0
+* Add .NET 5 support
 
 ### 0.10.1 - Friday, October 23rd, 2020
 * Add target netstandard for dotnet client

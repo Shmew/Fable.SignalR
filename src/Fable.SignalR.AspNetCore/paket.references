@@ -3,6 +3,7 @@
     Fable.Remoting.MsgPack
     FSharp.Core
     Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+    System.Text.Encodings.Web
     TaskBuilder.fs
 
 group Net5
@@ -10,4 +11,5 @@ group Net5
     Fable.Remoting.MsgPack
     FSharp.Core
     Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+    System.Text.Encodings.Web
     TaskBuilder.fs
