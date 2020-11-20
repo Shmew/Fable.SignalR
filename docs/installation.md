@@ -79,7 +79,7 @@ nuget packages into your F# project:
 ```bash
 # nuget
 dotnet add package Fable.SignalR.DotNet
-dotnet add package Fable.SignalR.DotNet.Elmish
+dotnet add package Fable.SignalR.DotNet.Elmish 
 
 # paket
 paket add Fable.SignalR.DotNet --project ./project/path
