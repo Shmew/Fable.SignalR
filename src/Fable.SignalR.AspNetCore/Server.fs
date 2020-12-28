@@ -140,6 +140,7 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] StreamToFableHub<'ClientApi,
             let! message = settings.Invoke msg (this :> FableHub)
             do! this.Clients.Caller.Invoke({ connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message })
         } :> Task
+
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
     member this.StreamTo msg = settings.StreamTo msg (this :> FableHub<'ClientApi,'ServerApi>)
 
