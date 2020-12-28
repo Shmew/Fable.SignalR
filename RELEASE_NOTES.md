@@ -1,3 +1,6 @@
+### 0.11.1 - Monday, December 28th, 2020
+* Make ConfigBuilder Build method public
+
 ### 0.11.0 - Friday, November 20th, 2020
 * Support FSharp.Core 5.0
 * Add .NET 5 support

@@ -193,6 +193,9 @@ type ConfigBuilder<'ClientApi,'ServerApi> (settings: Settings<'ClientApi,'Server
 
     /// Configure the SignalR server.
     member UseServerBuilder (handler: ISignalRServerBuilder -> ISignalRServerBuilder) : ConfigBuilder
+
+    /// Returns the SignalR settings.
+    member Build () : SignalR.Settings
 ```
 
 ## configure_signalr

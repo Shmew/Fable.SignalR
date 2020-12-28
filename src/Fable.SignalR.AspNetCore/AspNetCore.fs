@@ -24,6 +24,8 @@ module SignalRExtension =
 
     [<RequireQualifiedAccess>]
     module internal Impl =
+        let [<Literal>] Ns = "Microsoft.AspNetCore.SignalR"
+
         let config<'T, 'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi when 'T :> Hub> (builder: IServiceCollection) (hubOptions: (HubOptions -> unit) option) 
             (msgPack: bool) (builderFun: (ISignalRServerBuilder -> ISignalRServerBuilder) option) (transients: IServiceCollection -> IServiceCollection) =
             
@@ -54,7 +56,7 @@ module SignalRExtension =
     type IHostBuilder with
         /// Adds a logging filter for SignalR with the given log level threshold.
         member this.SignalRLogLevel (logLevel: Microsoft.Extensions.Logging.LogLevel) =
-            this.ConfigureLogging(fun l -> l.AddFilter("Microsoft.AspNetCore.SignalR", logLevel) |> ignore)
+            this.ConfigureLogging(fun l -> l.AddFilter(Impl.Ns, logLevel) |> ignore)
         
         /// Adds a logging filter for SignalR with the given log level threshold.
         member this.SignalRLogLevel (settings: SignalR.Settings<'ClientApi,'ServerApi>) =
@@ -62,7 +64,7 @@ module SignalRExtension =
             |> Option.bind(fun o -> o.LogLevel)
             |> function
             | Some logLevel ->
-                this.ConfigureLogging(fun l -> l.AddFilter("Microsoft.AspNetCore.SignalR", logLevel) |> ignore)
+                this.ConfigureLogging(fun l -> l.AddFilter(Impl.Ns, logLevel) |> ignore)
             | None -> this
 
     type IServiceCollection with
