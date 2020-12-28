@@ -67,6 +67,7 @@ and [<EditorBrowsable(EditorBrowsableState.Never)>] BaseFableHub<'ClientApi,'Ser
             let! message = settings.Invoke msg (this :> FableHub)
             do! this.Clients.Caller.Invoke({ connectionId = this.Context.ConnectionId; invocationId = invocationId; message = message })
         } :> Task
+
     member this.Send msg = settings.Send msg (this :> FableHub<'ClientApi,'ServerApi>)
 
     static member AddServices (send, invoke, services: IServiceCollection) =
@@ -751,7 +752,8 @@ module SignalR =
                         |> Some }
             this
 
-        member internal _.Build () = state
+        /// Returns the SignalR settings.
+        member _.Build () = state
 
 [<assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Fable.SignalR.Saturn")>]
 do ()
