@@ -7,6 +7,7 @@ module App =
     open Microsoft.Extensions.Logging
     open Saturn
     open System
+    open FSharp.Control.Tasks.V2
 
     module Setup =
         open SignalRApp.Auth
@@ -37,6 +38,7 @@ module App =
                             invoke SignalRHub.invoke
                             stream_from SignalRHub.Stream.sendToClient
                             use_bearer_auth
+                            with_on_connected (fun hub -> task { return! SignalRHub.send (SignalRHub.Action.IncrementCount 0) hub })
                             with_after_routing (fun builder ->
                                 builder
                                     .UseAuthentication()
