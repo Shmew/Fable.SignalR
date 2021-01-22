@@ -6,3 +6,22 @@ language
     F#
 tags
     fsharp, fable, websocket, signalr, dotnet, client
+dependencies
+    framework: net5
+        Fable.Remoting.Json ~> LOCKEDVERSION-Net5
+        Fable.Remoting.MsgPack ~> LOCKEDVERSION-Net5
+        FSharp.Core >= LOCKEDVERSION-Net5
+        Microsoft.AspNetCore.SignalR.Client ~> LOCKEDVERSION-Net5
+        Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> LOCKEDVERSION-Net5
+    framework: netcoreapp3.1
+        Fable.Remoting.Json ~> LOCKEDVERSION-NetCoreApp3
+        Fable.Remoting.MsgPack ~> LOCKEDVERSION-NetCoreApp3
+        FSharp.Core >= LOCKEDVERSION-NetCoreApp3
+        Microsoft.AspNetCore.SignalR.Client ~> LOCKEDVERSION-NetCoreApp3
+        Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> LOCKEDVERSION-NetCoreApp3
+    framework: netstandard2.0
+        Fable.Remoting.Json ~> LOCKEDVERSION-NetStandard2
+        Fable.Remoting.MsgPack ~> LOCKEDVERSION-NetStandard2
+        FSharp.Core >= LOCKEDVERSION-NetStandard2
+        Microsoft.AspNetCore.SignalR.Client ~> LOCKEDVERSION-NetStandard2
+        Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> LOCKEDVERSION-NetStandard2

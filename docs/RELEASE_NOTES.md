@@ -1,3 +1,6 @@
+### 0.11.2 - Friday, January 22nd, 2021
+* Fix framework targeting
+
 ### 0.11.1 - Monday, December 28th, 2020
 * Make ConfigBuilder Build method public
 

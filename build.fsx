@@ -372,9 +372,9 @@ Target.create "CI" ignore
 
 "Dev" <== ["All"; "ConfigDebug"; "Start"]
 
-"Release" <== ["All"; "NuGet"; "ConfigRelease"]
+"Release" <== ["All"; "ConfigRelease"; "NuGet"]
 
-"Publish" <== ["Release"; "ConfigRelease"; "NuGetPublish"; "PublishDocs"; "GitTag"; "GitPush" ]
+"Publish" <== ["Release"; "NuGetPublish"; "PublishDocs"; "GitTag"; "GitPush" ]
 
 "CI" <== ["RunTests"]
 
