@@ -77,13 +77,15 @@ type Model =
     { ...
       Hub: Hub option
       SFCount: int
-      StreamStatus: StreamStatus }
+      StreamStatus: StreamStatus
+      StreamSubscription: System.IDisposable option }
 
 type Msg =
     ...
     | SignalRStreamMsg of StreamFrom.Response
     | StartServerStream
     | StreamStatus of StreamStatus
+    | Subscription of System.IDisposable
 
 let init =
     { ...
@@ -110,6 +112,7 @@ let update msg model =
         , Cmd.SignalR.streamFrom model.Hub StreamFrom.Action.GenInts Subscription subscriber
     | StreamStatus ss -> { model with StreamStatus = ss }, Cmd.none
     | SignalRStreamMsg (StreamFrom.Response.GetInts i) -> { model with SFCount = i }, Cmd.none
+    | Subscription sub -> { model with StreamSubscription = Some sub }, Cmd.none
 ```
 
 ## Feliz
