@@ -1,3 +1,6 @@
+### 0.11.3 - Friday, March 19th, 2021
+* Fix nuget package dependency restrictions
+
 ### 0.11.2 - Friday, January 22nd, 2021
 * Fix framework targeting
 
