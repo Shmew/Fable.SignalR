@@ -84,6 +84,20 @@ module MsgPackProtocol =
             let inline elementsAs<'T> (o: obj []) =
                 o |> Array.choose Obj.toOptAs<'T>
 
+            let getMessageBytesWithPrependedLength (ms: MemoryStream) =
+                if ms.Length > MaxPayloadSize then
+                    sprintf "Writing messages above 2GB is not supported."
+                    |> InvalidOperationException
+                    |> raise
+            
+                use msgMs = new MemoryStream()
+                Write.writeUInt64 (uint64 ms.Length) msgMs
+                
+                let out = Array.zeroCreate (ms.Length + msgMs.Length |> int)
+                Array.Copy (msgMs.GetBuffer (), 0L, out, 0L, msgMs.Length)
+                Array.Copy (ms.GetBuffer (), 0L, out, msgMs.Length, ms.Length)
+                out
+
     [<RequireQualifiedAccess>]
     module private Server =
         module Read =
@@ -233,17 +247,7 @@ module MsgPackProtocol =
                     |> raise
                 |> serialize
 
-                if ms.Length > MaxPayloadSize then
-                    sprintf "Writing messages above 2GB is not supported."
-                    |> InvalidOperationException
-                    |> raise
-            
-                use msgMs = new MemoryStream()
-
-                Write.writeUInt64 (uint64 ms.Length) msgMs
-            
-                ms.ToArray()
-                |> Array.append (msgMs.ToArray())
+                Array.getMessageBytesWithPrependedLength ms
 
     [<RequireQualifiedAccess>]
     module private Client =
@@ -410,17 +414,7 @@ module MsgPackProtocol =
                     |> raise
                 |> serialize
 
-                if ms.Length > MaxPayloadSize then
-                    sprintf "Writing messages above 2GB is not supported."
-                    |> InvalidOperationException
-                    |> raise
-            
-                use msgMs = new MemoryStream()
-
-                Write.writeUInt64 (uint64 ms.Length) msgMs
-            
-                ms.ToArray()
-                |> Array.append (msgMs.ToArray())
+                Array.getMessageBytesWithPrependedLength ms
 
     type ClientFableHubProtocol<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi,'ServerApi,'ServerStreamApi> () =
         interface IHubProtocol with
