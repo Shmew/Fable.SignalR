@@ -118,6 +118,38 @@ let render = React.functionComponent(fun () ->
     ])
 ```
 
+In some cases you may want to change how `onMessage` behaves depending on React state. This will not work in the above example because the hub is a React 
+[ref](https://reactjs.org/docs/hooks-reference.html#useref) and so `count` and `text` would always appear to be their initial value. 
+
+Here's a solution:
+
+```fsharp
+let render = React.functionComponent(fun () ->
+    let count,setCount = React.useState 0
+    let text,setText = React.useState ""
+
+    let handleMsg =
+        React.useCallbackRef (fun msg -> 
+            match msg with
+            | Response.NewCount i -> setCount (count + 1)
+        )
+
+    let hub =
+        React.useSignalR<Action,Response>(fun hub -> 
+            hub.withUrl(Endpoints.Root)
+                .withAutomaticReconnect()
+                .configureLogging(LogLevel.Debug)
+                .onMessage(handleMsg)
+        )
+            
+    Html.div [
+        prop.children [
+            textDisplay {| count = count; text = text |}
+            buttons {| count = count; hub = hub |}
+        ]
+    ])
+```
+
 ### Native
 
 Same as the Feliz example, they both expose the same methods

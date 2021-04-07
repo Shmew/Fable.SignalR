@@ -1,3 +1,6 @@
+### 0.11.4 - Wednesday, April 7th, 2021
+* MsgPack optimizations
+
 ### 0.11.3 - Friday, March 19th, 2021
 * Fix nuget package dependency restrictions
 
