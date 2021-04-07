@@ -4,6 +4,7 @@ open Fable.Remoting.MsgPack
 open Microsoft.AspNetCore.SignalR
 open Microsoft.AspNetCore.SignalR.Protocol
 open Microsoft.AspNetCore.Connections
+open Microsoft.IO
 open System
 open System.IO
 open System.Buffers
@@ -17,19 +18,45 @@ module MsgPackProtocol =
     let [<Literal>] private ProtocolVersion = 1
     let [<Literal>] private MaxPayloadSize = 2147483648L
 
+    let private streamManager = 
+        new RecyclableMemoryStreamManager (
+            #if DEBUG
+            GenerateCallStacks = true,
+            ThrowExceptionOnToArray = true,
+            #endif
+
+            AggressiveBufferReturn = true
+        )
+
     [<AutoOpen>]
     module private MsgHelpers =
         open MemoryCache
 
         [<RequireQualifiedAccess>]
         module Serializer =
+            let private oT = typeof<obj>
+
             module Server =
-                let private make<'ServerApi,'ServerStreamApi> () = Write.makeSerializer<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>()
+                let private make<'ServerApi,'ServerStreamApi> () =
+                    if typeof<'ServerApi> = oT then 
+                        raise (InvalidDataException("ServerApi cannot be obj."))
+                    if typeof<'ServerStreamApi> = oT then
+                        raise (InvalidDataException("ServerStreamApi cannot be obj, if unused it should be unit."))
+                    
+                    Write.makeSerializer<Msg<unit,'ServerApi,'ServerApi,'ServerStreamApi>>()
 
                 let get<'ServerApi,'ServerStreamApi> () = memoize make<'ServerApi,'ServerStreamApi> ()
 
             module Client =
-                let private make<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> () = Write.makeSerializer<Msg<'ClientStreamFromApi,'ClientApi,unit,'ClientStreamToApi>>()
+                let private make<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> () = 
+                    if typeof<'ClientApi> = oT then 
+                        raise (InvalidDataException("ServerApi cannot be obj."))
+                    if typeof<'ClientStreamFromApi> = oT then
+                        raise (InvalidDataException("ClientStreamFromApi cannot be obj, if unused it should be unit."))
+                    if typeof<'ClientStreamToApi> = oT then
+                        raise (InvalidDataException("ClientStreamToApi cannot be obj, if unused it should be unit."))
+                    
+                    Write.makeSerializer<Msg<'ClientStreamFromApi,'ClientApi,unit,'ClientStreamToApi>>()
 
                 let get<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> () = memoize make<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> ()
                 
@@ -84,18 +111,28 @@ module MsgPackProtocol =
             let inline elementsAs<'T> (o: obj []) =
                 o |> Array.choose Obj.toOptAs<'T>
 
+            let longLength (xs: 'T []) = xs.LongLength
+
             let getMessageBytesWithPrependedLength (ms: MemoryStream) =
                 if ms.Length > MaxPayloadSize then
                     sprintf "Writing messages above 2GB is not supported."
                     |> InvalidOperationException
                     |> raise
             
-                use msgMs = new MemoryStream()
+                use msgMs = 
+                    #if DEBUG
+                    streamManager.GetStream("Array.getMessageBytesWithPrependedLength")
+                    #else
+                    streamManager.GetStream()
+                    #endif
+
                 Write.writeUInt64 (uint64 ms.Length) msgMs
                 
                 let out = Array.zeroCreate (ms.Length + msgMs.Length |> int)
-                Array.Copy (msgMs.GetBuffer (), 0L, out, 0L, msgMs.Length)
-                Array.Copy (ms.GetBuffer (), 0L, out, msgMs.Length, ms.Length)
+
+                Array.Copy (msgMs.GetBuffer(), 0L, out, 0L, msgMs.Length)
+                Array.Copy (ms.GetBuffer(), 0L, out, msgMs.Length, ms.Length)
+
                 out
 
     [<RequireQualifiedAccess>]
@@ -111,7 +148,7 @@ module MsgPackProtocol =
                     try
                         let reader = Read.Reader(input.ToArray())
                         let len = reader.Read typeof<uint32> |> unbox<uint32> |> int64
-
+                        
                         input <- input.Slice(len + 1L)
 
                         if len > MaxPayloadSize then
@@ -176,7 +213,12 @@ module MsgPackProtocol =
 
         module Write =
             let message<'ServerApi,'ServerStreamApi> (message: HubMessage) =
-                use ms = new MemoryStream()
+                use ms =
+                    #if DEBUG
+                    streamManager.GetStream("Server.Write.message")
+                    #else
+                    streamManager.GetStream()
+                    #endif
 
                 let serializer = Serializer.Server.get<'ServerApi,'ServerStreamApi>()
                 let serialize msg = serializer.Invoke(msg, ms)
@@ -261,7 +303,7 @@ module MsgPackProtocol =
                 else
                     let reader = Read.Reader(input.ToArray())
                     let len = reader.Read typeof<uint32> |> unbox<uint32> |> int64
-                    
+
                     input <- input.Slice(len + 1L)
 
                     try
@@ -327,7 +369,12 @@ module MsgPackProtocol =
 
         module Write =
             let message<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi> (message: HubMessage) =
-                use ms = new MemoryStream()
+                use ms =
+                    #if DEBUG
+                    streamManager.GetStream("Client.Write.message")
+                    #else
+                    streamManager.GetStream()
+                    #endif
 
                 let serializer = Serializer.Client.get<'ClientApi,'ClientStreamFromApi,'ClientStreamToApi>()
                 let serialize msg = serializer.Invoke(msg, ms)

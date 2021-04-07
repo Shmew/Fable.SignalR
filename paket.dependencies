@@ -48,6 +48,7 @@ group Net5
     nuget Microsoft.AspNetCore.SignalR.Client ~> 5
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
     nuget Microsoft.AspNetCore.TestHost ~> 5
+    nuget Microsoft.IO.RecyclableMemoryStream ~> 2
     nuget Saturn >= 0.14.1 lowest_matching: true
     nuget System.Text.Encodings.Web ~> 5
     nuget TaskBuilder.fs ~> 2
@@ -77,6 +78,7 @@ group NetCoreApp3
     nuget Microsoft.AspNetCore.SignalR.Client ~> 5
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
     nuget Microsoft.AspNetCore.TestHost ~> 3
+    nuget Microsoft.IO.RecyclableMemoryStream ~> 2
     nuget Saturn >= 0.14.1 lowest_matching: true
     nuget System.Text.Encodings.Web ~> 5
     nuget TaskBuilder.fs ~> 2
@@ -94,6 +96,7 @@ group NetStandard2
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
     nuget Microsoft.AspNetCore.SignalR.Client ~> 5
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
+    nuget Microsoft.IO.RecyclableMemoryStream ~> 2
 
 group Tooling
     source https://nuget.org/api/v2

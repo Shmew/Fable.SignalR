@@ -426,11 +426,7 @@ module Protocol =
             #else
             member _.parseMsgs<'ServerApi,'ServerStreamApi> (buffer: JS.ArrayBuffer) (logger: ILogger) : ResizeArray<HubMessage<unit,'ServerApi,'ServerApi,'ServerStreamApi>> =
             #endif
-                try
-                    if uint64 buffer.byteLength > MaxPayloadSize then
-                        failwith "Messages over 2GB are not supported."
-
-                    parseMsgs<'ServerApi,'ServerStreamApi> buffer
+                try parseMsgs<'ServerApi,'ServerStreamApi> buffer
                 with e ->
                     sprintf "An error occured during message deserialization: %s" e.Message
                     |> logger.log LogLevel.Error

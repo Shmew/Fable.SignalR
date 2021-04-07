@@ -15,3 +15,4 @@ There are a couple differences:
     Fable client. [FSharp.Control.AsyncSeq](https://github.com/fsprojects/FSharp.Control.AsyncSeq) 
     is highly recommended for handling these.
 * Instance methods are uppercase rather than lowercase.
+* You cannot use generic types when using `SignalR.Connect`. If something is unused (like streaming), specify `unit` rather than an underscore.
