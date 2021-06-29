@@ -1,3 +1,6 @@
+### 0.11.5 - Tuesday, June 29th, 2021
+* Update client side JSON serialization to remove warnings in Fable 3
+
 ### 0.11.4 - Wednesday, April 7th, 2021
 * MsgPack optimizations
 
