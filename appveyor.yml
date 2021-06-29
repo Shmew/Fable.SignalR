@@ -1,5 +1,5 @@
 environment:
-  CLI_VERSION: 3.1.301
+  CLI_VERSION: 5.0.301
 image: Visual Studio 2019
 init:
   - git config --global core.autocrlf input

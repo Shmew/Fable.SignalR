@@ -42,14 +42,15 @@ group Net5
 	nuget Fake.JavaScript.Npm ~> 5
     nuget Fake.JavaScript.Yarn ~> 5
     nuget FSharp.Control.AsyncSeq ~> 3
-    nuget FSharp.Core >= 4.7.2 lowest_matching: true
+    nuget FSharp.Core >= 5
     nuget FSharp.Data ~> 3
+    nuget Giraffe ~> 5
     nuget Microsoft.AspNetCore.Authentication.JwtBearer ~> 5
     nuget Microsoft.AspNetCore.SignalR.Client ~> 5
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
     nuget Microsoft.AspNetCore.TestHost ~> 5
     nuget Microsoft.IO.RecyclableMemoryStream ~> 2
-    nuget Saturn >= 0.14.1 lowest_matching: true
+    nuget Saturn ~> 0.15
     nuget System.Text.Encodings.Web ~> 5
     nuget TaskBuilder.fs ~> 2
 
@@ -74,12 +75,13 @@ group NetCoreApp3
     nuget FSharp.Control.AsyncSeq ~> 3
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
     nuget FSharp.Data ~> 3
+    nuget Giraffe ~> 4
     nuget Microsoft.AspNetCore.Authentication.JwtBearer ~> 3
     nuget Microsoft.AspNetCore.SignalR.Client ~> 5
     nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
     nuget Microsoft.AspNetCore.TestHost ~> 3
     nuget Microsoft.IO.RecyclableMemoryStream ~> 2
-    nuget Saturn >= 0.14.1 lowest_matching: true
+    nuget Saturn ~> 0.14.1
     nuget System.Text.Encodings.Web ~> 5
     nuget TaskBuilder.fs ~> 2
 

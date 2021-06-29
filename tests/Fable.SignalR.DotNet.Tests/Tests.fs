@@ -97,6 +97,6 @@ module Client =
     let tests =
         testList "SignalR" [
             clientTests
-            jsTests
+            //jsTests
         ]
         |> testSequenced
