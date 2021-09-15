@@ -145,8 +145,7 @@ module Endpoints =
 
 If you want to support streaming either from the client and/or the
 server you need to define the behavior you want:
-* Streaming from - A function that takes a streaming message (`StreamFrom.Action`) 
-and hub context that then returns an `IAsyncEnumerable<StreamFrom.Response>`.
+* Streaming from - A function that takes a streaming message (`StreamFrom.Action`), hub context, and a `CancellationToken` that signals that the stream should stop, then returns an `IAsyncEnumerable<StreamFrom.Response>`.
 * Streaming to - A function that takes a `IAsyncEnumerable<StreamTo.Action>` and a hub context
 and then (maybe) responds (with a `Response`).
 
@@ -161,6 +160,7 @@ module SignalRHub =
     open FSharp.Control.Tasks.V2
     open SignalRHub
     open System.Collections.Generic
+    open System.Threading
 
     let update (msg: Action) =
         match msg with
@@ -176,7 +176,7 @@ module SignalRHub =
 
     [<RequireQualifiedAccess>]
     module Stream =
-        let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) =
+        let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) (cancellationToken: CancellationToken) =
             match msg with
             | StreamFrom.Action.GenInts ->
                 asyncSeq {

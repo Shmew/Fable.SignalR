@@ -1,11 +1,12 @@
 ﻿namespace SignalRApp
 
+open System.Threading
 open FSharp.Control.Tasks.V2
 
-type RandomStringGen () = 
+type RandomStringGen () =
     member _.Gen () =
         let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        
+
         System.Random().Next(0,characters.Length-1)
         |> fun i -> characters.ToCharArray().[i]
         |> string
@@ -17,7 +18,7 @@ module SignalRHub =
     open Microsoft.Extensions.DependencyInjection
     open SignalRHub
     open System.Collections.Generic
-    
+
     let update (msg: Action) (stringGen: RandomStringGen) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
@@ -30,7 +31,7 @@ module SignalRHub =
                 hubContext.Services.GetService<RandomStringGen>()
                 |> update msg
         }
-            
+
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         task {
             let! response = invoke msg hubContext
@@ -39,7 +40,7 @@ module SignalRHub =
 
     [<RequireQualifiedAccess>]
     module Stream =
-        let sendToClient (msg: StreamFrom.Action) (_: FableHub<Action,Response>) =
+        let sendToClient (msg: StreamFrom.Action) (_: FableHub<Action,Response>) (_: CancellationToken) =
             match msg with
             | StreamFrom.Action.GenInts ->
                 asyncSeq {
@@ -65,7 +66,7 @@ module SignalRHub2 =
         | Action.DecrementCount i -> Response.NewCount(i - 1)
         | Action.RandomCharacter ->
             let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-            
+
             System.Random().Next(0,characters.Length-1)
             |> fun i -> characters.ToCharArray().[i]
             |> string
@@ -82,7 +83,7 @@ module SignalRHub2 =
 
     [<RequireQualifiedAccess>]
     module Stream =
-        let sendToClient (msg: StreamFrom.Action) (_: FableHub<Action,Response>) =
+        let sendToClient (msg: StreamFrom.Action) (_: FableHub<Action,Response>) (_: CancellationToken) =
             match msg with
             | StreamFrom.Action.GenInts ->
                 asyncSeq {

@@ -1,11 +1,12 @@
 ﻿namespace SignalRApp
 
 module SignalRHub =
+    open System.Threading
     open Fable.SignalR
     open FSharp.Control
     open FSharp.Control.Tasks.V2
     open SignalRHub
-    
+
     let update (msg: Action) =
         match msg with
         | Action.IncrementCount i -> Response.NewCount(i + 1)
@@ -17,10 +18,10 @@ module SignalRHub =
     let send (msg: Action) (hubContext: FableHub<Action,Response>) =
         update msg
         |> hubContext.Clients.Caller.Send
-    
+
     [<RequireQualifiedAccess>]
     module Stream =
-        let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) =
+        let sendToClient (msg: StreamFrom.Action) (hubContext: FableHub<Action,Response>) (_: CancellationToken) =
             match msg with
             | StreamFrom.Action.AppleStocks ->
                 Stocks.appleStocks
