@@ -1,6 +1,8 @@
 ﻿namespace SignalRApp
 
+#if !NET6_0
 open FSharp.Control.Tasks.V2
+#endif
 
 type RandomStringGen () = 
     member _.Gen () =

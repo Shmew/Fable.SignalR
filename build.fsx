@@ -163,6 +163,7 @@ Target.create "PrepDocs" ignore
 // Restore tasks
 
 let restoreSolution () =
+    DotNet.exec id "paket" "restore"
     solutionFile
     |> DotNet.restore id
 
@@ -177,10 +178,6 @@ Target.create "YarnInstall" <| fun _ ->
             }
         Yarn.install setParams
     else Yarn.install id
-
-Target.create "RebuildSass" <| fun _ ->
-    Target.activateFinal "KillProcess"
-    TaskRunner.runWithRetries (fun () -> Npm.exec "rebuild node-sass" id) 5
 
 // --------------------------------------------------------------------------------------
 // Build tasks
@@ -337,7 +334,6 @@ Target.create "CI" ignore
     ==> "YarnInstall"
     ==> "Lint"
     ==> "Build"
-    ==> "RebuildSass"
     ==> "RunTests"
 
 "All"

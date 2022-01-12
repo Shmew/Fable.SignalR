@@ -61,6 +61,9 @@ module Client =
             try
                 CmdLine.empty
                 |> CmdLine.appendRaw "run"
+                #if NET6_0
+                |> CmdLine.appendRaw "-f net6.0"
+                #endif
                 #if NET5_0
                 |> CmdLine.appendRaw "-f net5.0"
                 #endif

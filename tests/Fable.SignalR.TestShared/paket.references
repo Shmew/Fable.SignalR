@@ -3,3 +3,6 @@
 
 group Net5
 	FSharp.Core
+
+group Net6
+	FSharp.Core

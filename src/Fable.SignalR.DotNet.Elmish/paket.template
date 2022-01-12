@@ -7,6 +7,13 @@ language
 tags
     fsharp, fable, websocket, signalr, dotnet, client, elmish
 dependencies
+    framework: net6
+        Elmish ~> LOCKED:Major-Net6
+        Fable.Remoting.Json ~> LOCKED:Major-Net6
+        Fable.Remoting.MsgPack ~> LOCKED:Major-Net6
+        FSharp.Core >= LOCKED:Major-Net6
+        Microsoft.AspNetCore.SignalR.Client ~> LOCKED:Major-Net6
+        Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> LOCKED:Major-Net6
     framework: net5
         Elmish ~> LOCKED:Major-Net5
         Fable.Remoting.Json ~> LOCKED:Major-Net5
