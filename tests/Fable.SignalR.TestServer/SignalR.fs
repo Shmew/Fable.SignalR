@@ -1,6 +1,6 @@
 ﻿namespace SignalRApp
 
-#if !NET6_0
+#if !NET6_0_OR_GREATER
 open FSharp.Control.Tasks.V2
 #endif
 
