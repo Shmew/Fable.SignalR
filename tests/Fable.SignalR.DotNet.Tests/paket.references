@@ -21,3 +21,15 @@ group Net5
 	FSharp.Core
     Microsoft.AspNetCore.Authentication.JwtBearer
     Microsoft.AspNetCore.TestHost
+
+group Net6
+    BlackFox.CommandLine
+	Expecto
+	Expecto.FsCheck
+    Fake.IO.FileSystem
+    Fake.JavaScript.Npm
+    Fake.JavaScript.Yarn
+    FSharp.Control.AsyncSeq
+	FSharp.Core
+    Microsoft.AspNetCore.Authentication.JwtBearer
+    Microsoft.AspNetCore.TestHost

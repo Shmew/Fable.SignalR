@@ -7,6 +7,12 @@ language
 tags
     fsharp, fable, react, websocket, signalr, asp.net core, giraffe
 dependencies
+    framework: net6
+        Fable.Remoting.Json ~> LOCKED:Major-Net6
+        Fable.Remoting.MsgPack ~> LOCKED:Major-Net6
+        FSharp.Core >= LOCKED:Major-Net6
+        Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> LOCKED:Major-Net6
+        System.Text.Encodings.Web ~> LOCKED:Major-Net6
     framework: net5
         Fable.Remoting.Json ~> LOCKED:Major-Net5
         Fable.Remoting.MsgPack ~> LOCKED:Major-Net5

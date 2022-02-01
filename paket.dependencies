@@ -1,4 +1,4 @@
-version 5.253.0
+version 6.2.1
 
 group Fable
     source https://nuget.org/api/v2
@@ -22,6 +22,36 @@ group Fable
     nuget Feliz.UseElmish ~> 1
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
     nuget Zanaptak.TypedCssClasses ~> 0
+
+group Net6
+    source https://nuget.org/api/v2
+    source https://api.nuget.org/v3/index.json
+    
+    condition: net6_0
+    framework: net6
+    
+    nuget BenchmarkDotNet ~> 0
+    nuget BlackFox.CommandLine ~> 1
+    nuget Elmish ~> 3
+    nuget Expecto ~> 9
+    nuget Expecto.FsCheck ~> 9
+    nuget Fable.Remoting.Giraffe ~> 4
+    nuget Fable.Remoting.Json ~> 2
+    nuget Fable.Remoting.MsgPack ~> 1
+	nuget Fake.IO.FileSystem ~> 5
+	nuget Fake.JavaScript.Npm ~> 5
+    nuget Fake.JavaScript.Yarn ~> 5
+    nuget FSharp.Control.AsyncSeq ~> 3
+    nuget FSharp.Core >= 6
+    nuget FSharp.Data ~> 3
+    nuget Giraffe ~> 5
+    nuget Microsoft.AspNetCore.Authentication.JwtBearer ~> 6
+    nuget Microsoft.AspNetCore.SignalR.Client ~> 6
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 6
+    nuget Microsoft.AspNetCore.TestHost ~> 6
+    nuget Microsoft.IO.RecyclableMemoryStream ~> 2
+    nuget Saturn ~> 0.15
+    nuget System.Text.Encodings.Web ~> 6
 
 group Net5
     source https://nuget.org/api/v2
@@ -96,8 +126,8 @@ group NetStandard2
     nuget Fable.Remoting.Json ~> 2
     nuget Fable.Remoting.MsgPack ~> 1
     nuget FSharp.Core >= 4.7.2 lowest_matching: true
-    nuget Microsoft.AspNetCore.SignalR.Client ~> 5
-    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 5
+    nuget Microsoft.AspNetCore.SignalR.Client ~> 6
+    nuget Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson ~> 6
     nuget Microsoft.IO.RecyclableMemoryStream ~> 2
 
 group Tooling

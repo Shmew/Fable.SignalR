@@ -11,3 +11,10 @@ group Net5
     Microsoft.AspNetCore.Authentication.JwtBearer
     Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
     Saturn
+
+group Net6
+    Fable.Remoting.Json
+    FSharp.Core
+    Microsoft.AspNetCore.Authentication.JwtBearer
+    Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson
+    Saturn

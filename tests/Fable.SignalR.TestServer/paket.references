@@ -11,3 +11,9 @@ group Net5
     Microsoft.AspNetCore.Authentication.JwtBearer
     Saturn
     TaskBuilder.fs
+
+group Net6
+	FSharp.Core
+    FSharp.Control.AsyncSeq
+    Microsoft.AspNetCore.Authentication.JwtBearer
+    Saturn

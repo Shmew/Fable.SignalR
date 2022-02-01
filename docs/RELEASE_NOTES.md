@@ -1,3 +1,6 @@
+### 0.11.6 - tbd
+* Add .NET 6 support
+
 ### 0.11.5 - Tuesday, June 29th, 2021
 * Update client side JSON serialization to remove warnings in Fable 3
 

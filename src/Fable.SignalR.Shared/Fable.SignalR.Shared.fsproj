@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netcoreapp3.1;netstandard2.0;net5.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;netstandard2.0;net5.0;net6.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Types.fs" />
@@ -10,7 +10,7 @@
     <Compile Include="MsgPack.fs" />
     <None Include="paket.references" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' Or '$(TargetFramework)' == 'net5.0' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' Or '$(TargetFramework)' == 'net5.0' Or '$(TargetFramework)' == 'net6.0' ">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
